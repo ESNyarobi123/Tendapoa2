@@ -1,27 +1,22 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('title', 'Admin — Super Dashboard')
 
 @section('content')
 <style>
-  /* ====== Super Admin Dashboard ====== */
-  .super-admin-dashboard {
-    --primary: #3b82f6;
+  /* ====== Super Admin Dashboard - Dark Theme ====== */
+  .dashboard-container {
+    --primary: #6366f1;
+    --secondary: #06b6d4;
     --success: #10b981;
     --warning: #f59e0b;
-    --danger: #ef4444;
-    --dark: #1f2937;
-    --light: #f8fafc;
-    --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .super-admin-dashboard {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+    --danger: #f43f5e;
+    --card-bg: rgba(255,255,255,0.05);
+    --card-bg-hover: rgba(255,255,255,0.08);
+    --text-primary: #ffffff;
+    --text-muted: #94a3b8;
+    --border: rgba(255,255,255,0.1);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   }
 
   .dashboard-container {
@@ -33,12 +28,12 @@
 
   /* Header */
   .admin-header {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 24px;
     padding: 32px;
     box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .header-content {
@@ -51,9 +46,9 @@
   .header-text h1 {
     font-size: 3rem;
     font-weight: 900;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -79,15 +74,19 @@
   }
 
   .super-stat-card {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
     transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+  }
+  
+  .super-stat-card:hover {
+    background: var(--card-bg-hover);
   }
 
   .super-stat-card:hover {
@@ -137,7 +136,7 @@
   .stat-value {
     font-size: 3rem;
     font-weight: 900;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 8px 0;
     line-height: 1;
   }
@@ -170,12 +169,12 @@
 
   /* Real-time Monitoring */
   .monitoring-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .monitoring-header {
@@ -200,7 +199,7 @@
   .monitoring-title {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0;
   }
 
@@ -211,12 +210,16 @@
   }
 
   .monitoring-card {
-    background: white;
+    background: rgba(255,255,255,0.03);
     border-radius: 16px;
     padding: 20px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
     transition: all 0.3s ease;
+  }
+  
+  .monitoring-card:hover {
+    background: rgba(255,255,255,0.06);
   }
 
   .monitoring-card:hover {
@@ -234,7 +237,7 @@
   .monitoring-card-title {
     font-size: 1.1rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
@@ -264,13 +267,13 @@
     align-items: center;
     gap: 12px;
     padding: 12px;
-    background: #f8fafc;
+    background: rgba(255,255,255,0.03);
     border-radius: 12px;
     transition: all 0.3s ease;
   }
 
   .monitoring-item:hover {
-    background: #e2e8f0;
+    background: rgba(255,255,255,0.08);
     transform: translateX(4px);
   }
 
@@ -290,7 +293,7 @@
   .monitoring-details h4 {
     font-size: 0.875rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 2px 0;
   }
 
@@ -310,28 +313,28 @@
   }
 
   .monitoring-status.active {
-    background: #d1fae5;
-    color: #065f46;
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
   }
 
   .monitoring-status.completed {
-    background: #dbeafe;
-    color: #1e40af;
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
   }
 
   .monitoring-status.pending {
-    background: #fef3c7;
-    color: #92400e;
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
   }
 
   /* Analytics Charts */
   .analytics-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .analytics-grid {
@@ -341,11 +344,15 @@
   }
 
   .chart-container {
-    background: white;
+    background: rgba(255,255,255,0.03);
     border-radius: 16px;
     padding: 24px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
+  }
+  
+  .chart-container:hover {
+    background: rgba(255,255,255,0.06);
   }
 
   .chart-header {
@@ -358,15 +365,21 @@
   .chart-title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
   }
+  
+  .chart-canvas-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
 
   .chart-placeholder {
     height: 300px;
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    background: rgba(255,255,255,0.02);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -379,30 +392,14 @@
     overflow: hidden;
   }
 
-  .chart-placeholder::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(45deg, transparent 30%, rgba(59, 130, 246, 0.1) 50%, transparent 70%);
-    animation: shimmer 2s infinite;
-  }
-
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-
   /* Quick Actions */
   .quick-actions-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .actions-grid {
@@ -412,7 +409,7 @@
   }
 
   .action-card {
-    background: white;
+    background: rgba(255,255,255,0.03);
     border-radius: 16px;
     padding: 20px;
     box-shadow: var(--shadow);
@@ -421,6 +418,10 @@
     text-align: center;
     text-decoration: none;
     color: inherit;
+  }
+  
+  .action-card:hover {
+    background: rgba(255,255,255,0.08);
   }
 
   .action-card:hover {
@@ -445,7 +446,7 @@
   .action-title {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 4px 0;
   }
 
@@ -527,10 +528,6 @@
 
   /* Responsive */
   @media (max-width: 768px) {
-    .super-admin-dashboard {
-      padding: 16px;
-    }
-    
     .admin-header {
       padding: 24px;
     }
@@ -591,8 +588,7 @@
   $completionRate = $totalJobs > 0 ? round(($completedJobs / $totalJobs) * 100) : 0;
 @endphp
 
-<div class="super-admin-dashboard">
-  <div class="dashboard-container">
+<div class="dashboard-container">
     
     <!-- Super Admin Header -->
     <div class="admin-header">
@@ -811,8 +807,8 @@
               <option>Last 3 months</option>
             </select>
           </div>
-          <div class="chart-placeholder">
-            📊 Revenue Chart (Chart.js integration needed)
+          <div class="chart-canvas-container">
+            <canvas id="revenueChart"></canvas>
           </div>
         </div>
 
@@ -902,10 +898,93 @@
       </div>
     </div>
 
-  </div>
 </div>
 
 <script>
+  // Chart.js Configuration for Dark Theme
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
+  Chart.defaults.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+
+  // Revenue Chart
+  @php
+    // Generate revenue data for last 7 days
+    $revenueData = [];
+    $revenueLabels = [];
+    for ($i = 6; $i >= 0; $i--) {
+      $date = now()->subDays($i);
+      $revenueLabels[] = $date->format('M d');
+      $dayRevenue = \App\Models\Job::where('status', 'completed')
+        ->whereDate('updated_at', $date->format('Y-m-d'))
+        ->sum('price');
+      $revenueData[] = (int)$dayRevenue;
+    }
+  @endphp
+
+  const revenueCtx = document.getElementById('revenueChart');
+  if (revenueCtx) {
+    const revenueChart = new Chart(revenueCtx, {
+      type: 'line',
+      data: {
+        labels: @json($revenueLabels),
+        datasets: [{
+          label: 'Revenue (TZS)',
+          data: @json($revenueData),
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99, 102, 241, 0.1)',
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#6366f1',
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2,
+          pointRadius: 5,
+          pointHoverRadius: 7
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: {
+              color: '#94a3b8'
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            titleColor: '#ffffff',
+            bodyColor: '#94a3b8',
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: '#94a3b8',
+              callback: function(value) {
+                return 'TZS ' + value.toLocaleString();
+              }
+            },
+            grid: {
+              color: 'rgba(255,255,255,0.05)'
+            }
+          },
+          x: {
+            ticks: {
+              color: '#94a3b8'
+            },
+            grid: {
+              color: 'rgba(255,255,255,0.05)'
+            }
+          }
+        }
+      }
+    });
+  }
+
   // Real-time updates
   function updateDashboard() {
     // This would fetch real-time data from the server

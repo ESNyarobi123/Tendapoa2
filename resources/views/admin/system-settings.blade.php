@@ -1,9 +1,9 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 
 @section('title', 'System Settings - Admin')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-100 py-8">
+<div class="page-container" style="max-width: 1400px; margin: 0 auto; display: grid; gap: 24px;">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">

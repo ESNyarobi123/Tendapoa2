@@ -1,27 +1,22 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('title', 'Admin — Job Management')
 
 @section('content')
 <style>
-  /* ====== Modern Admin Jobs Page ====== */
-  .jobs-page {
-    --primary: #3b82f6;
+  /* ====== Modern Admin Jobs Page - Dark Theme ====== */
+  .page-container {
+    --primary: #6366f1;
+    --secondary: #06b6d4;
     --success: #10b981;
     --warning: #f59e0b;
-    --danger: #ef4444;
-    --dark: #1f2937;
-    --light: #f8fafc;
-    --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .jobs-page {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+    --danger: #f43f5e;
+    --card-bg: rgba(255,255,255,0.05);
+    --card-bg-hover: rgba(255,255,255,0.08);
+    --text-primary: #ffffff;
+    --text-muted: #94a3b8;
+    --border: rgba(255,255,255,0.1);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   }
 
   .page-container {
@@ -33,12 +28,12 @@
 
   /* Header */
   .page-header {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 24px;
     padding: 32px;
     box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .header-content {
@@ -51,7 +46,7 @@
   .header-text h1 {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
     background: linear-gradient(135deg, var(--primary), var(--success));
     -webkit-background-clip: text;
@@ -80,7 +75,7 @@
   }
 
   .stat-card {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 16px;
     padding: 20px;
@@ -438,7 +433,7 @@
   }
 </style>
 
-<div class="jobs-page">
+<div class="page-container">
   <div class="page-container">
     
     <!-- Page Header -->

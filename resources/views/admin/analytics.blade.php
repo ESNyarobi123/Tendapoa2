@@ -1,27 +1,22 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('title', 'Admin — Analytics & Reports')
 
 @section('content')
 <style>
-  /* ====== Modern Admin Analytics Page ====== */
-  .analytics-page {
-    --primary: #3b82f6;
+  /* ====== Modern Admin Analytics Page - Dark Theme ====== */
+  .page-container {
+    --primary: #6366f1;
+    --secondary: #06b6d4;
     --success: #10b981;
     --warning: #f59e0b;
-    --danger: #ef4444;
-    --dark: #1f2937;
-    --light: #f8fafc;
-    --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .analytics-page {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+    --danger: #f43f5e;
+    --card-bg: rgba(255,255,255,0.05);
+    --card-bg-hover: rgba(255,255,255,0.08);
+    --text-primary: #ffffff;
+    --text-muted: #94a3b8;
+    --border: rgba(255,255,255,0.1);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   }
 
   .page-container {
@@ -407,7 +402,7 @@
   }
 </style>
 
-<div class="analytics-page">
+<div class="page-container">
   <div class="page-container">
     
     <!-- Page Header -->

@@ -1,27 +1,22 @@
-@extends('layouts.app')
+@extends('layouts.admin')
 @section('title', 'Admin — User Management')
 
 @section('content')
 <style>
-  /* ====== Modern Admin Users Page ====== */
-  .users-page {
-    --primary: #3b82f6;
+  /* ====== Modern Admin Users Page - Dark Theme ====== */
+  .page-container {
+    --primary: #6366f1;
+    --secondary: #06b6d4;
     --success: #10b981;
     --warning: #f59e0b;
-    --danger: #ef4444;
-    --dark: #1f2937;
-    --light: #f8fafc;
-    --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .users-page {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-    padding: 20px;
+    --danger: #f43f5e;
+    --card-bg: rgba(255,255,255,0.05);
+    --card-bg-hover: rgba(255,255,255,0.08);
+    --text-primary: #ffffff;
+    --text-muted: #94a3b8;
+    --border: rgba(255,255,255,0.1);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
   }
 
   .page-container {
@@ -33,12 +28,12 @@
 
   /* Header */
   .page-header {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 24px;
     padding: 32px;
     box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .header-content {
@@ -51,9 +46,9 @@
   .header-text h1 {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -80,14 +75,18 @@
   }
 
   .stat-card {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 16px;
     padding: 20px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
     text-align: center;
     transition: all 0.3s ease;
+  }
+  
+  .stat-card:hover {
+    background: var(--card-bg-hover);
   }
 
   .stat-card:hover {
@@ -103,7 +102,7 @@
   .stat-value {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--dark);
+    color: var(--text-primary);
     margin-bottom: 4px;
   }
 
@@ -117,12 +116,12 @@
 
   /* Filters */
   .filters-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .filters-grid {
@@ -141,7 +140,7 @@
   .filter-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--dark);
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -151,7 +150,8 @@
     border: 2px solid var(--border);
     border-radius: 12px;
     font-size: 0.875rem;
-    background: white;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
     transition: all 0.3s ease;
   }
 
@@ -163,12 +163,12 @@
 
   /* Users Table */
   .users-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .users-table {
@@ -178,11 +178,11 @@
   }
 
   .users-table th {
-    background: #f8fafc;
+    background: rgba(255,255,255,0.05);
     padding: 16px;
     text-align: left;
     font-weight: 600;
-    color: var(--dark);
+    color: var(--text-primary);
     border-bottom: 2px solid var(--border);
     font-size: 0.875rem;
     text-transform: uppercase;
@@ -196,7 +196,7 @@
   }
 
   .users-table tr:hover {
-    background: #f8fafc;
+    background: rgba(255,255,255,0.05);
   }
 
   .user-info {
@@ -221,7 +221,7 @@
   .user-details h4 {
     font-size: 1rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 4px 0;
   }
 
@@ -241,18 +241,18 @@
   }
 
   .role-badge.admin {
-    background: #fef3c7;
-    color: #92400e;
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
   }
 
   .role-badge.mfanyakazi {
-    background: #dbeafe;
-    color: #1e40af;
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
   }
 
   .role-badge.muhitaji {
-    background: #d1fae5;
-    color: #065f46;
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
   }
 
   .status-badge {
@@ -265,13 +265,13 @@
   }
 
   .status-badge.active {
-    background: #d1fae5;
-    color: #065f46;
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
   }
 
   .status-badge.inactive {
-    background: #fecaca;
-    color: #dc2626;
+    background: rgba(244, 63, 94, 0.2);
+    color: #f87171;
   }
 
   /* Buttons */
@@ -348,7 +348,7 @@
   .empty-state {
     text-align: center;
     padding: 80px 20px;
-    background: #f8fafc;
+    background: rgba(255,255,255,0.02);
     border-radius: 16px;
     border: 2px dashed var(--border);
   }
@@ -362,7 +362,7 @@
   .empty-state h3 {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
   }
 
@@ -381,10 +381,6 @@
 
   /* Responsive */
   @media (max-width: 768px) {
-    .users-page {
-      padding: 16px;
-    }
-    
     .page-header {
       padding: 24px;
     }
@@ -413,8 +409,7 @@
   }
 </style>
 
-<div class="users-page">
-  <div class="page-container">
+<div class="page-container">
     
     <!-- Page Header -->
     <div class="page-header">
@@ -666,7 +661,7 @@
     // Add hover effects to table rows
     document.querySelectorAll('.user-row').forEach(row => {
       row.addEventListener('mouseenter', function() {
-        this.style.backgroundColor = '#f8fafc';
+        this.style.backgroundColor = 'rgba(255,255,255,0.05)';
         this.style.transform = 'translateX(4px)';
       });
       
@@ -675,6 +670,7 @@
         this.style.transform = 'translateX(0)';
       });
     });
-  });
-</script>
+    });
+  </script>
+
 @endsection

@@ -38,6 +38,15 @@ class JobViewController extends Controller
         return back();
     }
 
+    public function apiShow(Job $job)
+    {
+        $job->load('muhitaji', 'category', 'comments.user', 'acceptedWorker', 'payment');
+        return response()->json([
+            'success' => true,
+            'data' => $job
+        ]);
+    }
+
     public function accept(Job $job, JobComment $comment)
     {
         $role = Auth::user()->role ?? null;

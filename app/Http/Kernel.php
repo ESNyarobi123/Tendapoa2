@@ -25,5 +25,6 @@ class Kernel extends HttpKernel
         // 👉 ADD THIS
         'role' => \App\Http\Middleware\RoleMiddleware::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'force.json' => \App\Http\Middleware\ForceJsonResponse::class,
     ];
 }

@@ -33,6 +33,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/jobs/create', [JobController::class,'create'])->name('jobs.create');
     Route::post('/jobs', [JobController::class,'store'])->name('jobs.store');
     Route::get('/jobs/{job}/wait', [JobController::class,'wait'])->name('jobs.pay.wait');
+    Route::get('/jobs/{job}/edit', [JobController::class,'edit'])->name('jobs.edit');
+    Route::put('/jobs/{job}', [JobController::class,'update'])->name('jobs.update');
     
     // MFANYAKAZI: create + pay jobs (role check tutafanya ndani ya controller)
     Route::get('/jobs/create-mfanyakazi', [JobController::class,'createMfanyakazi'])->name('jobs.create-mfanyakazi');
