@@ -28,12 +28,31 @@
 
   /* Header */
   .page-header {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 24px;
     padding: 32px;
     box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease infinite;
+  }
+  
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
   }
 
   .header-content {
@@ -46,12 +65,14 @@
   .header-text h1 {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    position: relative;
+    z-index: 1;
   }
 
   .header-text p {
@@ -68,12 +89,12 @@
 
   /* Filters */
   .filters-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .filters-grid {
@@ -92,7 +113,7 @@
   .filter-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--dark);
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -102,8 +123,14 @@
     border: 2px solid var(--border);
     border-radius: 12px;
     font-size: 0.875rem;
-    background: white;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
     transition: all 0.3s ease;
+  }
+  
+  .filter-select option {
+    background: #1a1a3e;
+    color: white;
   }
 
   .filter-select:focus {
@@ -114,12 +141,12 @@
 
   /* Withdrawals List */
   .withdrawals-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .withdrawals-list {
@@ -128,17 +155,47 @@
   }
 
   .withdrawal-card {
-    background: white;
+    background: rgba(255,255,255,0.03);
     border-radius: 16px;
     padding: 24px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .withdrawal-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #6366f1, #8b5cf6);
+    transition: width 0.3s ease;
+  }
+  
+  .withdrawal-card[data-status="paid"]::before {
+    background: linear-gradient(180deg, #10b981, #06b6d4);
+  }
+  
+  .withdrawal-card[data-status="rejected"]::before {
+    background: linear-gradient(180deg, #f43f5e, #ec4899);
+  }
+  
+  .withdrawal-card[data-status="processing"]::before {
+    background: linear-gradient(180deg, #f59e0b, #f97316);
   }
 
   .withdrawal-card:hover {
-    transform: translateY(-2px);
+    background: rgba(255,255,255,0.08);
+    transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
+  }
+  
+  .withdrawal-card:hover::before {
+    width: 6px;
   }
 
   .withdrawal-header {
@@ -151,7 +208,7 @@
   .withdrawal-info h3 {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
   }
 
@@ -167,7 +224,10 @@
   .withdrawal-amount {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--success);
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     text-align: right;
   }
 
@@ -183,30 +243,41 @@
   }
 
   .withdrawal-status.pending {
-    background: #fef3c7;
-    color: #92400e;
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
   }
 
   .withdrawal-status.processing {
-    background: #dbeafe;
-    color: #1e40af;
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    animation: pulse 2s infinite;
   }
 
   .withdrawal-status.paid {
-    background: #d1fae5;
-    color: #065f46;
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
   }
 
   .withdrawal-status.rejected {
-    background: #fecaca;
-    color: #dc2626;
+    background: rgba(244, 63, 94, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(244, 63, 94, 0.4);
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
   }
 
   .withdrawal-details {
-    background: #f8fafc;
+    background: rgba(255,255,255,0.03);
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 16px;
+    border: 1px solid var(--border);
   }
 
   .detail-row {
@@ -214,7 +285,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
   }
 
   .detail-row:last-child {
@@ -230,7 +301,7 @@
   .detail-value {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--dark);
+    color: var(--text-primary);
   }
 
   .withdrawal-actions {
@@ -319,7 +390,7 @@
   .empty-state {
     text-align: center;
     padding: 80px 20px;
-    background: #f8fafc;
+    background: rgba(255,255,255,0.02);
     border-radius: 16px;
     border: 2px dashed var(--border);
   }
@@ -333,7 +404,7 @@
   .empty-state h3 {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
   }
 
@@ -359,13 +430,32 @@
   }
 
   .stat-card {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 16px;
     padding: 20px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
     text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+  }
+  
+  .stat-card:hover {
+    background: var(--card-bg-hover);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
   }
 
   .stat-icon {
@@ -376,8 +466,12 @@
   .stat-value {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--dark);
+    color: var(--text-primary);
     margin-bottom: 4px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .stat-label {

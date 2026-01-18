@@ -10,14 +10,65 @@
     font-family: 'Inter', sans-serif;
   }
   
+  .page-container {
+    --primary: #6366f1;
+    --secondary: #06b6d4;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #f43f5e;
+    --purple: #8b5cf6;
+    --pink: #ec4899;
+    --card-bg: rgba(255,255,255,0.05);
+    --card-bg-hover: rgba(255,255,255,0.08);
+    --text-primary: #ffffff;
+    --text-muted: #94a3b8;
+    --border: rgba(255,255,255,0.1);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    max-width: 1400px;
+    margin: 0 auto;
+    display: grid;
+    gap: 24px;
+  }
+  
   .glass-morphism {
-    background: rgba(255, 255, 255, 0.25);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    transition: all 0.3s ease;
+  }
+  
+  .glass-morphism:hover {
+    background: var(--card-bg-hover);
+    box-shadow: var(--shadow-lg);
   }
   
   .gradient-bg {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #2d1b69 100%);
+  }
+  
+  .page-header {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #06b6d4);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease infinite;
+  }
+  
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
   }
   
   .activity-card {
@@ -114,15 +165,28 @@
   }
   
   .stats-card {
-    background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
   }
   
   .stats-card:hover {
+    background: var(--card-bg-hover);
     transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    box-shadow: var(--shadow-lg);
   }
   
   .timeline-line {
@@ -165,35 +229,31 @@
   }
 </style>
 
-<div class="min-h-screen gradient-bg">
-  <!-- Animated Background Elements -->
-  <div class="absolute inset-0 overflow-hidden">
-    <div class="absolute -top-40 -right-40 w-80 h-80 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
-    <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style="animation-delay: 2s;"></div>
-    <div class="absolute top-40 left-1/2 w-80 h-80 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style="animation-delay: 4s;"></div>
-  </div>
-
-  <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="page-container">
     <!-- Header Section -->
-    <div class="glass-morphism rounded-3xl p-8 mb-8 fade-in">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-        <div class="mb-6 lg:mb-0">
-          <h1 class="text-4xl font-bold text-white mb-3 slide-in">
+    <div class="glass-morphism page-header" style="padding: 32px; margin-bottom: 24px; position: relative; overflow: hidden;">
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div style="display: flex; flex-direction: column; gap: 16px; flex: 1;">
+          <h1 class="slide-in" style="font-size: 2.5rem; font-weight: 800; margin-bottom: 0.5rem; color: var(--text-primary); background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; position: relative; z-index: 1;">
             📊 System Activity Monitor
           </h1>
-          <p class="text-white/80 text-lg">Real-time monitoring of all platform activities and user interactions</p>
-          <div class="flex items-center mt-4">
-            <div class="w-3 h-3 bg-green-400 rounded-full mr-2 pulse-animation"></div>
-            <span class="text-white/90 font-medium">Live monitoring active</span>
+          <p style="color: var(--text-muted); font-size: 1.125rem; position: relative; z-index: 1;">Real-time monitoring of all platform activities and user interactions</p>
+          <div style="display: flex; align-items: center; margin-top: 16px; position: relative; z-index: 1;">
+            <div class="pulse-animation" style="width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; background: var(--success);"></div>
+            <span style="color: var(--text-primary); font-weight: 600;">Live monitoring active</span>
           </div>
         </div>
-        <div class="flex flex-wrap gap-4">
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; position: relative; z-index: 1;">
           <a href="{{ route('admin.dashboard') }}" 
-             class="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 backdrop-blur-sm border border-white/30">
+             style="background: rgba(255,255,255,0.1); color: var(--text-primary); padding: 12px 24px; border-radius: 12px; font-weight: 600; text-decoration: none; transition: all 0.3s; border: 1px solid var(--border); display: inline-flex; align-items: center; gap: 8px;"
+             onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.transform='translateY(-2px)'"
+             onmouseout="this.style.background='rgba(255,255,255,0.1)'; this.style.transform='translateY(0)'">
             ← Dashboard
           </a>
           <button onclick="refreshData()" 
-                  class="bg-blue-500/80 hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
+                  style="background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; padding: 12px 24px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);"
+                  onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(99, 102, 241, 0.6)'"
+                  onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 14px rgba(99, 102, 241, 0.4)'">
             🔄 Refresh
           </button>
         </div>
@@ -201,102 +261,105 @@
     </div>
 
     <!-- Stats Overview -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-      <div class="stats-card rounded-2xl p-6 text-white fade-in" style="animation-delay: 0.1s;">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-white/80 text-sm font-medium">Total Activities</p>
-            <p class="text-3xl font-bold">{{ $activities->count() }}</p>
-            <p class="text-white/60 text-xs mt-1">All time</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-bottom: 24px;">
+      <div class="stats-card" style="border-radius: 20px; padding: 24px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); box-shadow: var(--shadow); transition: all 0.3s; position: relative; overflow: hidden;" onmouseover="this.style.background='var(--card-bg-hover)'; this.style.transform='translateY(-4px)'; this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.background='var(--card-bg)'; this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow)'">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #6366f1, #8b5cf6);"></div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+          <div style="flex: 1;">
+            <p style="color: var(--text-muted); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Total Activities</p>
+            <p style="color: var(--text-primary); font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">{{ $activities->count() }}</p>
+            <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0.25rem 0 0 0;">All time</p>
           </div>
-          <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="stats-card rounded-2xl p-6 text-white fade-in" style="animation-delay: 0.2s;">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-white/80 text-sm font-medium">Jobs Created</p>
-            <p class="text-3xl font-bold">{{ $activities->where('type', 'job_created')->count() }}</p>
-            <p class="text-white/60 text-xs mt-1">This session</p>
-          </div>
-          <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
-              <path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
-            </svg>
+          <div style="width: 48px; height: 48px; background: rgba(99, 102, 241, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">
+            ✅
           </div>
         </div>
       </div>
 
-      <div class="stats-card rounded-2xl p-6 text-white fade-in" style="animation-delay: 0.3s;">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-white/80 text-sm font-medium">Messages Sent</p>
-            <p class="text-3xl font-bold">{{ $activities->where('type', 'message_sent')->count() }}</p>
-            <p class="text-white/60 text-xs mt-1">Private chats</p>
+      <div class="stats-card" style="border-radius: 20px; padding: 24px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); box-shadow: var(--shadow); transition: all 0.3s; position: relative; overflow: hidden;" onmouseover="this.style.background='var(--card-bg-hover)'; this.style.transform='translateY(-4px)'; this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.background='var(--card-bg)'; this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow)'">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #10b981, #06b6d4);"></div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+          <div style="flex: 1;">
+            <p style="color: var(--text-muted); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Jobs Created</p>
+            <p style="color: var(--text-primary); font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #10b981, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">{{ $activities->where('type', 'job_created')->count() }}</p>
+            <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0.25rem 0 0 0;">This session</p>
           </div>
-          <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
-              <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
-            </svg>
+          <div style="width: 48px; height: 48px; background: rgba(16, 185, 129, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">
+            💼
           </div>
         </div>
       </div>
 
-      <div class="stats-card rounded-2xl p-6 text-white fade-in" style="animation-delay: 0.4s;">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-white/80 text-sm font-medium">Payments Made</p>
-            <p class="text-3xl font-bold">{{ $activities->where('type', 'payment_made')->count() }}</p>
-            <p class="text-white/60 text-xs mt-1">Transactions</p>
+      <div class="stats-card" style="border-radius: 20px; padding: 24px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); box-shadow: var(--shadow); transition: all 0.3s; position: relative; overflow: hidden;" onmouseover="this.style.background='var(--card-bg-hover)'; this.style.transform='translateY(-4px)'; this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.background='var(--card-bg)'; this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow)'">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #6366f1, #8b5cf6);"></div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+          <div style="flex: 1;">
+            <p style="color: var(--text-muted); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Messages Sent</p>
+            <p style="color: var(--text-primary); font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #6366f1, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">{{ $activities->where('type', 'message_sent')->count() }}</p>
+            <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0.25rem 0 0 0;">Private chats</p>
           </div>
-          <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"></path>
-              <path d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"></path>
-            </svg>
+          <div style="width: 48px; height: 48px; background: rgba(99, 102, 241, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">
+            💬
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-card" style="border-radius: 20px; padding: 24px; background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border); box-shadow: var(--shadow); transition: all 0.3s; position: relative; overflow: hidden;" onmouseover="this.style.background='var(--card-bg-hover)'; this.style.transform='translateY(-4px)'; this.style.boxShadow='var(--shadow-lg)'" onmouseout="this.style.background='var(--card-bg)'; this.style.transform='translateY(0)'; this.style.boxShadow='var(--shadow)'">
+        <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #f59e0b, #f97316);"></div>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px;">
+          <div style="flex: 1;">
+            <p style="color: var(--text-muted); font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">Payments Made</p>
+            <p style="color: var(--text-primary); font-size: 2rem; font-weight: 800; background: linear-gradient(135deg, #f59e0b, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin: 0.5rem 0;">{{ $activities->where('type', 'payment_made')->count() }}</p>
+            <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0.25rem 0 0 0;">Transactions</p>
+          </div>
+          <div style="width: 48px; height: 48px; background: rgba(245, 158, 11, 0.2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">
+            💰
           </div>
         </div>
       </div>
     </div>
 
     <!-- Search and Filter Section -->
-    <div class="glass-morphism rounded-2xl p-6 mb-8 fade-in">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div class="flex-1">
-          <div class="relative">
+    <div class="glass-morphism fade-in" style="padding: 24px; margin-bottom: 24px; border-radius: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="position: relative;">
             <input type="text" 
                    id="searchInput"
                    placeholder="Search activities, users, or descriptions..." 
-                   class="search-input w-full px-4 py-3 pl-12 rounded-xl border-0 text-gray-700 placeholder-gray-500 focus:outline-none focus:ring-0">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                   style="width: 100%; padding: 12px 16px 12px 48px; border-radius: 12px; border: 2px solid var(--border); background: rgba(255,255,255,0.05); color: var(--text-primary); font-size: 0.875rem; transition: all 0.3s; font-family: inherit;"
+                   onfocus="this.style.borderColor='#6366f1'; this.style.background='rgba(255,255,255,0.08)'; this.style.boxShadow='0 0 0 3px rgba(99, 102, 241, 0.2)'"
+                   onblur="this.style.borderColor='var(--border)'; this.style.background='rgba(255,255,255,0.05)'; this.style.boxShadow='none'">
+            <div style="position: absolute; top: 50%; left: 16px; transform: translateY(-50%); display: flex; align-items: center; pointer-events: none;">
+              <svg style="width: 20px; height: 20px; color: var(--text-muted);" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
               </svg>
             </div>
           </div>
         </div>
-        <div class="flex flex-wrap gap-3">
+        <div style="display: flex; flex-wrap: wrap; gap: 12px;">
           <button onclick="filterByType('all')" 
-                  class="filter-btn bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300">
+                  style="background: rgba(255,255,255,0.1); color: var(--text-primary); padding: 8px 16px; border-radius: 8px; font-weight: 600; border: 1px solid var(--border); cursor: pointer; transition: all 0.3s;"
+                  onmouseover="this.style.background='rgba(255,255,255,0.15)'"
+                  onmouseout="this.style.background='rgba(255,255,255,0.1)'">
             All
           </button>
           <button onclick="filterByType('job_created')" 
-                  class="filter-btn bg-green-500/80 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300">
+                  style="background: rgba(16, 185, 129, 0.2); color: #34d399; padding: 8px 16px; border-radius: 8px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.4); cursor: pointer; transition: all 0.3s;"
+                  onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'"
+                  onmouseout="this.style.background='rgba(16, 185, 129, 0.2)'">
             Jobs
           </button>
           <button onclick="filterByType('message_sent')" 
-                  class="filter-btn bg-blue-500/80 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300">
+                  style="background: rgba(99, 102, 241, 0.2); color: #818cf8; padding: 8px 16px; border-radius: 8px; font-weight: 600; border: 1px solid rgba(99, 102, 241, 0.4); cursor: pointer; transition: all 0.3s;"
+                  onmouseover="this.style.background='rgba(99, 102, 241, 0.3)'"
+                  onmouseout="this.style.background='rgba(99, 102, 241, 0.2)'">
             Messages
           </button>
           <button onclick="filterByType('payment_made')" 
-                  class="filter-btn bg-orange-500/80 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-300">
+                  style="background: rgba(245, 158, 11, 0.2); color: #fbbf24; padding: 8px 16px; border-radius: 8px; font-weight: 600; border: 1px solid rgba(245, 158, 11, 0.4); cursor: pointer; transition: all 0.3s;"
+                  onmouseover="this.style.background='rgba(245, 158, 11, 0.3)'"
+                  onmouseout="this.style.background='rgba(245, 158, 11, 0.2)'">
             Payments
           </button>
         </div>
@@ -304,23 +367,25 @@
     </div>
 
     <!-- Activity Timeline -->
-    <div class="glass-morphism rounded-2xl overflow-hidden fade-in">
-      <div class="px-8 py-6 border-b border-white/20">
-        <h2 class="text-2xl font-bold text-white">Activity Timeline</h2>
-        <p class="text-white/80">Real-time feed of all platform activities</p>
+    <div class="glass-morphism fade-in" style="border-radius: 20px; overflow: hidden;">
+      <div style="padding: 24px; border-bottom: 1px solid var(--border);">
+        <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--text-primary); margin-bottom: 0.5rem;">Activity Timeline</h2>
+        <p style="color: var(--text-muted);">Real-time feed of all platform activities</p>
       </div>
 
-      <div class="relative">
+      <div style="position: relative;">
         <div class="timeline-line"></div>
-        <div class="p-6 space-y-6" id="activityContainer">
+        <div style="padding: 24px; display: flex; flex-direction: column; gap: 24px;" id="activityContainer">
           @forelse($activities as $index => $activity)
           <div class="activity-item activity-card" 
                data-type="{{ $activity['type'] }}" 
                data-user="{{ strtolower($activity['user']->name ?? '') }}"
                data-description="{{ strtolower($activity['description'] ?? '') }}"
                style="animation-delay: {{ $index * 0.1 }}s;">
-            <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-              <div class="flex items-start space-x-4">
+            <div style="background: rgba(255,255,255,0.03); backdrop-filter: blur(20px); border-radius: 16px; padding: 24px; border: 1px solid var(--border); transition: all 0.3s;"
+                 onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.transform='translateX(4px)'"
+                 onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.transform='translateX(0)'">
+              <div style="display: flex; align-items: flex-start; gap: 16px;">
                 <!-- Activity Icon -->
                 <div class="flex-shrink-0">
                   @if($activity['type'] == 'job_created')
@@ -357,24 +422,24 @@
                 <div class="flex-1 min-w-0">
                   <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center space-x-3">
-                      <h3 class="text-lg font-semibold text-white">
+                      <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--text-primary);">
                         {{ $activity['user']->name ?? 'Unknown User' }}
                       </h3>
-                      <span class="type-badge inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/20 text-white/90">
+                      <span style="display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.4);">
                         {{ ucfirst($activity['user']->role ?? 'user') }}
                       </span>
                     </div>
                     <div class="text-right">
-                      <p class="text-sm text-white/80 font-medium">
+                      <p style="font-size: 0.875rem; color: var(--text-muted); font-weight: 600;">
                         {{ $activity['timestamp']->diffForHumans() }}
                       </p>
-                      <p class="text-xs text-white/60">
+                      <p style="font-size: 0.75rem; color: var(--text-muted);">
                         {{ $activity['timestamp']->format('M j, Y g:i A') }}
                       </p>
                     </div>
                   </div>
                   
-                  <p class="text-white/90 mb-4">{{ $activity['description'] }}</p>
+                  <p style="color: var(--text-primary); margin-bottom: 1rem;">{{ $activity['description'] }}</p>
 
                   <!-- Additional Details -->
                   @if(isset($activity['data']))

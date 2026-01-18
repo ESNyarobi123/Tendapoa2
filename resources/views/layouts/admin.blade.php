@@ -187,6 +187,8 @@
             overflow-x: hidden;
             flex: 1;
             height: calc(100vh - 240px);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
         }
 
         .sidebar-menu-item {
@@ -228,10 +230,17 @@
         }
 
         .sidebar-menu-icon {
-            font-size: 20px;
-            min-width: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            min-width: 28px;
+            width: 28px;
+            height: 28px;
             text-align: center;
             flex-shrink: 0;
+            opacity: 1 !important;
+            line-height: 1;
         }
 
         .sidebar-menu-text {
@@ -408,20 +417,37 @@
 
         /* Scrollbar Styling */
         .sidebar-menu::-webkit-scrollbar {
-            width: 6px;
+            width: 8px;
         }
 
         .sidebar-menu::-webkit-scrollbar-track {
-            background: transparent;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+            margin: 8px 0;
         }
 
         .sidebar-menu::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .sidebar-menu::-webkit-scrollbar-thumb:hover {
-            background: rgba(255,255,255,0.3);
+            background: rgba(255, 255, 255, 0.5);
+        }
+        
+        /* Ensure icons are always visible */
+        .sidebar-menu-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            min-width: 28px;
+            width: 28px;
+            height: 28px;
+            text-align: center;
+            flex-shrink: 0;
+            opacity: 1 !important;
         }
     </style>
 </head>

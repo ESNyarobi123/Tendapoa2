@@ -28,12 +28,31 @@
 
   /* Header */
   .page-header {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 24px;
     padding: 32px;
     box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #06b6d4);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease infinite;
+  }
+  
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
   }
 
   .header-content {
@@ -46,12 +65,14 @@
   .header-text h1 {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    position: relative;
+    z-index: 1;
   }
 
   .header-text p {
@@ -68,12 +89,12 @@
 
   /* Date Range Picker */
   .date-range-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .date-range-grid {
@@ -92,7 +113,7 @@
   .date-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--dark);
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -102,7 +123,8 @@
     border: 2px solid var(--border);
     border-radius: 12px;
     font-size: 0.875rem;
-    background: white;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
     transition: all 0.3s ease;
   }
 
@@ -120,16 +142,29 @@
   }
 
   .metric-card {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
   }
 
   .metric-card:hover {
+    background: var(--card-bg-hover);
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
   }
@@ -165,8 +200,12 @@
   .metric-value {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 8px 0;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .metric-change {
@@ -187,12 +226,12 @@
 
   /* Charts Section */
   .charts-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .charts-grid {
@@ -202,11 +241,15 @@
   }
 
   .chart-container {
-    background: white;
+    background: rgba(255,255,255,0.03);
     border-radius: 16px;
     padding: 24px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
+  }
+  
+  .chart-container:hover {
+    background: rgba(255,255,255,0.06);
   }
 
   .chart-header {
@@ -219,15 +262,21 @@
   .chart-title {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 8px;
   }
+  
+  .chart-canvas-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
 
   .chart-placeholder {
     height: 300px;
-    background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+    background: rgba(255,255,255,0.02);
     border-radius: 12px;
     display: flex;
     align-items: center;
@@ -240,12 +289,12 @@
 
   /* Top Performers */
   .top-performers {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .performers-list {
@@ -254,12 +303,16 @@
   }
 
   .performer-item {
-    background: white;
+    background: rgba(255,255,255,0.03);
     border-radius: 12px;
     padding: 16px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
     transition: all 0.3s ease;
+  }
+  
+  .performer-item:hover {
+    background: rgba(255,255,255,0.08);
   }
 
   .performer-item:hover {
@@ -296,7 +349,7 @@
   .performer-details h4 {
     font-size: 0.875rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0;
   }
 
@@ -526,8 +579,8 @@
               <option>Last 3 months</option>
             </select>
           </div>
-          <div class="chart-placeholder">
-            📈 Revenue Chart (Chart.js integration needed)
+          <div class="chart-canvas-container">
+            <canvas id="revenueChart"></canvas>
           </div>
         </div>
 
@@ -539,8 +592,8 @@
               Job Categories
             </div>
           </div>
-          <div class="chart-placeholder">
-            🥧 Category Distribution (Chart.js integration needed)
+          <div class="chart-canvas-container">
+            <canvas id="categoryChart"></canvas>
           </div>
         </div>
       </div>
@@ -591,8 +644,8 @@
               User Growth
             </div>
           </div>
-          <div class="chart-placeholder">
-            📊 User Growth Chart (Chart.js integration needed)
+          <div class="chart-canvas-container">
+            <canvas id="userGrowthChart"></canvas>
           </div>
         </div>
 
@@ -604,8 +657,8 @@
               Job Status Distribution
             </div>
           </div>
-          <div class="chart-placeholder">
-            🥧 Job Status Pie Chart (Chart.js integration needed)
+          <div class="chart-canvas-container">
+            <canvas id="jobStatusChart"></canvas>
           </div>
         </div>
       </div>
@@ -695,8 +748,228 @@
     }, 3000);
   }
 
-  // Add some interactive animations
+  // Chart.js Configuration for Dark Theme
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
+  Chart.defaults.backgroundColor = 'rgba(99, 102, 241, 0.1)';
+
+  // Initialize Charts
   document.addEventListener('DOMContentLoaded', function() {
+    @php
+      // Generate revenue data for last 7 days
+      $revenueData = [];
+      $revenueLabels = [];
+      for ($i = 6; $i >= 0; $i--) {
+        $date = now()->subDays($i);
+        $revenueLabels[] = $date->format('M d');
+        $dayRevenue = \App\Models\Job::where('status', 'completed')
+          ->whereDate('updated_at', $date->format('Y-m-d'))
+          ->sum('price');
+        $revenueData[] = (int)$dayRevenue;
+      }
+      
+      // Job status distribution
+      $jobStatuses = \App\Models\Job::selectRaw('status, count(*) as count')
+        ->groupBy('status')
+        ->pluck('count', 'status')
+        ->toArray();
+      
+      // User growth data
+      $userGrowthData = [];
+      $userGrowthLabels = [];
+      for ($i = 6; $i >= 0; $i--) {
+        $date = now()->subDays($i);
+        $userGrowthLabels[] = $date->format('M d');
+        $dayUsers = \App\Models\User::whereDate('created_at', $date->format('Y-m-d'))->count();
+        $userGrowthData[] = $dayUsers;
+      }
+    @endphp
+
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart');
+    if (revenueCtx) {
+      new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+          labels: @json($revenueLabels),
+          datasets: [{
+            label: 'Revenue (TZS)',
+            data: @json($revenueData),
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#6366f1',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8' }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: '#ffffff',
+              bodyColor: '#94a3b8',
+              borderColor: 'rgba(255,255,255,0.1)',
+              borderWidth: 1
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            x: {
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          }
+        }
+      });
+    }
+
+    // Category Distribution Chart (Doughnut)
+    const categoryCtx = document.getElementById('categoryChart');
+    if (categoryCtx) {
+      new Chart(categoryCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Category 1', 'Category 2', 'Category 3', 'Category 4'],
+          datasets: [{
+            data: [30, 25, 20, 25],
+            backgroundColor: [
+              'rgba(99, 102, 241, 0.8)',
+              'rgba(139, 92, 246, 0.8)',
+              'rgba(236, 72, 153, 0.8)',
+              'rgba(6, 182, 212, 0.8)'
+            ],
+            borderColor: [
+              '#6366f1',
+              '#8b5cf6',
+              '#ec4899',
+              '#06b6d4'
+            ],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#94a3b8', padding: 15 }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: '#ffffff',
+              bodyColor: '#94a3b8'
+            }
+          }
+        }
+      });
+    }
+
+    // User Growth Chart
+    const userGrowthCtx = document.getElementById('userGrowthChart');
+    if (userGrowthCtx) {
+      new Chart(userGrowthCtx, {
+        type: 'bar',
+        data: {
+          labels: @json($userGrowthLabels),
+          datasets: [{
+            label: 'New Users',
+            data: @json($userGrowthData),
+            backgroundColor: 'rgba(139, 92, 246, 0.8)',
+            borderColor: '#8b5cf6',
+            borderWidth: 2,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#94a3b8' }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: '#ffffff',
+              bodyColor: '#94a3b8'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            },
+            x: {
+              ticks: { color: '#94a3b8' },
+              grid: { color: 'rgba(255,255,255,0.05)' }
+            }
+          }
+        }
+      });
+    }
+
+    // Job Status Distribution Chart
+    const jobStatusCtx = document.getElementById('jobStatusChart');
+    if (jobStatusCtx) {
+      new Chart(jobStatusCtx, {
+        type: 'pie',
+        data: {
+          labels: ['Completed', 'In Progress', 'Pending', 'Cancelled'],
+          datasets: [{
+            data: [
+              {{ $jobStatuses['completed'] ?? 0 }},
+              {{ $jobStatuses['in_progress'] ?? 0 }},
+              {{ $jobStatuses['pending'] ?? 0 }},
+              {{ $jobStatuses['cancelled'] ?? 0 }}
+            ],
+            backgroundColor: [
+              'rgba(16, 185, 129, 0.8)',
+              'rgba(99, 102, 241, 0.8)',
+              'rgba(245, 158, 11, 0.8)',
+              'rgba(244, 63, 94, 0.8)'
+            ],
+            borderColor: [
+              '#10b981',
+              '#6366f1',
+              '#f59e0b',
+              '#f43f5e'
+            ],
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#94a3b8', padding: 15 }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: '#ffffff',
+              bodyColor: '#94a3b8'
+            }
+          }
+        }
+      });
+    }
+
+    // Add some interactive animations
     // Animate metric cards on scroll
     const observerOptions = {
       threshold: 0.1,
