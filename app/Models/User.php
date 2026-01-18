@@ -34,4 +34,18 @@ class User extends Authenticatable
     {
         return $this->wallet()->firstOrCreate([], ['balance'=>0]);
     }
+
+    // Location helpers
+    public function hasLocation(): bool
+    {
+        return !is_null($this->lat) && !is_null($this->lng);
+    }
+
+    public function getLocationString(): ?string
+    {
+        if (!$this->hasLocation()) {
+            return null;
+        }
+        return "{$this->lat}, {$this->lng}";
+    }
 }

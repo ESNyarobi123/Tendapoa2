@@ -38,6 +38,10 @@ class JobController extends Controller
             'phone'       => ['required','regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
         ],[
             'phone.regex' => 'Weka 06/07xxxxxxxx au 2556/2557xxxxxxxx.',
+            'lat.required' => 'Eneo la kazi ni lazima. Tafadhali weka pini eneo la kazi kwenye ramani.',
+            'lng.required' => 'Eneo la kazi ni lazima. Tafadhali weka pini eneo la kazi kwenye ramani.',
+            'lat.between' => 'Latitude si sahihi. Tafadhali weka eneo sahihi kwenye ramani.',
+            'lng.between' => 'Longitude si sahihi. Tafadhali weka eneo sahihi kwenye ramani.',
         ]);
 
         $job = Job::create([
