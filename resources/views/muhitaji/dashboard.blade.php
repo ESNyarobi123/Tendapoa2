@@ -385,30 +385,183 @@
   /* Responsive */
   @media (max-width: 768px) {
     .muhitaji-dash {
-      padding: 16px;
+      padding: 12px;
+    }
+    
+    .dashboard-container {
+      gap: 16px;
+    }
+    
+    .hero-section {
+      padding: 24px 16px;
+      border-radius: 16px;
     }
     
     .hero-content {
       grid-template-columns: 1fr;
       text-align: center;
+      gap: 20px;
     }
     
     .hero-text h1 {
-      font-size: 2rem;
+      font-size: clamp(1.75rem, 5vw, 2rem);
+    }
+    
+    .hero-text p {
+      font-size: 1rem;
+    }
+    
+    .hero-actions {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .hero-actions .btn {
+      width: 100%;
+      justify-content: center;
     }
     
     .stats-grid {
       grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    
+    .stat-card {
+      padding: 20px 16px;
+    }
+    
+    .stat-header {
+      gap: 12px;
+    }
+    
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      font-size: 20px;
+    }
+    
+    .stat-value {
+      font-size: 2rem;
+    }
+    
+    .stat-info h3 {
+      font-size: 0.75rem;
+    }
+    
+    .progress-section {
+      padding: 20px 16px;
     }
     
     .progress-content {
       grid-template-columns: 1fr;
       text-align: center;
+      gap: 20px;
+    }
+    
+    .progress-ring {
+      margin: 0 auto;
+    }
+    
+    .progress-info h3 {
+      font-size: 1.1rem;
+    }
+    
+    .progress-info p {
+      font-size: 0.875rem;
+    }
+    
+    .progress-actions {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .progress-actions .btn {
+      width: 100%;
+      justify-content: center;
+    }
+    
+    .recent-jobs {
+      padding: 20px 16px;
+    }
+    
+    .recent-jobs-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .job-item {
+      padding: 16px;
     }
     
     .job-header {
       flex-direction: column;
       gap: 12px;
+      align-items: flex-start;
+    }
+    
+    .job-info h4 {
+      font-size: 1rem;
+    }
+    
+    .job-meta {
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+    }
+    
+    .job-price {
+      font-size: 1.1rem;
+    }
+    
+    .history-section {
+      padding: 20px 16px;
+    }
+    
+    .history-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .history-header h3 {
+      font-size: 1.1rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .muhitaji-dash {
+      padding: 8px;
+    }
+    
+    .hero-section {
+      padding: 20px 12px;
+    }
+    
+    .hero-text h1 {
+      font-size: 1.5rem;
+    }
+    
+    .hero-text p {
+      font-size: 0.9rem;
+    }
+    
+    .stat-card {
+      padding: 16px 12px;
+    }
+    
+    .stat-value {
+      font-size: 1.75rem;
+    }
+    
+    .progress-section,
+    .recent-jobs,
+    .history-section {
+      padding: 16px 12px;
+    }
+    
+    .btn {
+      padding: 10px 16px;
+      font-size: 0.8rem;
     }
   }
 

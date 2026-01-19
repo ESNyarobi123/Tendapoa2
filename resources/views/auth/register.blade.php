@@ -419,45 +419,286 @@
         @media (max-width: 768px) {
             body {
                 padding: 1rem;
+                align-items: flex-start;
+                min-height: 100vh;
+            }
+
+            .back-home {
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                background: rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(10px);
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                z-index: 100;
             }
 
             .register-container {
                 grid-template-columns: 1fr;
-                max-height: 100vh;
+                margin-top: 3rem;
+                border-radius: 16px;
+                max-width: 100%;
+                max-height: calc(100vh - 4rem);
                 overflow-y: auto;
             }
 
             .brand-panel {
-                padding: 3rem 2rem;
+                padding: 2rem 1.5rem;
+                order: 2;
             }
 
             .brand-logo {
-                font-size: 3rem;
+                font-size: 2.5rem;
             }
 
             .brand-title {
-                font-size: 2rem;
+                font-size: 1.75rem;
+            }
+
+            .brand-subtitle {
+                font-size: 1rem;
+                line-height: 1.5;
+                margin-bottom: 1.5rem;
+            }
+
+            .brand-features {
+                font-size: 0.8rem;
+            }
+
+            .brand-features li {
+                margin: 0.5rem 0;
             }
 
             .form-panel {
-                padding: 2rem;
+                padding: 2rem 1.5rem;
                 max-height: none;
+                order: 1;
+            }
+
+            .form-header {
+                margin-bottom: 1.5rem;
+            }
+
+            .form-title {
+                font-size: clamp(1.5rem, 4vw, 1.75rem);
+            }
+
+            .form-subtitle {
+                font-size: 0.8rem;
+            }
+
+            .form-card {
+                padding: 1.5rem;
+            }
+
+            .form-group {
+                margin-bottom: 1.25rem;
+            }
+
+            .form-input,
+            .form-select {
+                padding: 0.75rem 0.875rem;
+                font-size: 1rem;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .form-grid .form-group {
+                margin-bottom: 1.25rem;
+            }
+
+            .role-selection {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .role-card {
+                padding: 1.25rem;
+            }
+
+            .role-icon {
+                font-size: 2rem;
+            }
+
+            .role-name {
+                font-size: 0.95rem;
+            }
+
+            .role-desc {
+                font-size: 0.7rem;
+            }
+
+            .location-group {
+                padding: 1.25rem;
+            }
+
+            .location-group-title {
+                font-size: 0.8rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .location-inputs {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .location-inputs .form-group {
+                margin: 0;
+            }
+
+            .gps-btn {
+                padding: 0.75rem 1.25rem;
+                width: 100%;
+                font-size: 0.9rem;
+            }
+
+            .location-hint {
+                font-size: 0.7rem;
+                margin-top: 0.75rem;
+            }
+
+            .btn-submit {
+                padding: 0.875rem;
+                font-size: 0.95rem;
+            }
+
+            .form-footer {
+                padding-top: 1.25rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.75rem;
+            }
+
+            .back-home {
+                top: 0.75rem;
+                left: 0.75rem;
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+            }
+
+            .register-container {
+                margin-top: 2.5rem;
+                border-radius: 12px;
+                max-height: calc(100vh - 3.5rem);
+            }
+
+            .brand-panel {
+                padding: 1.5rem 1rem;
+            }
+
+            .brand-logo {
+                font-size: 2rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .brand-title {
+                font-size: 1.5rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .brand-subtitle {
+                font-size: 0.9rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .brand-features {
+                font-size: 0.75rem;
+            }
+
+            .brand-features li {
+                margin: 0.4rem 0;
+            }
+
+            .form-panel {
+                padding: 1.5rem 1rem;
+            }
+
+            .form-header {
+                margin-bottom: 1.25rem;
             }
 
             .form-title {
                 font-size: 1.5rem;
             }
 
-            .form-grid {
-                grid-template-columns: 1fr;
+            .form-subtitle {
+                font-size: 0.75rem;
             }
 
-            .role-selection {
-                grid-template-columns: 1fr;
+            .form-card {
+                padding: 1.25rem;
+                border-radius: 12px;
             }
 
-            .location-inputs {
-                grid-template-columns: 1fr;
+            .form-label {
+                font-size: 0.8rem;
+            }
+
+            .form-input,
+            .form-select {
+                padding: 0.7rem 0.8rem;
+                font-size: 0.95rem;
+            }
+
+            .password-toggle {
+                font-size: 1.1rem;
+                right: 0.75rem;
+            }
+
+            .role-card {
+                padding: 1rem;
+            }
+
+            .role-icon {
+                font-size: 1.75rem;
+            }
+
+            .role-name {
+                font-size: 0.9rem;
+            }
+
+            .role-desc {
+                font-size: 0.65rem;
+            }
+
+            .location-group {
+                padding: 1rem;
+            }
+
+            .location-group-title {
+                font-size: 0.75rem;
+            }
+
+            .gps-btn {
+                padding: 0.7rem 1rem;
+                font-size: 0.85rem;
+            }
+
+            .location-hint {
+                font-size: 0.65rem;
+            }
+
+            .btn-submit {
+                padding: 0.8rem;
+                font-size: 0.9rem;
+            }
+
+            .form-footer-text,
+            .login-link {
+                font-size: 0.8rem;
+            }
+
+            .alert-error {
+                padding: 0.875rem;
+                font-size: 0.8rem;
             }
         }
     </style>

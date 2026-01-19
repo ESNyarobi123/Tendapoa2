@@ -315,30 +315,174 @@
         @media (max-width: 768px) {
             body {
                 padding: 1rem;
+                align-items: flex-start;
+                min-height: 100vh;
+            }
+
+            .back-home {
+                position: fixed;
+                top: 1rem;
+                left: 1rem;
+                background: rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(10px);
+                padding: 0.5rem 1rem;
+                border-radius: 8px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                z-index: 100;
             }
 
             .login-container {
                 grid-template-columns: 1fr;
+                margin-top: 3rem;
+                border-radius: 16px;
+                max-width: 100%;
             }
 
             .brand-panel {
-                padding: 3rem 2rem;
+                padding: 2rem 1.5rem;
+                order: 2;
             }
 
             .brand-logo {
-                font-size: 3rem;
+                font-size: 2.5rem;
             }
 
             .brand-title {
-                font-size: 2rem;
+                font-size: 1.75rem;
+            }
+
+            .brand-subtitle {
+                font-size: 1rem;
+                line-height: 1.5;
             }
 
             .form-panel {
-                padding: 2rem;
+                padding: 2rem 1.5rem;
+                order: 1;
+            }
+
+            .form-title {
+                font-size: clamp(1.5rem, 4vw, 1.75rem);
+            }
+
+            .form-subtitle {
+                font-size: 0.8rem;
+            }
+
+            .form-card {
+                padding: 1.5rem;
+            }
+
+            .form-group {
+                margin-bottom: 1.25rem;
+            }
+
+            .form-input {
+                padding: 0.75rem 0.875rem;
+                font-size: 1rem;
+            }
+
+            .form-options {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+
+            .btn-submit {
+                padding: 0.875rem;
+                font-size: 0.95rem;
+            }
+
+            .form-footer {
+                margin-top: 1.5rem;
+                padding-top: 1.5rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 0.75rem;
+            }
+
+            .back-home {
+                top: 0.75rem;
+                left: 0.75rem;
+                padding: 0.5rem 0.75rem;
+                font-size: 0.8rem;
+            }
+
+            .login-container {
+                margin-top: 2.5rem;
+                border-radius: 12px;
+            }
+
+            .brand-panel {
+                padding: 1.5rem 1rem;
+            }
+
+            .brand-logo {
+                font-size: 2rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .brand-title {
+                font-size: 1.5rem;
+                margin-bottom: 0.75rem;
+            }
+
+            .brand-subtitle {
+                font-size: 0.9rem;
+            }
+
+            .form-panel {
+                padding: 1.5rem 1rem;
+            }
+
+            .form-header {
+                margin-bottom: 1.5rem;
             }
 
             .form-title {
                 font-size: 1.5rem;
+            }
+
+            .form-subtitle {
+                font-size: 0.75rem;
+            }
+
+            .form-card {
+                padding: 1.25rem;
+                border-radius: 12px;
+            }
+
+            .form-label {
+                font-size: 0.8rem;
+            }
+
+            .form-input {
+                padding: 0.7rem 0.8rem;
+                font-size: 0.95rem;
+            }
+
+            .password-toggle {
+                font-size: 1.1rem;
+                right: 0.75rem;
+            }
+
+            .checkbox-label,
+            .forgot-link,
+            .form-footer-text {
+                font-size: 0.8rem;
+            }
+
+            .btn-submit {
+                padding: 0.8rem;
+                font-size: 0.9rem;
+            }
+
+            .alert-error {
+                padding: 0.875rem;
+                font-size: 0.8rem;
             }
         }
 
