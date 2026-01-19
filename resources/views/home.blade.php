@@ -771,6 +771,123 @@
         .fade-in-up {
             animation: fadeInUp 0.8s ease-out;
         }
+
+        /* WhatsApp Floating Button */
+        .whatsapp-float {
+            position: fixed;
+            width: 60px;
+            height: 60px;
+            bottom: 25px;
+            right: 25px;
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            animation: pulse-whatsapp 2s infinite;
+            padding: 12px;
+        }
+
+        .whatsapp-float svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .whatsapp-float:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 30px rgba(37, 211, 102, 0.6);
+            background: linear-gradient(135deg, #128C7E 0%, #25D366 100%);
+        }
+
+        .whatsapp-float:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes pulse-whatsapp {
+            0% {
+                box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+            }
+            50% {
+                box-shadow: 0 4px 30px rgba(37, 211, 102, 0.7), 0 0 0 10px rgba(37, 211, 102, 0.1);
+            }
+            100% {
+                box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+            }
+        }
+
+        /* WhatsApp tooltip */
+        .whatsapp-tooltip {
+            position: absolute;
+            right: 70px;
+            bottom: 50%;
+            transform: translateY(50%);
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            font-weight: 500;
+        }
+
+        .whatsapp-tooltip::after {
+            content: '';
+            position: absolute;
+            left: 100%;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 6px solid transparent;
+            border-left-color: rgba(0, 0, 0, 0.85);
+        }
+
+        .whatsapp-float:hover .whatsapp-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Responsive WhatsApp Button */
+        @media (max-width: 768px) {
+            .whatsapp-float {
+                width: 56px;
+                height: 56px;
+                bottom: 20px;
+                right: 20px;
+                font-size: 28px;
+            }
+
+            .whatsapp-tooltip {
+                font-size: 0.75rem;
+                padding: 6px 10px;
+                right: 65px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .whatsapp-float {
+                width: 52px;
+                height: 52px;
+                bottom: 16px;
+                right: 16px;
+                font-size: 26px;
+            }
+
+            .whatsapp-tooltip {
+                font-size: 0.7rem;
+                padding: 5px 8px;
+                right: 60px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1094,5 +1211,19 @@
             statsObserver.observe(statsSection);
         }
     </script>
+
+    <!-- WhatsApp Floating Button -->
+    <a href="https://wa.me/255626957138" 
+       target="_blank" 
+       rel="noopener noreferrer" 
+       class="whatsapp-float"
+       aria-label="Chat with us on WhatsApp">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M16 0C7.164 0 0 7.164 0 16c0 2.824.744 5.476 2.044 7.772L0 32l8.52-1.984C10.716 31.256 13.276 32 16 32c8.836 0 16-7.164 16-16S24.836 0 16 0z" fill="#FFF"/>
+            <path d="M16 29.232c-2.416 0-4.688-.656-6.652-1.804l-.476-.28-4.916 1.144 1.172-4.792-.308-.496C3.836 21.608 3 18.892 3 16c0-7.18 5.82-13 13-13s13 5.82 13 13-5.82 13-13 13z" fill="#25D366"/>
+            <path d="M23.908 19.116c-.36-.18-2.136-1.052-2.468-1.176-.332-.124-.574-.18-.816.18-.242.36-.94 1.176-1.152 1.42-.212.244-.424.276-.788.092-.36-.18-1.524-.564-2.904-1.796-1.076-.96-1.804-2.144-2.016-2.508-.212-.36-.024-.556.16-.736.164-.164.36-.424.54-.636.18-.212.24-.36.36-.6.12-.24.06-.452-.03-.636-.092-.18-.816-1.968-1.116-2.696-.292-.716-.588-.62-.816-.632-.212-.012-.456-.024-.696-.024-.24 0-.628.092-.956.46-.328.36-1.252 1.22-1.252 2.976 0 1.756 1.28 3.452 1.46 3.692.18.24 2.52 3.84 6.104 5.388.848.364 1.512.584 2.028.748.856.276 1.636.236 2.252.144.688-.1 2.136-.872 2.436-1.712.3-.84.3-1.56.212-1.712-.088-.148-.332-.244-.692-.424z" fill="#FFF"/>
+        </svg>
+        <span class="whatsapp-tooltip">Chat na sisi</span>
+    </a>
 </body>
 </html>
