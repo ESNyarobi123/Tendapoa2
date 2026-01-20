@@ -732,9 +732,9 @@ class AdminController extends Controller
     public function uploadApk(Request $request)
     {
         // Increase execution time and memory for large file processing
-        set_time_limit(180); // 3 minutes
-        ini_set('max_execution_time', '180');
-        ini_set('memory_limit', '256M');
+        set_time_limit(600); // 10 minutes
+        ini_set('max_execution_time', '600');
+        ini_set('memory_limit', '512M');
         
         try {
             // Check if file is provided

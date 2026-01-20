@@ -801,11 +801,11 @@
         throw new Error('Upload was cancelled.');
       });
       
-      // Set timeout (180 seconds for large files)
-      xhr.timeout = 180000;
+      // Set timeout (600 seconds for large files)
+      xhr.timeout = 600000;
       xhr.addEventListener('timeout', function() {
         progressContainer.style.display = 'none';
-        uploadErrorText.textContent = 'Upload timeout: The server took too long to respond. This may be due to a large file size or server configuration. Please check PHP max_execution_time and try again with a smaller file or contact your server administrator.';
+        uploadErrorText.textContent = 'Upload timeout: The server took too long to respond. This may be due to a large file size or slow connection. Please check PHP max_execution_time and try again with a smaller file or contact your server administrator.';
         uploadError.style.display = 'block';
         
         // Reset button
