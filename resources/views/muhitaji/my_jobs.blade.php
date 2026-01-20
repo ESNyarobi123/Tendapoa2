@@ -19,9 +19,28 @@
   }
 
   .my-jobs-page {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
     min-height: 100vh;
-    padding: 20px;
+    display: flex;
+    position: relative;
+  }
+
+  .main-content {
+    flex: 1;
+    margin-left: 280px;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  .sidebar.collapsed ~ .main-content {
+    margin-left: 80px;
+  }
+
+  @media (max-width: 1024px) {
+    .main-content {
+      margin-left: 0;
+    }
   }
 
   .page-container {
@@ -437,7 +456,10 @@
 </style>
 
 <div class="my-jobs-page">
-  <div class="page-container">
+  @include('components.user-sidebar')
+  
+  <main class="main-content">
+    <div class="page-container">
     
     <!-- Page Header -->
     <div class="page-header">

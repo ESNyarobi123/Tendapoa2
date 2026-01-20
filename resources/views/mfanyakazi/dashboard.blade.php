@@ -3,25 +3,215 @@
 
 @section('content')
 <style>
-  /* ====== Modern Mfanyakazi Dashboard ====== */
+  /* ====== Amazing Mfanyakazi Dashboard with Sidebar ====== */
   .mfanyakazi-dash {
-    --primary: #3b82f6;
+    --primary: #2563eb;
+    --primary-dark: #1e3a8a;
+    --primary-light: #3b82f6;
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
-    --dark: #1f2937;
+    --dark: #1e293b;
     --light: #f8fafc;
     --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
+    --text: #1e293b;
+    --text-muted: #64748b;
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
   .mfanyakazi-dash {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #f8fafc;
     min-height: 100vh;
-    padding: 20px;
+    display: flex;
+    position: relative;
+  }
+
+  /* Sidebar Styles */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 280px;
+    background: linear-gradient(180deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sidebar.collapsed {
+    width: 80px;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 80px;
+  }
+
+  .sidebar-logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 0.3s;
+  }
+
+  .sidebar.collapsed .sidebar-logo {
+    opacity: 0;
+    width: 0;
+  }
+
+  .sidebar-toggle {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+
+  .sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+  }
+
+  .sidebar-menu {
+    padding: 16px 0;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    transition: all 0.3s;
+    position: relative;
+    margin: 4px 12px;
+    border-radius: 12px;
+  }
+
+  .menu-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: translateX(4px);
+  }
+
+  .menu-item.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .menu-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60%;
+    background: white;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .menu-icon {
+    font-size: 1.5rem;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .menu-text {
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    transition: opacity 0.3s;
+  }
+
+  .sidebar.collapsed .menu-text {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+  }
+
+  .menu-badge {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .sidebar.collapsed .menu-badge {
+    display: none;
+  }
+
+  /* Mobile Menu Button */
+  .mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    background: #2563eb;
+    color: white;
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .mobile-overlay.active {
+    opacity: 1;
+  }
+
+  /* Main Content Area */
+  .main-content {
+    flex: 1;
+    margin-left: 280px;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  .sidebar.collapsed ~ .main-content {
+    margin-left: 80px;
   }
 
   .dashboard-container {
@@ -31,14 +221,42 @@
     gap: 24px;
   }
 
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .sidebar {
+      transform: translateX(-100%);
+    }
+
+    .sidebar.mobile-open {
+      transform: translateX(0);
+    }
+
+    .main-content {
+      margin-left: 0;
+    }
+
+    .mobile-menu-btn {
+      display: flex;
+    }
+
+    .mobile-overlay {
+      display: block;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .main-content {
+      padding: 16px;
+    }
+  }
+
   /* Hero Section */
   .hero-section {
-    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.9) 100%);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
+    background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);
+    border-radius: 16px;
     padding: 32px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 8px 24px rgba(30, 58, 138, 0.1);
+    border: 1px solid rgba(37, 99, 235, 0.1);
   }
 
   .hero-content {
@@ -51,18 +269,16 @@
   .hero-text h1 {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--dark);
-    margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #1e293b;
+    margin: 0 0 12px 0;
   }
 
   .hero-text p {
-    color: var(--text-muted);
+    color: #1e293b;
     font-size: 1.1rem;
     margin: 0;
+    line-height: 1.7;
+    font-weight: 500;
   }
 
   .hero-actions {
@@ -74,66 +290,100 @@
   /* Stats Grid */
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
   }
 
   .stat-card {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #2563eb;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
   }
 
   .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+    border-color: #2563eb;
+  }
+
+  .stat-card:hover::before {
+    transform: scaleX(1);
   }
 
   .stat-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 12px;
   }
 
   .stat-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    background: linear-gradient(135deg, var(--primary), var(--success));
+    font-size: 20px;
+    background: #2563eb;
     color: white;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .stat-card:hover .stat-icon {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  }
+
+  .stat-info {
+    flex: 1;
+    min-width: 0;
   }
 
   .stat-info h3 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin: 0;
+    margin: 0 0 4px 0;
+    line-height: 1.2;
   }
 
   .stat-value {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--dark);
-    margin: 8px 0;
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    font-weight: 900;
+    color: #2563eb;
+    margin: 6px 0;
+    line-height: 1.1;
   }
 
   .stat-change {
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 600;
+    margin-top: 4px;
   }
 
   .stat-change.positive {
@@ -181,7 +431,7 @@
   .map-placeholder {
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #2563eb;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -192,12 +442,11 @@
 
   /* Jobs Section */
   .jobs-section {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
+    background: white;
+    border-radius: 16px;
     padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 4px 16px rgba(30, 58, 138, 0.08);
+    border: 1px solid rgba(37, 99, 235, 0.1);
   }
 
   .jobs-header {
@@ -217,8 +466,8 @@
   }
 
   .job-card {
-    background: white;
-    border-radius: 16px;
+    background: #f9fafb;
+    border-radius: 12px;
     padding: 20px;
     margin-bottom: 16px;
     box-shadow: var(--shadow);
@@ -239,9 +488,9 @@
   }
 
   .job-info h4 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #1e293b;
     margin: 0 0 4px 0;
   }
 
@@ -289,7 +538,7 @@
 
   .job-price {
     font-size: 1.25rem;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--success);
   }
 
@@ -309,14 +558,15 @@
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
+    background: #2563eb;
     color: white;
-    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
   }
 
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    background: #1e40af;
   }
 
   .btn-success {
@@ -583,12 +833,22 @@
       font-size: 0.9rem;
     }
     
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
     .stat-card {
-      padding: 16px 12px;
+      padding: 14px;
+    }
+    
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
     }
     
     .stat-value {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
     }
     
     .map-section,
@@ -612,12 +872,12 @@
   }
 
   .history-section {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
     border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    padding: 28px;
+    box-shadow: 0 8px 25px rgba(79, 172, 254, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
   }
 
   .history-header {
@@ -630,9 +890,9 @@
   }
 
   .history-header h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--dark);
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: #1e293b;
     margin: 0;
   }
 
@@ -674,7 +934,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: white;
+    background: #f3f4f6;
     border-radius: 50%;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
@@ -684,10 +944,13 @@
   }
 
   .history-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 4px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 50%, #43e97b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
   }
 
   .history-description {
@@ -731,17 +994,18 @@
   }
 
   .history-amount {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1.25rem;
+    font-weight: 800;
     text-align: right;
+    color: #1e293b;
   }
 
   .history-amount.positive {
-    color: var(--success);
+    color: #2563eb;
   }
 
   .history-amount.negative {
-    color: var(--danger);
+    color: #dc2626;
   }
 
   .empty-history {
@@ -852,7 +1116,11 @@
 @endphp
 
 <div class="mfanyakazi-dash">
-  <div class="dashboard-container">
+  @include('components.user-sidebar')
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="dashboard-container">
     
     <!-- Hero Section -->
     <div class="hero-section">
@@ -1193,8 +1461,8 @@
         <div class="empty-subtitle">Kubali na kumaliza kazi za kwanza</div>
       </div>
     @endif
-  </div>
-
+    </div>
+  </main>
 </div>
 
 <!-- Include Leaflet CSS and JS for OpenStreetMap -->
@@ -1511,7 +1779,7 @@ function showLocationOnMap() {
   
   // Create a more realistic map representation
   mapContainer.innerHTML = `
-    <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+    <div style="width: 100%; height: 100%; background: #2563eb; 
                 display: flex; align-items: center; justify-content: center; color: white; 
                 border-radius: 16px; position: relative; overflow: hidden;">
       
@@ -1531,7 +1799,7 @@ function showLocationOnMap() {
       <!-- Location info overlay -->
       <div style="position: absolute; bottom: 16px; left: 16px; right: 16px;
                   background: rgba(0,0,0,0.7); padding: 12px; border-radius: 8px;
-                  backdrop-filter: blur(10px);">
+                  background: rgba(0,0,0,0.7);">
         <div style="font-weight: 600; margin-bottom: 4px;">📍 Eneo Lako Limepatikana</div>
         <div style="font-size: 0.75rem; opacity: 0.8;">
           Lat: ${userLocation.lat.toFixed(4)} | Lng: ${userLocation.lng.toFixed(4)}
@@ -1556,7 +1824,7 @@ function showJobLocationOnMap(jobLocation) {
   const mapContainer = document.getElementById('mapContainer');
   
   mapContainer.innerHTML = `
-    <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); 
+    <div style="width: 100%; height: 100%; background: #2563eb; 
                 display: flex; align-items: center; justify-content: center; color: white; 
                 border-radius: 16px; position: relative; overflow: hidden;">
       
@@ -1581,7 +1849,7 @@ function showJobLocationOnMap(jobLocation) {
       <!-- Location info overlay -->
       <div style="position: absolute; bottom: 16px; left: 16px; right: 16px;
                   background: rgba(0,0,0,0.7); padding: 12px; border-radius: 8px;
-                  backdrop-filter: blur(10px);">
+                  background: rgba(0,0,0,0.7);">
         <div style="font-weight: 600; margin-bottom: 4px;">📍 Eneo la Kazi</div>
         <div style="font-size: 0.75rem; opacity: 0.8;">
           ${jobLocation.address}
@@ -1757,5 +2025,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
 </script>
 @endsection

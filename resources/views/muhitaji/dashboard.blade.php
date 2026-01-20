@@ -3,25 +3,215 @@
 
 @section('content')
 <style>
-  /* ====== Modern Muhitaji Dashboard ====== */
+  /* ====== Amazing Muhitaji Dashboard with Sidebar ====== */
   .muhitaji-dash {
-    --primary: #3b82f6;
+    --primary: #2563eb;
+    --primary-dark: #1e3a8a;
+    --primary-light: #3b82f6;
     --success: #10b981;
     --warning: #f59e0b;
     --danger: #ef4444;
-    --dark: #1f2937;
+    --dark: #1e293b;
     --light: #f8fafc;
     --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
+    --text: #1e293b;
+    --text-muted: #64748b;
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
   .muhitaji-dash {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #f8fafc;
     min-height: 100vh;
-    padding: 20px;
+    display: flex;
+    position: relative;
+  }
+
+  /* Sidebar Styles */
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 280px;
+    background: #1e293b;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .sidebar.collapsed {
+    width: 80px;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 80px;
+  }
+
+  .sidebar-logo {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: opacity 0.3s;
+  }
+
+  .sidebar.collapsed .sidebar-logo {
+    opacity: 0;
+    width: 0;
+  }
+
+  .sidebar-toggle {
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+
+  .sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+  }
+
+  .sidebar-menu {
+    padding: 16px 0;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    transition: all 0.3s;
+    position: relative;
+    margin: 4px 12px;
+    border-radius: 12px;
+  }
+
+  .menu-item:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: translateX(4px);
+  }
+
+  .menu-item.active {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .menu-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60%;
+    background: white;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .menu-icon {
+    font-size: 1.5rem;
+    width: 24px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .menu-text {
+    font-weight: 600;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    transition: opacity 0.3s;
+  }
+
+  .sidebar.collapsed .menu-text {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+  }
+
+  .menu-badge {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .sidebar.collapsed .menu-badge {
+    display: none;
+  }
+
+  /* Mobile Menu Button */
+  .mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1001;
+    background: #2563eb;
+    color: white;
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+
+  .mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .mobile-overlay.active {
+    opacity: 1;
+  }
+
+  /* Main Content Area */
+  .main-content {
+    flex: 1;
+    margin-left: 280px;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 24px;
+    min-height: 100vh;
+  }
+
+  .sidebar.collapsed ~ .main-content {
+    margin-left: 80px;
   }
 
   .dashboard-container {
@@ -31,14 +221,42 @@
     gap: 24px;
   }
 
+  /* Responsive */
+  @media (max-width: 1024px) {
+    .sidebar {
+      transform: translateX(-100%);
+    }
+
+    .sidebar.mobile-open {
+      transform: translateX(0);
+    }
+
+    .main-content {
+      margin-left: 0;
+    }
+
+    .mobile-menu-btn {
+      display: flex;
+    }
+
+    .mobile-overlay {
+      display: block;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .main-content {
+      padding: 16px;
+    }
+  }
+
   /* Hero Section */
   .hero-section {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
+    background: white;
+    border-radius: 12px;
     padding: 32px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
   }
 
   .hero-content {
@@ -51,18 +269,16 @@
   .hero-text h1 {
     font-size: 2.5rem;
     font-weight: 800;
-    color: var(--dark);
-    margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #1e293b;
+    margin: 0 0 12px 0;
   }
 
   .hero-text p {
-    color: var(--text-muted);
+    color: #1e293b;
     font-size: 1.1rem;
     margin: 0;
+    line-height: 1.7;
+    font-weight: 500;
   }
 
   .hero-actions {
@@ -74,66 +290,100 @@
   /* Stats Grid */
   .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
   }
 
   .stat-card {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
     transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: #2563eb;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
   }
 
   .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12);
+    border-color: #2563eb;
+  }
+
+  .stat-card:hover::before {
+    transform: scaleX(1);
   }
 
   .stat-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 12px;
   }
 
   .stat-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    background: linear-gradient(135deg, var(--primary), var(--success));
+    font-size: 20px;
+    background: #2563eb;
     color: white;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+  }
+
+  .stat-card:hover .stat-icon {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  }
+
+  .stat-info {
+    flex: 1;
+    min-width: 0;
   }
 
   .stat-info h3 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #64748b;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    margin: 0;
+    margin: 0 0 4px 0;
+    line-height: 1.2;
   }
 
   .stat-value {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--dark);
-    margin: 8px 0;
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    font-weight: 900;
+    color: #2563eb;
+    margin: 6px 0;
+    line-height: 1.1;
   }
 
   .stat-change {
     display: flex;
     align-items: center;
     gap: 4px;
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     font-weight: 600;
+    margin-top: 4px;
   }
 
   .stat-change.positive {
@@ -146,12 +396,11 @@
 
   /* Progress Ring */
   .progress-section {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
+    background: white;
     border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    padding: 28px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
   }
 
   .progress-content {
@@ -178,22 +427,39 @@
     inset: 0;
     display: grid;
     place-items: center;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--dark);
     font-size: 1.5rem;
   }
 
+  .progress-info {
+    position: relative;
+    z-index: 1;
+  }
+
   .progress-info h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin: 0 0 8px 0;
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 12px 0;
   }
 
   .progress-info p {
-    color: var(--text-muted);
-    font-size: 0.875rem;
-    margin: 0 0 16px 0;
+    color: #475569;
+    font-size: 1rem;
+    margin: 0 0 20px 0;
+    line-height: 1.6;
+  }
+
+  .progress-info a {
+    color: #2563eb;
+    text-decoration: underline;
+    font-weight: 600;
+    transition: all 0.3s ease;
+  }
+
+  .progress-info a:hover {
+    color: #1e40af;
   }
 
   .progress-actions {
@@ -204,12 +470,11 @@
 
   /* Recent Jobs */
   .recent-jobs {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
+    background: white;
+    border-radius: 12px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .recent-jobs-header {
@@ -231,16 +496,17 @@
   .job-item {
     background: white;
     border-radius: 16px;
-    padding: 20px;
+    padding: 24px;
     margin-bottom: 16px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
     transition: all 0.3s ease;
   }
 
   .job-item:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.15);
+    border-color: #2563eb;
   }
 
   .job-header {
@@ -251,9 +517,9 @@
   }
 
   .job-info h4 {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--dark);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #1e293b;
     margin: 0 0 4px 0;
   }
 
@@ -266,11 +532,14 @@
   }
 
   .job-status {
-    padding: 4px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
 
   .job-status.draft {
@@ -300,7 +569,7 @@
 
   .job-price {
     font-size: 1.25rem;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--success);
   }
 
@@ -320,14 +589,17 @@
   }
 
   .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
+    background: #2563eb;
     color: white;
-    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    font-weight: 700;
+    transition: all 0.3s ease;
   }
 
   .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+    background: #1e40af;
   }
 
   .btn-success {
@@ -356,30 +628,37 @@
   .empty-state {
     text-align: center;
     padding: 60px 20px;
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
+    background: white;
+    border-radius: 12px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .empty-state-icon {
-    font-size: 4rem;
-    margin-bottom: 16px;
-    opacity: 0.6;
+    font-size: 5rem;
+    margin-bottom: 24px;
+    opacity: 0.9;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
   }
 
   .empty-state h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin: 0 0 8px 0;
+    font-size: 2rem;
+    font-weight: 900;
+    color: #1e293b;
+    margin: 0 0 12px 0;
   }
 
   .empty-state p {
-    color: var(--text-muted);
-    font-size: 1rem;
-    margin: 0 0 24px 0;
+    color: #475569;
+    font-size: 1.125rem;
+    margin: 0 0 32px 0;
+    line-height: 1.6;
   }
 
   /* Responsive */
@@ -422,26 +701,26 @@
     }
     
     .stats-grid {
-      grid-template-columns: 1fr;
-      gap: 16px;
-    }
-    
-    .stat-card {
-      padding: 20px 16px;
-    }
-    
-    .stat-header {
+      grid-template-columns: repeat(2, 1fr);
       gap: 12px;
     }
     
+    .stat-card {
+      padding: 16px;
+    }
+    
+    .stat-header {
+      gap: 10px;
+    }
+    
     .stat-icon {
-      width: 48px;
-      height: 48px;
-      font-size: 20px;
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
     }
     
     .stat-value {
-      font-size: 2rem;
+      font-size: 1.75rem;
     }
     
     .stat-info h3 {
@@ -545,12 +824,22 @@
       font-size: 0.9rem;
     }
     
+    .stats-grid {
+      grid-template-columns: 1fr;
+    }
+    
     .stat-card {
-      padding: 16px 12px;
+      padding: 14px;
+    }
+    
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
     }
     
     .stat-value {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
     }
     
     .progress-section,
@@ -573,12 +862,11 @@
   }
 
   .history-section {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
+    background: white;
     border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    padding: 28px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
   }
 
   .history-header {
@@ -591,9 +879,9 @@
   }
 
   .history-header h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--dark);
+    font-size: 1.75rem;
+    font-weight: 900;
+    color: #1e293b;
     margin: 0;
   }
 
@@ -645,16 +933,17 @@
   }
 
   .history-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 4px;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 6px;
   }
 
   .history-description {
     font-size: 0.875rem;
-    color: var(--text-muted);
+    color: #475569;
     margin-bottom: 8px;
+    line-height: 1.5;
   }
 
   .history-meta {
@@ -702,13 +991,14 @@
   }
 
   .history-amount {
-    font-size: 1.1rem;
-    font-weight: 700;
+    font-size: 1.25rem;
+    font-weight: 800;
     text-align: right;
+    color: #2563eb;
   }
 
   .history-amount.negative {
-    color: var(--danger);
+    color: #dc2626;
   }
 
   .amount-label {
@@ -718,9 +1008,9 @@
   }
 
   .amount-value {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--dark);
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #2563eb;
   }
 
   .empty-history {
@@ -776,7 +1066,11 @@
 @endphp
 
 <div class="muhitaji-dash">
-  <div class="dashboard-container">
+  @include('components.user-sidebar')
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="dashboard-container">
     
     <!-- Hero Section -->
     <div class="hero-section">
@@ -859,8 +1153,8 @@
               stroke-dasharray="{{ $dash }},{{ $circ }}"></circle>
             <defs>
               <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#10b981;stop-opacity:1" />
+                <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
               </linearGradient>
             </defs>
           </svg>
@@ -948,113 +1242,114 @@
       </div>
     @endif
 
-  </div>
-</div>
-
-<!-- Payment History Section -->
-<div class="payment-history-section" style="margin-top: 32px;">
-  
-  <!-- Payment History -->
-  <div class="history-section">
-    <div class="history-header">
-      <h3>💳 Historia ya Malipo</h3>
-      <span class="history-count">{{ $paymentHistory->count() }} malipo</span>
-    </div>
-    
-    @if($paymentHistory->count() > 0)
-      <div class="history-list">
-        @foreach($paymentHistory as $payment)
-          <div class="history-item payment-item" data-status="{{ strtolower($payment->status) }}">
-            <div class="history-icon">
-              @if($payment->status === 'COMPLETED')
-                ✅
-              @elseif($payment->status === 'PENDING')
-                ⏳
-              @elseif($payment->status === 'FAILED')
-                ❌
-              @else
-                💳
-              @endif
-            </div>
-            <div class="history-details">
-              <div class="history-title">{{ $payment->job->title ?? 'Job Payment' }}</div>
-              <div class="history-description">
-                Order ID: {{ $payment->order_id ?? 'N/A' }} | 
-                Status: {{ ucfirst($payment->status) }}
+    <!-- Payment History Section -->
+    <div class="payment-history-section" style="margin-top: 32px;">
+      
+      <!-- Payment History -->
+      <div class="history-section">
+        <div class="history-header">
+          <h3>💳 Historia ya Malipo</h3>
+          <span class="history-count">{{ $paymentHistory->count() }} malipo</span>
+        </div>
+        
+        @if($paymentHistory->count() > 0)
+          <div class="history-list">
+            @foreach($paymentHistory as $payment)
+              <div class="history-item payment-item" data-status="{{ strtolower($payment->status) }}">
+                <div class="history-icon">
+                  @if($payment->status === 'COMPLETED')
+                    ✅
+                  @elseif($payment->status === 'PENDING')
+                    ⏳
+                  @elseif($payment->status === 'FAILED')
+                    ❌
+                  @else
+                    💳
+                  @endif
+                </div>
+                <div class="history-details">
+                  <div class="history-title">{{ $payment->job->title ?? 'Job Payment' }}</div>
+                  <div class="history-description">
+                    Order ID: {{ $payment->order_id ?? 'N/A' }} | 
+                    Status: {{ ucfirst($payment->status) }}
+                  </div>
+                  <div class="history-meta">
+                    <span class="history-date">{{ $payment->created_at->diffForHumans() }}</span>
+                    <span class="history-status status-{{ strtolower($payment->status) }}">
+                      {{ ucfirst($payment->status) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="history-amount negative">-{{ number_format($payment->amount) }} TZS</div>
               </div>
-              <div class="history-meta">
-                <span class="history-date">{{ $payment->created_at->diffForHumans() }}</span>
-                <span class="history-status status-{{ strtolower($payment->status) }}">
-                  {{ ucfirst($payment->status) }}
-                </span>
-              </div>
-            </div>
-            <div class="history-amount negative">-{{ number_format($payment->amount) }} TZS</div>
+            @endforeach
           </div>
-        @endforeach
-      </div>
-    @else
-      <div class="empty-history">
-        <div class="empty-icon">💳</div>
-        <div class="empty-text">Hujafanya malipo bado</div>
-        <div class="empty-subtitle">Chapisha kazi za kwanza ili uone malipo yako</div>
-      </div>
-    @endif
-  </div>
-
-  <!-- All Jobs History -->
-  <div class="history-section">
-    <div class="history-header">
-      <h3>📋 Historia ya Kazi Zote</h3>
-      <span class="history-count">{{ $allJobs->count() }} kazi</span>
-    </div>
-    
-    @if($allJobs->count() > 0)
-      <div class="history-list">
-        @foreach($allJobs as $job)
-          <div class="history-item jobs-item" data-status="{{ strtolower($job->status) }}">
-            <div class="history-icon">
-              @if($job->status === 'completed')
-                ✅
-              @elseif($job->status === 'in_progress')
-                🔄
-              @elseif($job->status === 'assigned')
-                📋
-              @else
-                📝
-              @endif
-            </div>
-            <div class="history-details">
-              <div class="history-title">{{ $job->title ?? 'Kazi' }}</div>
-              <div class="history-description">
-                @if($job->acceptedWorker)
-                  Mfanyakazi: {{ $job->acceptedWorker->name }} | 
-                @endif
-                Kategoria: {{ $job->category->name ?? 'N/A' }}
-              </div>
-              <div class="history-meta">
-                <span class="history-date">{{ $job->created_at->diffForHumans() }}</span>
-                <span class="history-status status-{{ strtolower($job->status) }}">
-                  {{ ucfirst(str_replace('_', ' ', $job->status)) }}
-                </span>
-              </div>
-            </div>
-            <div class="history-amount">
-              <span class="amount-label">Bei:</span>
-              <span class="amount-value">{{ number_format($job->amount) }} TZS</span>
-            </div>
+        @else
+          <div class="empty-history">
+            <div class="empty-icon">💳</div>
+            <div class="empty-text">Hujafanya malipo bado</div>
+            <div class="empty-subtitle">Chapisha kazi za kwanza ili uone malipo yako</div>
           </div>
-        @endforeach
+        @endif
       </div>
-    @else
-      <div class="empty-history">
-        <div class="empty-icon">📋</div>
-        <div class="empty-text">Hujachapisha kazi bado</div>
-        <div class="empty-subtitle">Chapisha kazi za kwanza ili uone historia yako</div>
-    </div>
-  @endif
-  </div>
 
+      <!-- All Jobs History -->
+      <div class="history-section">
+        <div class="history-header">
+          <h3>📋 Historia ya Kazi Zote</h3>
+          <span class="history-count">{{ $allJobs->count() }} kazi</span>
+        </div>
+        
+        @if($allJobs->count() > 0)
+          <div class="history-list">
+            @foreach($allJobs as $job)
+              <div class="history-item jobs-item" data-status="{{ strtolower($job->status) }}">
+                <div class="history-icon">
+                  @if($job->status === 'completed')
+                    ✅
+                  @elseif($job->status === 'in_progress')
+                    🔄
+                  @elseif($job->status === 'assigned')
+                    📋
+                  @else
+                    📝
+                  @endif
+                </div>
+                <div class="history-details">
+                  <div class="history-title">{{ $job->title ?? 'Kazi' }}</div>
+                  <div class="history-description">
+                    @if($job->acceptedWorker)
+                      Mfanyakazi: {{ $job->acceptedWorker->name }} | 
+                    @endif
+                    Kategoria: {{ $job->category->name ?? 'N/A' }}
+                  </div>
+                  <div class="history-meta">
+                    <span class="history-date">{{ $job->created_at->diffForHumans() }}</span>
+                    <span class="history-status status-{{ strtolower($job->status) }}">
+                      {{ ucfirst(str_replace('_', ' ', $job->status)) }}
+                    </span>
+                  </div>
+                </div>
+                <div class="history-amount">
+                  <span class="amount-label">Bei:</span>
+                  <span class="amount-value">{{ number_format($job->amount) }} TZS</span>
+                </div>
+              </div>
+            @endforeach
+          </div>
+        @else
+          <div class="empty-history">
+            <div class="empty-icon">📋</div>
+            <div class="empty-text">Hujachapisha kazi bado</div>
+            <div class="empty-subtitle">Chapisha kazi za kwanza ili uone historia yako</div>
+          </div>
+        @endif
+      </div>
+
+    </div>
+
+    </div>
+  </main>
 </div>
 
 <script>
@@ -1093,6 +1388,15 @@
         this.style.transform = 'translateY(0) scale(1)';
       });
     });
+  });
+
+  // Handle window resize
+  window.addEventListener('resize', function() {
+    if (window.innerWidth > 1024) {
+      document.getElementById('mobileOverlay').classList.remove('active');
+    } else {
+      document.getElementById('sidebar').classList.remove('collapsed');
+    }
   });
 </script>
 @endsection

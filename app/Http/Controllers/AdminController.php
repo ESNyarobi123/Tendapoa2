@@ -8,10 +8,12 @@ use App\Models\PrivateMessage;
 use App\Models\Payment;
 use App\Models\Withdrawal;
 use App\Models\WalletTransaction;
+use App\Models\AppVersion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 
 class AdminController extends Controller
 {
@@ -682,9 +684,254 @@ class AdminController extends Controller
      */
     public function updateSystemSettings(Request $request)
     {
-        // Here you can add system-wide settings
-        // For now, just return success
+        // Handle APK file upload if provided
+        if ($request->hasFile('apk_file')) {
+            $request->validate([
+                'apk_file' => 'required|file|mimes:apk|max:102400', // Max 100MB
+                'apk_version' => 'required|string|max:50',
+                'apk_description' => 'nullable|string|max:1000',
+            ]);
+
+            $file = $request->file('apk_file');
+            $version = $request->input('apk_version');
+            $description = $request->input('apk_description');
+
+            // Check if version already exists
+            $existingVersion = AppVersion::where('version', $version)->first();
+            if ($existingVersion) {
+                return back()->with('error', "Version {$version} already exists. Please use a different version number.");
+            }
+
+            // Store file in storage/app/public/apk/
+            $fileName = 'tendapoa-' . $version . '-' . time() . '.apk';
+            $filePath = $file->storeAs('apk', $fileName, 'public');
+
+            // Deactivate all previous versions
+            AppVersion::where('is_active', true)->update(['is_active' => false]);
+
+            // Create new app version record
+            AppVersion::create([
+                'version' => $version,
+                'file_path' => $filePath,
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'is_active' => true,
+                'description' => $description,
+            ]);
+
+            return back()->with('success', "APK version {$version} uploaded successfully and set as active!");
+        }
+
+        // Here you can add other system-wide settings
         return back()->with('success', 'System settings updated!');
+    }
+
+    /**
+     * ADMIN FULL CONTROL - Upload APK file (AJAX)
+     */
+    public function uploadApk(Request $request)
+    {
+        // Increase execution time and memory for large file processing
+        set_time_limit(180); // 3 minutes
+        ini_set('max_execution_time', '180');
+        ini_set('memory_limit', '256M');
+        
+        try {
+            // Check if file is provided
+            if (!$request->hasFile('apk_file')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'APK file is required. Please select a file to upload.'
+                ], 400);
+            }
+            
+            // Check PHP configuration before processing
+            $uploadMaxFilesize = $this->parseSize(ini_get('upload_max_filesize'));
+            $postMaxSize = $this->parseSize(ini_get('post_max_size'));
+            $maxExecutionTime = ini_get('max_execution_time');
+            
+            $file = $request->file('apk_file');
+            $fileSize = $file->getSize();
+            
+            if ($fileSize > $uploadMaxFilesize) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "File size ({$this->formatBytes($fileSize)}) exceeds PHP upload_max_filesize limit ({$this->formatBytes($uploadMaxFilesize)}). Please increase upload_max_filesize in php.ini or use a smaller file."
+                ], 400);
+            }
+            
+            if ($fileSize > $postMaxSize) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "File size ({$this->formatBytes($fileSize)}) exceeds PHP post_max_size limit ({$this->formatBytes($postMaxSize)}). Please increase post_max_size in php.ini or use a smaller file."
+                ], 400);
+            }
+
+            // Validate file
+            $request->validate([
+                'apk_file' => 'required|file|mimes:apk|max:102400', // Max 100MB
+                'apk_version' => 'required|string|max:50|regex:/^[0-9]+\.[0-9]+\.[0-9]+$/',
+                'apk_description' => 'nullable|string|max:1000',
+            ], [
+                'apk_file.required' => 'Please select an APK file to upload.',
+                'apk_file.file' => 'The uploaded file is not valid.',
+                'apk_file.mimes' => 'Only .apk files are allowed. Please upload a valid APK file.',
+                'apk_file.max' => 'The APK file is too large. Maximum size is 100MB. Your file size: ' . 
+                    number_format($request->file('apk_file')->getSize() / 1024 / 1024, 2) . ' MB',
+                'apk_version.required' => 'Version number is required.',
+                'apk_version.regex' => 'Version number must be in format: X.Y.Z (e.g., 1.0.0, 2.1.3)',
+            ]);
+
+            $file = $request->file('apk_file');
+            $version = $request->input('apk_version');
+            $description = $request->input('apk_description');
+
+            // Check file size manually (in case validation doesn't catch it)
+            $fileSizeMB = $file->getSize() / 1024 / 1024;
+            if ($fileSizeMB > 100) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "File is too large ({$fileSizeMB} MB). Maximum allowed size is 100MB. Please compress or use a smaller APK file."
+                ], 400);
+            }
+
+            // Check if version already exists
+            $existingVersion = AppVersion::where('version', $version)->first();
+            if ($existingVersion) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "Version {$version} already exists. Please use a different version number (e.g., " . 
+                        $this->suggestNextVersion($version) . ")."
+                ], 400);
+            }
+
+            // Ensure directory exists
+            $apkDir = storage_path('app/public/apk');
+            if (!file_exists($apkDir)) {
+                mkdir($apkDir, 0755, true);
+            }
+            
+            // Store file in storage/app/public/apk/ using stream for large files
+            $fileName = 'tendapoa-' . $version . '-' . time() . '.apk';
+            $destinationPath = $apkDir . '/' . $fileName;
+            
+            // Use move_uploaded_file for better performance with large files
+            if (!move_uploaded_file($file->getPathname(), $destinationPath)) {
+                // Fallback to Laravel's store method
+                $filePath = $file->storeAs('apk', $fileName, 'public');
+                if (!$filePath) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Failed to save the APK file. Please check storage permissions and try again.'
+                    ], 500);
+                }
+                $filePath = 'apk/' . $fileName;
+            } else {
+                $filePath = 'apk/' . $fileName;
+            }
+
+            // Deactivate all previous versions
+            AppVersion::where('is_active', true)->update(['is_active' => false]);
+
+            // Create new app version record
+            // #region agent log
+            $logFile = base_path('.cursor/debug.log');
+            $logEntry = json_encode([
+                'location' => 'AdminController.php:848',
+                'message' => 'Creating AppVersion record',
+                'data' => [
+                    'version' => $version,
+                    'filePath' => $filePath,
+                    'fileName' => $file->getClientOriginalName(),
+                    'fileSize' => $file->getSize(),
+                ],
+                'timestamp' => time() * 1000,
+                'sessionId' => 'debug-session',
+                'runId' => 'run1',
+                'hypothesisId' => 'J'
+            ]) . "\n";
+            file_put_contents($logFile, $logEntry, FILE_APPEND);
+            // #endregion
+            
+            $appVersion = AppVersion::create([
+                'version' => $version,
+                'file_path' => $filePath,
+                'file_name' => $file->getClientOriginalName(),
+                'file_size' => $file->getSize(),
+                'is_active' => true,
+                'description' => $description,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => "APK version {$version} uploaded successfully and set as active!",
+                'data' => [
+                    'version' => $appVersion->version,
+                    'file_name' => $appVersion->file_name,
+                    'file_size' => $appVersion->file_size,
+                ]
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $errors = $e->errors();
+            $firstError = collect($errors)->flatten()->first();
+            
+            return response()->json([
+                'success' => false,
+                'message' => $firstError ?? 'Validation failed. Please check your input.',
+                'errors' => $errors
+            ], 422);
+
+        } catch (\Exception $e) {
+            \Log::error('APK Upload Error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'An error occurred while uploading the APK: ' . $e->getMessage() . 
+                    '. Please try again or contact support if the problem persists.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Parse PHP size string to bytes
+     */
+    private function parseSize($size)
+    {
+        $unit = preg_replace('/[^bkmgtpezy]/i', '', $size);
+        $size = preg_replace('/[^0-9\.]/', '', $size);
+        if ($unit) {
+            return round($size * pow(1024, stripos('bkmgtpezy', $unit[0])));
+        }
+        return round($size);
+    }
+
+    /**
+     * Format bytes to human readable format
+     */
+    private function formatBytes($bytes, $precision = 2)
+    {
+        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        $bytes = max($bytes, 0);
+        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
+        $pow = min($pow, count($units) - 1);
+        $bytes /= pow(1024, $pow);
+        return round($bytes, $precision) . ' ' . $units[$pow];
+    }
+
+    /**
+     * Suggest next version number
+     */
+    private function suggestNextVersion($currentVersion)
+    {
+        $parts = explode('.', $currentVersion);
+        if (count($parts) === 3) {
+            $parts[2] = (int)$parts[2] + 1;
+            return implode('.', $parts);
+        }
+        return $currentVersion . '.1';
     }
 
     /**

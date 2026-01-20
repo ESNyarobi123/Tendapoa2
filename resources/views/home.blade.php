@@ -925,6 +925,19 @@
                 <a href="{{ route('register') }}" class="btn btn-primary">
                     Pata Huduma
                 </a>
+                @php
+                    $activeVersion = \App\Models\AppVersion::getActive();
+                @endphp
+                <a
+                    href="{{ $activeVersion ? route('app.download') : 'javascript:void(0)' }}"
+                    class="btn btn-primary"
+                    style="display: inline-flex; align-items: center; gap: 0.5rem; {{ $activeVersion ? '' : 'opacity:0.6; cursor:not-allowed;' }}"
+                    @if(!$activeVersion) aria-disabled="true" onclick="alert('App bado haijapakiwa. Tafadhali jaribu tena baadae.'); return false;" @endif
+                    title="{{ $activeVersion ? 'Download Tendapoa App' : 'App bado haijapakiwa' }}"
+                >
+                    <span>📱</span>
+                    Download App{{ $activeVersion ? ' (v'.$activeVersion->version.')' : '' }}
+                </a>
             </div>
         </div>
     </section>

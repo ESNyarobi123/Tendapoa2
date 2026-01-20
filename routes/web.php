@@ -13,6 +13,9 @@ use App\Http\Controllers\{
 // HOME / LANDING
 Route::get('/', [HomeController::class,'index'])->name('home');
 
+// APK Download (Public)
+Route::get('/download/app', [HomeController::class, 'downloadApp'])->name('app.download');
+
 // GUEST: auth pages
 Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class,'showRegister'])->name('register');
@@ -116,6 +119,7 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/system-logs', [\App\Http\Controllers\AdminController::class, 'systemLogs'])->name('admin.system-logs');
     Route::get('/system-settings', [\App\Http\Controllers\AdminController::class, 'systemSettings'])->name('admin.system-settings');
     Route::post('/system-settings', [\App\Http\Controllers\AdminController::class, 'updateSystemSettings'])->name('admin.system-settings.update');
+    Route::post('/apk/upload', [\App\Http\Controllers\AdminController::class, 'uploadApk'])->name('admin.apk.upload');
     
     // ADMIN FULL CONTROL - Communication
     Route::post('/users/{user}/send-message', [\App\Http\Controllers\AdminController::class, 'sendMessageToUser'])->name('admin.user.send-message');

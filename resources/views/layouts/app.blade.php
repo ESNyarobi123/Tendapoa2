@@ -23,6 +23,10 @@ input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radiu
 </style>
 </head>
 <body>
+@php
+  $hideHeader = auth()->check() && in_array(auth()->user()->role, ['muhitaji', 'mfanyakazi']);
+@endphp
+@if(!$hideHeader)
 <header class="header">
   <div class="brand">TendaPoa</div>
   <nav>
@@ -74,6 +78,7 @@ input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radiu
     @endauth
   </nav>
 </header>
+@endif
 
 <main style="max-width:980px;margin:0 auto;padding:18px">
   @yield('content')
