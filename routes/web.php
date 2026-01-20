@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
     HomeController, DashboardController,
     JobController, PaymentController, FeedController, JobViewController,
-    AuthController
+    AuthController, AdminController
 };
 
 // HOME / LANDING
@@ -113,16 +113,18 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     
     // ADMIN FULL CONTROL - Job Management
     Route::post('/jobs/{job}/force-complete', [\App\Http\Controllers\AdminController::class, 'forceCompleteJob'])->name('admin.job.force-complete');
-    Route::post('/jobs/{job}/force-cancel', [\App\Http\Controllers\AdminController::class, 'forceCancelJob'])->name('admin.job.force-cancel');
+    Route::post('/jobs/{job}/force-complete', [AdminController::class, 'forceCompleteJob'])->name('admin.job.force-complete');
+    Route::post('/jobs/{job}/force-cancel', [AdminController::class, 'forceCancelJob'])->name('admin.job.force-cancel');
     
     // ADMIN FULL CONTROL - System Management
-    Route::get('/system-logs', [\App\Http\Controllers\AdminController::class, 'systemLogs'])->name('admin.system-logs');
-    Route::get('/system-settings', [\App\Http\Controllers\AdminController::class, 'systemSettings'])->name('admin.system-settings');
-    Route::post('/system-settings', [\App\Http\Controllers\AdminController::class, 'updateSystemSettings'])->name('admin.system-settings.update');
-    Route::post('/apk/upload', [\App\Http\Controllers\AdminController::class, 'uploadApk'])->name('admin.apk.upload');
+    Route::get('/system-logs', [AdminController::class, 'systemLogs'])->name('admin.system-logs');
+    Route::get('/system-settings', [AdminController::class, 'systemSettings'])->name('admin.system-settings');
+    Route::post('/system-settings', [AdminController::class, 'updateSystemSettings'])->name('admin.system-settings.update');
+    Route::post('/apk/upload', [AdminController::class, 'uploadApk'])->name('admin.apk.upload');
+    Route::post('/apk/scan', [AdminController::class, 'scanManualApk'])->name('admin.apk.scan');
     
     // ADMIN FULL CONTROL - Communication
-    Route::post('/users/{user}/send-message', [\App\Http\Controllers\AdminController::class, 'sendMessageToUser'])->name('admin.user.send-message');
+    Route::post('/users/{user}/send-message', [AdminController::class, 'sendMessageToUser'])->name('admin.user.send-message');
     
     // Withdrawals
     Route::get('/withdrawals', [WithdrawalAdminController::class,'index'])->name('admin.withdrawals');

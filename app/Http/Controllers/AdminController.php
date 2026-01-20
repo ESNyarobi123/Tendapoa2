@@ -732,8 +732,8 @@ class AdminController extends Controller
     public function uploadApk(Request $request)
     {
         // Increase execution time and memory for large file processing
-        set_time_limit(600); // 10 minutes
-        ini_set('max_execution_time', '600');
+        set_time_limit(3600); // 1 hour
+        ini_set('max_execution_time', '3600');
         ini_set('memory_limit', '512M');
         
         try {
@@ -751,6 +751,15 @@ class AdminController extends Controller
             $maxExecutionTime = ini_get('max_execution_time');
             
             $file = $request->file('apk_file');
+            
+            // Check if file is valid
+            if (!$file->isValid()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'File upload failed: ' . $file->getErrorMessage()
+                ], 400);
+            }
+
             $fileSize = $file->getSize();
             
             if ($fileSize > $uploadMaxFilesize) {
@@ -769,7 +778,7 @@ class AdminController extends Controller
 
             // Validate file
             $request->validate([
-                'apk_file' => 'required|file|mimes:apk|max:102400', // Max 100MB
+                'apk_file' => 'required|file|mimes:apk,zip,application/vnd.android.package-archive,application/octet-stream|max:102400', // Max 100MB
                 'apk_version' => 'required|string|max:50|regex:/^[0-9]+\.[0-9]+\.[0-9]+$/',
                 'apk_description' => 'nullable|string|max:1000',
             ], [
@@ -971,6 +980,87 @@ class AdminController extends Controller
         // Create a system message (you can create a system_messages table)
         // For now, we'll just return success
         return back()->with('success', "Message sent to {$user->name}!");
+    }
+
+    /**
+     * ADMIN FULL CONTROL - Scan for manually uploaded APK
+     */
+    public function scanManualApk()
+    {
+        $apkDir = storage_path('app/public/apk');
+        
+        // Ensure directory exists
+        if (!file_exists($apkDir)) {
+            mkdir($apkDir, 0755, true);
+            return back()->with('error', "Directory created at {$apkDir}. Please upload an APK file there and try again.");
+        }
+
+        // Scan for .apk files
+        $files = glob($apkDir . '/*.apk');
+        
+        if (empty($files)) {
+            return back()->with('error', "No APK files found in {$apkDir}. Please upload a file via FTP/File Manager first.");
+        }
+
+        // Get the most recently modified file
+        $latestFile = null;
+        $latestTime = 0;
+
+        foreach ($files as $file) {
+            $time = filemtime($file);
+            if ($time > $latestTime) {
+                $latestTime = $time;
+                $latestFile = $file;
+            }
+        }
+
+        if (!$latestFile) {
+            return back()->with('error', 'Could not determine the latest file.');
+        }
+
+        $fileName = basename($latestFile);
+        $filePath = 'apk/' . $fileName;
+        $fileSize = filesize($latestFile);
+        
+        // Guess version from filename (e.g., tendapoa-1.0.0.apk)
+        $version = '1.0.0'; // Default
+        if (preg_match('/(\d+\.\d+\.\d+)/', $fileName, $matches)) {
+            $version = $matches[1];
+        } else {
+            // Auto-increment from DB if not found in filename
+            $lastVersion = AppVersion::latest()->first();
+            if ($lastVersion) {
+                $parts = explode('.', $lastVersion->version);
+                if (count($parts) === 3) {
+                    $parts[2] = (int)$parts[2] + 1;
+                    $version = implode('.', $parts);
+                }
+            }
+        }
+
+        // Check if this specific file is already recorded
+        $existing = AppVersion::where('file_name', $fileName)->first();
+        if ($existing) {
+            // Just activate it
+            AppVersion::where('is_active', true)->update(['is_active' => false]);
+            $existing->update(['is_active' => true]);
+            return back()->with('success', "Existing version {$existing->version} activated successfully!");
+        }
+
+        // Deactivate previous
+        AppVersion::where('is_active', true)->update(['is_active' => false]);
+
+        // Create new record
+        AppVersion::create([
+            'version' => $version,
+            'file_path' => $filePath,
+            'file_name' => $fileName,
+            'file_size' => $fileSize,
+            'is_active' => true,
+            'description' => 'Manually scanned and activated via Admin Panel',
+        ]);
+
+        return back()->with('success', "Found and activated APK: {$fileName} (Version: {$version})");
     }
 }
 

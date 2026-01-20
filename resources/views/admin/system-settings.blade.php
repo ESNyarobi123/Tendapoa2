@@ -657,6 +657,24 @@
         </div>
       </form>
 
+      <!-- Manual Scan Option -->
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);">
+        <h3 style="color: var(--text-primary); font-size: 1rem; font-weight: 700; margin-bottom: 12px;">Manual Upload & Scan</h3>
+        <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 16px;">
+          If the web upload fails, you can upload the APK file manually via FTP or File Manager to:
+          <br>
+          <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; color: #10b981;">storage/app/public/apk/</code>
+          <br>
+          Then click the button below to detect and activate it.
+        </p>
+        <form action="{{ route('admin.apk.scan') }}" method="POST">
+          @csrf
+          <button type="submit" class="btn btn-outline" style="width: 100%;">
+            <span>🔍</span> Scan & Activate Latest APK
+          </button>
+        </form>
+      </div>
+
       @if($allVersions->count() > 0)
       <div style="margin-top: 32px;">
         <h3 style="color: var(--text-primary); font-size: 1rem; font-weight: 700; margin-bottom: 16px;">Previous Versions</h3>
@@ -778,7 +796,14 @@
               window.location.reload();
             }, 2000);
           } else {
-            throw new Error(response.message || 'Upload failed');
+            // Display error instead of throwing
+            progressContainer.style.display = 'none';
+            uploadErrorText.textContent = response.message || 'Upload failed';
+            uploadError.style.display = 'block';
+            
+            // Reset button
+            uploadBtn.disabled = false;
+            uploadBtn.innerHTML = '<span>📤</span> Upload APK';
           }
         } else {
           let response;
@@ -787,7 +812,15 @@
           } catch(e) {
             response = {message: 'Server error: ' + xhr.status};
           }
-          throw new Error(response.message || 'Upload failed with status: ' + xhr.status);
+          
+          // Display error instead of throwing
+          progressContainer.style.display = 'none';
+          uploadErrorText.textContent = response.message || 'Upload failed with status: ' + xhr.status;
+          uploadError.style.display = 'block';
+          
+          // Reset button
+          uploadBtn.disabled = false;
+          uploadBtn.innerHTML = '<span>📤</span> Upload APK';
         }
       });
       
@@ -801,11 +834,13 @@
         throw new Error('Upload was cancelled.');
       });
       
-      // Set timeout (600 seconds for large files)
-      xhr.timeout = 600000;
-      xhr.addEventListener('timeout', function() {
+      // Disable timeout (0 = no timeout)
+      xhr.timeout = 0;
+      
+      // Handle network errors
+      xhr.addEventListener('error', function() {
         progressContainer.style.display = 'none';
-        uploadErrorText.textContent = 'Upload timeout: The server took too long to respond. This may be due to a large file size or slow connection. Please check PHP max_execution_time and try again with a smaller file or contact your server administrator.';
+        uploadErrorText.textContent = 'Network error occurred. Please check your connection and try again.';
         uploadError.style.display = 'block';
         
         // Reset button
