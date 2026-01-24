@@ -63,6 +63,26 @@
         </span>
         <span class="menu-text">Kazi Zangu</span>
       </a>
+
+      <a href="{{ route('my.jobs', ['status' => 'pending_payment']) }}" class="menu-item {{ request()->fullUrlIs(route('my.jobs', ['status' => 'pending_payment'])) ? 'active' : '' }}">
+        <span class="menu-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+        </span>
+        <span class="menu-text">Malipo Yanayosubiri</span>
+      </a>
+
+      <a href="{{ route('withdraw.form') }}" class="menu-item {{ request()->routeIs('withdraw.*') ? 'active' : '' }}">
+        <span class="menu-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+            <line x1="1" y1="10" x2="23" y2="10"></line>
+          </svg>
+        </span>
+        <span class="menu-text">Toa Pesa</span>
+      </a>
     @elseif($isMfanyakazi)
       <a href="{{ route('feed') }}" class="menu-item {{ request()->routeIs('feed') ? 'active' : '' }}">
         <span class="menu-icon">

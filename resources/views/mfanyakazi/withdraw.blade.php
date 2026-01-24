@@ -303,12 +303,18 @@
       <div class="balance-label">Salio Lako</div>
       <div class="balance-amount">{{ number_format($wallet->balance) }} TZS</div>
       <div class="balance-info">
-        @if($wallet->balance >= 5000)
+        @if($wallet->balance >= ($settings['min_withdrawal'] ?? 5000))
           <span style="color: var(--success);">✅ Unaweza kutoa pesa</span>
         @else
-          <span style="color: var(--danger);">❌ Salio ni chini ya TZS 5,000</span>
+          <span style="color: var(--danger);">❌ Salio ni chini ya TZS {{ number_format($settings['min_withdrawal'] ?? 5000) }}</span>
         @endif
       </div>
+      @if(auth()->user()->role === 'mfanyakazi')
+        <div style="margin-top: 16px; padding: 12px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; font-size: 0.8rem; color: #92400e; text-align: left;">
+          <b>ℹ️ Taarifa ya Makato:</b><br>
+          Kila kazi unayofanya inakatwa {{ $settings['commission_rate'] ?? '10' }}% kama gharama za huduma (Service Fee). Salio unaloona hapa ni kiasi ambacho tayari kimeshakatwa na kiko tayari kutolewa.
+        </div>
+      @endif
     </div>
 
     <!-- Withdrawal Form -->
@@ -342,7 +348,7 @@
             required
           >
           <div class="form-help">
-            Kiasi cha chini ni TZS 5,000. Kiasi cha juu ni {{ number_format($wallet->balance) }} TZS
+            Kiasi cha chini ni TZS {{ number_format($settings['min_withdrawal'] ?? 5000) }}. Kiasi cha juu ni {{ number_format($wallet->balance) }} TZS
           </div>
         </div>
 

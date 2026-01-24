@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use App\Models\Job;
+use App\Models\Setting;
 
 class WorkerActionsController extends Controller
 {
@@ -265,17 +266,23 @@ class WorkerActionsController extends Controller
             }
 
             $amount = $job->amount; // This uses the getAmountAttribute() method
-            \Log::info("Processing payment: TZS {$amount} to worker {$worker->id} for job {$job->id}");
+            
+            // Calculate Commission (Dynamic from settings, default 10%)
+            $commissionRate = (float) Setting::get('commission_rate', 10) / 100;
+            $commission = (int) ($amount * $commissionRate);
+            $netAmount = $amount - $commission;
+
+            \Log::info("Processing payment: Total TZS {$amount}, Commission TZS {$commission}, Net TZS {$netAmount} to worker {$worker->id} for job {$job->id}");
             
             // Check if worker has wallet
             $wallet = $worker->ensureWallet();
             \Log::info("Worker wallet before payment: TZS {$wallet->balance}");
             
-            // Add money to worker's wallet
+            // Add money to worker's wallet (Net Amount)
             $walletService = app(\App\Services\WalletService::class);
-            $updatedWallet = $walletService->credit($worker, $amount, 'EARN', 'Job completion payment');
+            $updatedWallet = $walletService->credit($worker, $netAmount, 'EARN', "Job completion payment (Job #{$job->id}) - 10% Service Fee Deducted");
 
-            \Log::info("Payment processed successfully: TZS {$amount} to worker {$worker->id} for job {$job->id}");
+            \Log::info("Payment processed successfully: Net TZS {$netAmount} to worker {$worker->id} for job {$job->id}");
             \Log::info("Worker wallet after payment: TZS {$updatedWallet->balance}");
             
         } catch (\Exception $e) {

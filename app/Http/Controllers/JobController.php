@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{Job, Category, Wallet, WalletTransaction};
+use App\Models\{Job, Category, Wallet, WalletTransaction, Setting};
 use App\Services\ZenoPayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -53,9 +53,14 @@ class JobController extends Controller
             'lat'         => (float) $r->input('lat'),
             'lng'         => (float) $r->input('lng'),
             'address_text'=> $r->input('address_text'),
-            'status'      => 'posted',
-            'published_at'=> now(),
+
+            'status'      => Setting::get('payments_enabled', '1') == '1' ? 'pending_payment' : 'posted',
+            'published_at'=> Setting::get('payments_enabled', '1') == '1' ? null : now(),
         ]);
+
+        if (Setting::get('payments_enabled', '1') == '0') {
+            return redirect()->route('my.jobs')->with('success', 'Kazi imechapishwa kwa mafanikio!');
+        }
 
         $orderId = (string) Str::ulid();
         $job->payment()->create([
@@ -71,7 +76,8 @@ class JobController extends Controller
             'buyer_name'  => $buyer?->name  ?? 'Client',
             'buyer_phone' => $r->input('phone'),
             'amount'      => $job->price,
-            'webhook_url' => route('zeno.webhook'),
+            'amount'      => $job->price,
+            // 'webhook_url' => route('zeno.webhook'), // User requested polling only
         ];
 
         $res = $zeno->startPayment($payload);
@@ -150,7 +156,7 @@ class JobController extends Controller
         ]);
 
         // If price increased, process additional payment
-        if ($priceDifference > 0) {
+        if ($priceDifference > 0 && Setting::get('payments_enabled', '1') == '1') {
             $orderId = (string) Str::ulid();
             $job->payment()->create([
                 'order_id' => $orderId,
@@ -165,7 +171,8 @@ class JobController extends Controller
                 'buyer_name'  => $buyer?->name  ?? 'Client',
                 'buyer_phone' => $buyer?->phone ?? '000000000',
                 'amount'      => $priceDifference,
-                'webhook_url' => route('zeno.webhook'),
+                'amount'      => $priceDifference,
+                // 'webhook_url' => route('zeno.webhook'), // User requested polling only
             ];
 
             $res = $zeno->startPayment($payload);
@@ -307,7 +314,8 @@ class JobController extends Controller
                 'buyer_name'  => $buyer?->name  ?? 'Client',
                 'buyer_phone' => $buyer?->phone ?? '000000000',
                 'amount'      => $priceDifference,
-                'webhook_url' => route('zeno.webhook'),
+                'amount'      => $priceDifference,
+                // 'webhook_url' => route('zeno.webhook'), // User requested polling only
             ];
 
             $res = $zeno->startPayment($payload);
@@ -373,7 +381,8 @@ class JobController extends Controller
             'buyer_name'  => $buyer?->name  ?? 'Client',
             'buyer_phone' => $r->input('phone'),
             'amount'      => $job->price,
-            'webhook_url' => route('zeno.webhook'),
+            'amount'      => $job->price,
+            // 'webhook_url' => route('zeno.webhook'), // User requested polling only
         ];
 
         $res = $zeno->startPayment($payload);
@@ -514,7 +523,8 @@ class JobController extends Controller
             'buyer_name'  => $user->name ?? 'Worker',
             'buyer_phone' => $request->input('phone'),
             'amount'      => $postingFee,
-            'webhook_url' => route('zeno.webhook'),
+            'amount'      => $postingFee,
+            // 'webhook_url' => route('zeno.webhook'), // User requested polling only
         ];
 
         $res = $zeno->startPayment($payload);
@@ -523,5 +533,38 @@ class JobController extends Controller
         }
 
         return redirect()->route('jobs.pay.wait', $job);
+    }
+    public function cancel(Job $job)
+    {
+        $this->ensureMuhitajiOrAdmin();
+
+        if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Huna ruhusa ya ku-cancel kazi hii.');
+        }
+
+        if ($job->status !== 'posted') {
+            return back()->withErrors(['cancel' => 'Huwezi ku-cancel kazi ambayo imeshaanza au haijapostiwa.']);
+        }
+
+        DB::transaction(function () use ($job) {
+            // Refund to wallet
+            $wallet = Auth::user()->ensureWallet();
+            $wallet->increment('balance', $job->price);
+
+            WalletTransaction::create([
+                'user_id' => Auth::id(),
+                'type'    => 'refund',
+                'amount'  => $job->price,
+                'description' => "Refund for cancelled job: {$job->title}",
+                'reference'   => "JOB_REFUND_{$job->id}",
+            ]);
+
+            // Update job status
+            $job->update([
+                'status' => 'cancelled',
+            ]);
+        });
+
+        return redirect()->route('my.jobs')->with('status', 'Kazi imefutwa na pesa imerudishwa kwenye wallet yako.');
     }
 }

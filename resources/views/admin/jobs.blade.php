@@ -17,6 +17,7 @@
     --border: rgba(255,255,255,0.1);
     --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+    --dark: #0f172a;
   }
 
   .page-container {
@@ -98,7 +99,7 @@
   .stat-value {
     font-size: 1.5rem;
     font-weight: 800;
-    color: var(--dark);
+    color: var(--text-primary);
     margin-bottom: 4px;
   }
 
@@ -112,12 +113,12 @@
 
   /* Filters */
   .filters-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .filters-grid {
@@ -136,17 +137,18 @@
   .filter-label {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--dark);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   .filter-input, .filter-select {
     padding: 12px 16px;
-    border: 2px solid var(--border);
+    border: 1px solid var(--border);
     border-radius: 12px;
     font-size: 0.875rem;
-    background: white;
+    background: rgba(255,255,255,0.05);
+    color: white;
     transition: all 0.3s ease;
   }
 
@@ -158,12 +160,12 @@
 
   /* Jobs List */
   .jobs-section {
-    background: rgba(255,255,255,0.95);
+    background: var(--card-bg);
     backdrop-filter: blur(20px);
     border-radius: 20px;
     padding: 24px;
     box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
 
   .jobs-list {
@@ -172,7 +174,7 @@
   }
 
   .job-card {
-    background: white;
+    background: rgba(255,255,255,0.03);
     border-radius: 16px;
     padding: 24px;
     box-shadow: var(--shadow);
@@ -195,7 +197,7 @@
   .job-info h3 {
     font-size: 1.25rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
   }
 
@@ -252,7 +254,7 @@
   }
 
   .job-details {
-    background: #f8fafc;
+    background: rgba(255,255,255,0.02);
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 16px;
@@ -263,7 +265,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
   }
 
   .detail-row:last-child {
@@ -279,7 +281,7 @@
   .detail-value {
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--dark);
+    color: var(--text-primary);
   }
 
   .job-actions {
@@ -362,7 +364,7 @@
   .empty-state {
     text-align: center;
     padding: 80px 20px;
-    background: #f8fafc;
+    background: rgba(255,255,255,0.02);
     border-radius: 16px;
     border: 2px dashed var(--border);
   }
@@ -376,7 +378,7 @@
   .empty-state h3 {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--dark);
+    color: var(--text-primary);
     margin: 0 0 8px 0;
   }
 
@@ -391,6 +393,27 @@
     display: flex;
     justify-content: center;
     margin-top: 32px;
+  }
+
+  .pagination-wrapper nav svg {
+    width: 20px;
+  }
+
+  .pagination-wrapper nav div div p {
+    color: var(--text-muted) !important;
+    margin: 0 10px;
+  }
+
+  .pagination-wrapper nav div span span,
+  .pagination-wrapper nav div a {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+  }
+
+  .pagination-wrapper nav div span[aria-current="page"] span {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
   }
 
   /* Responsive */
@@ -477,6 +500,11 @@
         <div class="stat-icon">✅</div>
         <div class="stat-value">{{ $jobs->where('status', 'completed')->count() }}</div>
         <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">❌</div>
+        <div class="stat-value">{{ $jobs->where('status', 'cancelled')->count() }}</div>
+        <div class="stat-label">Cancelled</div>
       </div>
     </div>
 

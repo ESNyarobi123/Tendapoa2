@@ -483,11 +483,11 @@
       <div class="date-range-grid">
         <div class="date-group">
           <label class="date-label" for="startDate">Start Date</label>
-          <input type="date" class="date-input" id="startDate" value="{{ date('Y-m-01') }}">
+          <input type="date" class="date-input" id="startDate" value="{{ $startDate->format('Y-m-d') }}">
         </div>
         <div class="date-group">
           <label class="date-label" for="endDate">End Date</label>
-          <input type="date" class="date-input" id="endDate" value="{{ date('Y-m-d') }}">
+          <input type="date" class="date-input" id="endDate" value="{{ $endDate->format('Y-m-d') }}">
         </div>
         <div class="date-group">
           <button class="btn btn-primary" onclick="updateAnalytics()">
@@ -511,10 +511,10 @@
           <div class="metric-icon">📦</div>
           <div class="metric-info">
             <h3>Total Jobs</h3>
-            <div class="metric-value">{{ number_format($totalJobs ?? 0) }}</div>
+            <div class="metric-value">{{ number_format($totalJobs) }}</div>
             <div class="metric-change positive">
               <span>📈</span>
-              +12% from last month
+              Last {{ $period }} days
             </div>
           </div>
         </div>
@@ -525,10 +525,24 @@
           <div class="metric-icon">💰</div>
           <div class="metric-info">
             <h3>Total Revenue</h3>
-            <div class="metric-value">TZS {{ number_format($totalRevenue ?? 0) }}</div>
+            <div class="metric-value">TZS {{ number_format($totalRevenue) }}</div>
             <div class="metric-change positive">
               <span>📈</span>
-              +8% from last month
+              Last {{ $period }} days
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="metric-card">
+        <div class="metric-header">
+          <div class="metric-icon">🏦</div>
+          <div class="metric-info">
+            <h3>Platform Commissions</h3>
+            <div class="metric-value">TZS {{ number_format($totalCommissions) }}</div>
+            <div class="metric-change positive">
+              <span>💎</span>
+              10% Service Fee
             </div>
           </div>
         </div>
@@ -539,10 +553,10 @@
           <div class="metric-icon">👥</div>
           <div class="metric-info">
             <h3>Active Users</h3>
-            <div class="metric-value">{{ number_format($activeUsers ?? 0) }}</div>
+            <div class="metric-value">{{ number_format($activeUsers) }}</div>
             <div class="metric-change positive">
               <span>📈</span>
-              +15% from last month
+              System-wide
             </div>
           </div>
         </div>
@@ -553,10 +567,10 @@
           <div class="metric-icon">⭐</div>
           <div class="metric-info">
             <h3>Completion Rate</h3>
-            <div class="metric-value">{{ number_format($completionRate ?? 0) }}%</div>
+            <div class="metric-value">{{ number_format($completionRate, 1) }}%</div>
             <div class="metric-change positive">
               <span>📈</span>
-              +3% from last month
+              Last {{ $period }} days
             </div>
           </div>
         </div>
@@ -611,25 +625,27 @@
         </a>
       </div>
       <div class="performers-list">
-        @for($i = 1; $i <= 5; $i++)
+        @forelse($topWorkers as $worker)
           <div class="performer-item">
             <div class="performer-header">
               <div class="performer-info">
                 <div class="performer-avatar">
-                  {{ chr(64 + $i) }}
+                  {{ strtoupper(substr($worker->name, 0, 1)) }}
                 </div>
                 <div class="performer-details">
-                  <h4>Worker {{ $i }}</h4>
-                  <p>Completed {{ rand(10, 50) }} jobs</p>
+                  <h4>{{ $worker->name }}</h4>
+                  <p>Completed {{ $worker->completed_jobs }} jobs</p>
                 </div>
               </div>
               <div class="performer-stats">
-                <div class="performer-value">TZS {{ number_format(rand(100000, 500000)) }}</div>
+                <div class="performer-value">TZS {{ number_format($worker->total_earned ?? 0) }}</div>
                 <div class="performer-label">Total Earnings</div>
               </div>
             </div>
           </div>
-        @endfor
+        @empty
+          <p class="text-center py-4">No top workers found for this period.</p>
+        @endforelse
       </div>
     </div>
 
@@ -683,30 +699,12 @@
       return;
     }
     
-    // Show loading state
-    const btn = event.target;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<span>⏳</span> Loading...';
-    btn.disabled = true;
-    
-    // Simulate API call
-    setTimeout(() => {
-      btn.innerHTML = originalText;
-      btn.disabled = false;
-      
-      // Update metrics (this would be real data from API)
-      updateMetrics();
-      
-      showNotification('Analytics updated successfully!', 'success');
-    }, 2000);
+    // Redirect with parameters
+    window.location.href = `{{ route('admin.analytics') }}?start_date=${startDate}&end_date=${endDate}`;
   }
 
   function resetDateRange() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    document.getElementById('startDate').value = firstDay.toISOString().split('T')[0];
-    document.getElementById('endDate').value = today.toISOString().split('T')[0];
+    window.location.href = `{{ route('admin.analytics') }}?period=30`;
   }
 
   function updateMetrics() {
@@ -756,33 +754,15 @@
   // Initialize Charts
   document.addEventListener('DOMContentLoaded', function() {
     @php
-      // Generate revenue data for last 7 days
-      $revenueData = [];
-      $revenueLabels = [];
-      for ($i = 6; $i >= 0; $i--) {
-        $date = now()->subDays($i);
-        $revenueLabels[] = $date->format('M d');
-        $dayRevenue = \App\Models\Job::where('status', 'completed')
-          ->whereDate('updated_at', $date->format('Y-m-d'))
-          ->sum('price');
-        $revenueData[] = (int)$dayRevenue;
-      }
-      
-      // Job status distribution
-      $jobStatuses = \App\Models\Job::selectRaw('status, count(*) as count')
-        ->groupBy('status')
-        ->pluck('count', 'status')
-        ->toArray();
-      
-      // User growth data
-      $userGrowthData = [];
-      $userGrowthLabels = [];
-      for ($i = 6; $i >= 0; $i--) {
-        $date = now()->subDays($i);
-        $userGrowthLabels[] = $date->format('M d');
-        $dayUsers = \App\Models\User::whereDate('created_at', $date->format('Y-m-d'))->count();
-        $userGrowthData[] = $dayUsers;
-      }
+      // Prepare chart data from controller variables
+      $revenueLabels = $revenueTrend->pluck('date')->map(fn($d) => date('M d', strtotime($d)))->toArray();
+      $revenueData = $revenueTrend->pluck('total')->toArray();
+
+      $userGrowthLabels = $userGrowth->pluck('date')->map(fn($d) => date('M d', strtotime($d)))->toArray();
+      $userGrowthData = $userGrowth->pluck('count')->toArray();
+
+      $categoryLabels = $categoryDistribution->pluck('name')->toArray();
+      $categoryData = $categoryDistribution->pluck('jobs_count')->toArray();
     @endphp
 
     // Revenue Chart
@@ -842,9 +822,9 @@
       new Chart(categoryCtx, {
         type: 'doughnut',
         data: {
-          labels: ['Category 1', 'Category 2', 'Category 3', 'Category 4'],
+          labels: @json($categoryLabels),
           datasets: [{
-            data: [30, 25, 20, 25],
+            data: @json($categoryData),
             backgroundColor: [
               'rgba(99, 102, 241, 0.8)',
               'rgba(139, 92, 246, 0.8)',

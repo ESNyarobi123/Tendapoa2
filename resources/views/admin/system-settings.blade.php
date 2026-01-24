@@ -354,160 +354,112 @@
       <div class="form-grid">
         <div class="form-group">
           <label class="form-label" for="platform_name">Platform Name</label>
-          <input type="text" id="platform_name" name="platform_name" value="Tendapoa" class="form-input">
+          <input type="text" id="platform_name" name="platform_name" value="{{ $settings['platform_name'] ?? 'Tendapoa' }}" class="form-input">
         </div>
 
         <div class="form-group">
           <label class="form-label" for="platform_version">Platform Version</label>
-          <input type="text" id="platform_version" name="platform_version" value="1.0.0" class="form-input">
+          <input type="text" id="platform_version" name="platform_version" value="{{ $settings['platform_version'] ?? '1.0.0' }}" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="system_currency">System Currency</label>
+          <input type="text" id="system_currency" name="system_currency" value="{{ $settings['system_currency'] ?? 'TZS' }}" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="contact_email">Support Email</label>
+          <input type="email" id="contact_email" name="contact_email" value="{{ $settings['contact_email'] ?? 'support@tendapoa.com' }}" class="form-input">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="platform_logo">Platform Logo</label>
+          <input type="file" id="platform_logo" name="platform_logo" class="form-input" style="padding: 8px;">
+          @if(isset($settings['platform_logo']))
+            <div style="margin-top: 8px; display: flex; align-items: center; gap: 12px;">
+              <img src="{{ asset('storage/' . $settings['platform_logo']) }}" alt="Logo" style="height: 40px; border-radius: 8px; background: rgba(255,255,255,0.1); padding: 4px;">
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Current Logo</span>
+            </div>
+          @endif
         </div>
       </div>
 
       <div class="form-group" style="margin-top: 24px;">
         <label class="form-label" for="platform_description">Platform Description</label>
-        <textarea id="platform_description" name="platform_description" rows="3" class="form-textarea">Tendapoa - Your trusted platform for connecting job seekers with employers</textarea>
+        <textarea id="platform_description" name="platform_description" rows="3" class="form-textarea">{{ $settings['platform_description'] ?? 'Tendapoa - Your trusted platform for connecting job seekers with employers' }}</textarea>
       </div>
     </div>
 
-    <!-- User Management Settings -->
+    <!-- Financial & Commission Settings -->
     <div class="settings-section">
       <h2 class="section-title">
-        <span class="section-icon">👥</span>
-        User Management
+        <span class="section-icon">💰</span>
+        Financial & Commission Settings
       </h2>
       
       <div class="form-grid">
         <div class="form-group">
-          <label class="form-label" for="user_registration">New User Registration</label>
-          <select id="user_registration" name="user_registration" class="form-select">
-            <option value="enabled">Enabled</option>
-            <option value="disabled">Disabled</option>
-            <option value="approval_required">Approval Required</option>
-          </select>
+          <label class="form-label" for="commission_rate">Job Commission Rate (%)</label>
+          <input type="number" id="commission_rate" name="commission_rate" value="{{ $settings['commission_rate'] ?? '10' }}" step="0.1" class="form-input">
+          <small style="color: var(--text-muted);">This percentage is deducted from worker earnings upon job completion.</small>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="email_verification">Email Verification Required</label>
-          <select id="email_verification" name="email_verification" class="form-select">
-            <option value="required">Required</option>
-            <option value="optional">Optional</option>
-          </select>
+          <label class="form-label" for="min_withdrawal">Minimum Withdrawal ({{ $settings['system_currency'] ?? 'TZS' }})</label>
+          <input type="number" id="min_withdrawal" name="min_withdrawal" value="{{ $settings['min_withdrawal'] ?? '10000' }}" class="form-input">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="default_role">Default User Role</label>
-          <select id="default_role" name="default_role" class="form-select">
-            <option value="muhitaji">Muhitaji (Job Poster)</option>
-            <option value="mfanyakazi">Mfanyakazi (Worker)</option>
-          </select>
+          <label class="form-label" for="withdrawal_fee">Withdrawal Fee ({{ $settings['system_currency'] ?? 'TZS' }})</label>
+          <input type="number" id="withdrawal_fee" name="withdrawal_fee" value="{{ $settings['withdrawal_fee'] ?? '500' }}" class="form-input">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="suspension_policy">User Suspension Policy</label>
-          <select id="suspension_policy" name="suspension_policy" class="form-select">
-            <option value="manual">Manual Only</option>
-            <option value="automatic">Automatic (3 strikes)</option>
-            <option value="hybrid">Hybrid (Manual + Auto)</option>
-          </select>
+          <label class="form-label" for="job_posting_fee">Job Posting Fee ({{ $settings['system_currency'] ?? 'TZS' }})</label>
+          <input type="number" id="job_posting_fee" name="job_posting_fee" value="{{ $settings['job_posting_fee'] ?? '0' }}" class="form-input">
         </div>
       </div>
     </div>
 
-    <!-- Job Management Settings -->
+    <!-- System Toggles -->
     <div class="settings-section">
       <h2 class="section-title">
-        <span class="section-icon">💼</span>
-        Job Management
+        <span class="section-icon">🔌</span>
+        System Toggles
       </h2>
       
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="job_posting_fee">Job Posting Fee (Tsh)</label>
-          <input type="number" id="job_posting_fee" name="job_posting_fee" value="0" class="form-input">
+      <div style="display: grid; gap: 16px;">
+        <div class="toggle-group">
+          <div class="toggle-info">
+            <h3>Enable Payments (USSD Push)</h3>
+            <p>If disabled, users can post jobs for free without USSD payment prompt.</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" name="payments_enabled" {{ ($settings['payments_enabled'] ?? '1') == '1' ? 'checked' : '' }}>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="commission_rate">Commission Rate (%)</label>
-          <input type="number" id="commission_rate" name="commission_rate" value="5" step="0.1" class="form-input">
+        <div class="toggle-group">
+          <div class="toggle-info">
+            <h3>Maintenance Mode</h3>
+            <p>Put the entire system into maintenance mode. Only admins can access.</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" name="maintenance_mode" {{ ($settings['maintenance_mode'] ?? '0') == '1' ? 'checked' : '' }}>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="job_expiry_days">Job Auto-Expiry (Days)</label>
-          <input type="number" id="job_expiry_days" name="job_expiry_days" value="30" class="form-input">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="max_jobs_per_user">Max Jobs Per User</label>
-          <input type="number" id="max_jobs_per_user" name="max_jobs_per_user" value="10" class="form-input">
-        </div>
-      </div>
-    </div>
-
-    <!-- Payment Settings -->
-    <div class="settings-section">
-      <h2 class="section-title">
-        <span class="section-icon">💳</span>
-        Payment Settings
-      </h2>
-      
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="payment_gateway">Payment Gateway</label>
-          <select id="payment_gateway" name="payment_gateway" class="form-select">
-            <option value="zenopay">ZenoPay</option>
-            <option value="mpesa">M-Pesa</option>
-            <option value="tigopesa">Tigo Pesa</option>
-            <option value="airtelmoney">Airtel Money</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="min_withdrawal">Minimum Withdrawal (Tsh)</label>
-          <input type="number" id="min_withdrawal" name="min_withdrawal" value="10000" class="form-input">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="withdrawal_processing_hours">Withdrawal Processing Time (Hours)</label>
-          <input type="number" id="withdrawal_processing_hours" name="withdrawal_processing_hours" value="24" class="form-input">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="transaction_fee">Transaction Fee (%)</label>
-          <input type="number" id="transaction_fee" name="transaction_fee" value="2.5" step="0.1" class="form-input">
-        </div>
-      </div>
-    </div>
-
-    <!-- Security Settings -->
-    <div class="settings-section">
-      <h2 class="section-title">
-        <span class="section-icon">🔒</span>
-        Security Settings
-      </h2>
-      
-      <div class="form-grid">
-        <div class="form-group">
-          <label class="form-label" for="session_timeout">Session Timeout (Minutes)</label>
-          <input type="number" id="session_timeout" name="session_timeout" value="120" class="form-input">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="max_login_attempts">Max Login Attempts</label>
-          <input type="number" id="max_login_attempts" name="max_login_attempts" value="5" class="form-input">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="password_reset_timeout">Password Reset Timeout (Minutes)</label>
-          <input type="number" id="password_reset_timeout" name="password_reset_timeout" value="60" class="form-input">
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="two_factor_auth">Two-Factor Authentication</label>
-          <select id="two_factor_auth" name="two_factor_auth" class="form-select">
-            <option value="disabled">Disabled</option>
-            <option value="optional">Optional</option>
-            <option value="required">Required</option>
-          </select>
+        <div class="toggle-group">
+          <div class="toggle-info">
+            <h3>New User Registration</h3>
+            <p>Allow new users to create accounts on the platform.</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" name="registration_enabled" {{ ($settings['registration_enabled'] ?? '1') == '1' ? 'checked' : '' }}>
+            <span class="toggle-slider"></span>
+          </label>
         </div>
       </div>
     </div>
@@ -526,7 +478,7 @@
             <p>Send email notifications for important events</p>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" name="email_notifications" checked>
+            <input type="checkbox" name="email_notifications" {{ ($settings['email_notifications'] ?? '1') == '1' ? 'checked' : '' }}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -537,7 +489,7 @@
             <p>Send SMS notifications for urgent events</p>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" name="sms_notifications">
+            <input type="checkbox" name="sms_notifications" {{ ($settings['sms_notifications'] ?? '0') == '1' ? 'checked' : '' }}>
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -548,7 +500,7 @@
             <p>Send push notifications to mobile devices</p>
           </div>
           <label class="toggle-switch">
-            <input type="checkbox" name="push_notifications" checked>
+            <input type="checkbox" name="push_notifications" {{ ($settings['push_notifications'] ?? '1') == '1' ? 'checked' : '' }}>
             <span class="toggle-slider"></span>
           </label>
         </div>

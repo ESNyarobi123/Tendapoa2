@@ -53,6 +53,7 @@ Route::middleware(['auth'])->group(function () {
 
     // MUHITAJI accept (role check ndani ya controller)
     Route::post('/jobs/{job}/accept/{comment}', [JobViewController::class,'accept'])->name('jobs.accept');
+    Route::post('/jobs/{job}/cancel', [JobController::class, 'cancel'])->name('jobs.cancel');
 
     // PRIVATE CHAT/MESSAGING
     Route::get('/chat', [\App\Http\Controllers\ChatController::class, 'index'])->name('chat.index');
@@ -98,6 +99,9 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/chats', [\App\Http\Controllers\AdminController::class, 'allChats'])->name('admin.chats');
     Route::get('/chats/{job}', [\App\Http\Controllers\AdminController::class, 'viewChat'])->name('admin.chat.view');
     
+    // Commission & Fees Tracking
+    Route::get('/commissions', [\App\Http\Controllers\Admin\CommissionController::class, 'index'])->name('admin.commissions');
+    
     // Analytics & Reports
     Route::get('/analytics', [\App\Http\Controllers\AdminController::class, 'analytics'])->name('admin.analytics');
     
@@ -122,6 +126,12 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
     Route::post('/system-settings', [AdminController::class, 'updateSystemSettings'])->name('admin.system-settings.update');
     Route::post('/apk/upload', [AdminController::class, 'uploadApk'])->name('admin.apk.upload');
     Route::post('/apk/scan', [AdminController::class, 'scanManualApk'])->name('admin.apk.scan');
+    
+    // Category Management
+    Route::get('/categories', [AdminController::class, 'categories'])->name('admin.categories');
+    Route::post('/categories', [AdminController::class, 'storeCategory'])->name('admin.categories.store');
+    Route::put('/categories/{category}', [AdminController::class, 'updateCategory'])->name('admin.categories.update');
+    Route::delete('/categories/{category}', [AdminController::class, 'deleteCategory'])->name('admin.categories.delete');
     
     // ADMIN FULL CONTROL - Communication
     Route::post('/users/{user}/send-message', [AdminController::class, 'sendMessageToUser'])->name('admin.user.send-message');

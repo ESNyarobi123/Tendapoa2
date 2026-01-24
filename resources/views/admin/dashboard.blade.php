@@ -30,8 +30,8 @@
   .admin-header {
     background: var(--card-bg);
     backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
+    border-radius: 20px;
+    padding: 20px 24px;
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border);
   }
@@ -44,8 +44,8 @@
   }
 
   .header-text h1 {
-    font-size: 3rem;
-    font-weight: 900;
+    font-size: 2rem;
+    font-weight: 800;
     color: var(--text-primary);
     margin: 0 0 8px 0;
     background: linear-gradient(135deg, var(--primary), var(--secondary));
@@ -56,7 +56,7 @@
 
   .header-text p {
     color: var(--text-muted);
-    font-size: 1.2rem;
+    font-size: 0.95rem;
     margin: 0;
   }
 
@@ -76,8 +76,8 @@
   .super-stat-card {
     background: var(--card-bg);
     backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
+    border-radius: 16px;
+    padding: 16px 20px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
     transition: all 0.3s ease;
@@ -112,13 +112,13 @@
   }
 
   .stat-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 20px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 28px;
+    font-size: 22px;
     background: linear-gradient(135deg, var(--primary), var(--success));
     color: white;
     box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
@@ -134,8 +134,8 @@
   }
 
   .stat-value {
-    font-size: 3rem;
-    font-weight: 900;
+    font-size: 2rem;
+    font-weight: 800;
     color: var(--text-primary);
     margin: 8px 0;
     line-height: 1;
@@ -461,8 +461,8 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 12px 20px;
-    border-radius: 12px;
+    padding: 8px 16px;
+    border-radius: 10px;
     font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
@@ -569,6 +569,8 @@
   $activeClients = \App\Models\User::where('role', 'muhitaji')->count();
   $pendingWithdrawals = \App\Models\Withdrawal::where('status', 'PROCESSING')->count();
   $totalWithdrawals = \App\Models\Withdrawal::sum('amount');
+  $netProfit = $totalRevenue * 0.10;
+  $cancelledJobs = \App\Models\Job::where('status', 'cancelled')->count();
   
   // Recent activities
   $recentJobs = \App\Models\Job::with('muhitaji', 'acceptedWorker', 'category')->latest()->take(5)->get();
@@ -628,7 +630,7 @@
             </div>
             <div class="stat-trend">
               <span>📊</span>
-              {{ $completedJobs }} completed
+              {{ $completedJobs }} done • <span style="color: #ef4444;">{{ $cancelledJobs }} cancelled</span>
             </div>
           </div>
         </div>
@@ -638,8 +640,8 @@
         <div class="stat-header">
           <div class="stat-icon">💰</div>
           <div class="stat-info">
-            <h3>Total Revenue</h3>
-            <div class="stat-value">TZS {{ number_format($totalRevenue) }}</div>
+            <h3>Net Profit (10%)</h3>
+            <div class="stat-value" style="color: #10b981;">TZS {{ number_format($netProfit) }}</div>
             <div class="stat-change positive">
               <span>📈</span>
               +{{ rand(8, 20) }}% this month

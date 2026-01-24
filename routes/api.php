@@ -95,6 +95,66 @@ Route::get('/home', function () {
     ]);
 });
 
+// Check nearby workers (for job posting)
+Route::get('/workers/nearby', function (Request $request) {
+    $request->validate([
+        'lat' => ['required', 'numeric', 'between:-90,90'],
+        'lng' => ['required', 'numeric', 'between:-180,180'],
+        'radius' => ['nullable', 'numeric', 'min:1', 'max:50'], // km, default 5
+    ]);
+    
+    $lat = (float) $request->lat;
+    $lng = (float) $request->lng;
+    $radiusKm = (float) ($request->radius ?? 5);
+    
+    // Haversine formula to calculate distance in km
+    // Earth radius = 6371 km
+    $workers = \App\Models\User::where('role', 'mfanyakazi')
+        ->where('is_active', true)
+        ->whereNotNull('lat')
+        ->whereNotNull('lng')
+        ->selectRaw("
+            *,
+            (6371 * acos(
+                cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) +
+                sin(radians(?)) * sin(radians(lat))
+            )) AS distance_km
+        ", [$lat, $lng, $lat])
+        ->having('distance_km', '<=', $radiusKm)
+        ->orderBy('distance_km')
+        ->get();
+    
+    $workerCount = $workers->count();
+    
+    // Determine message based on worker count
+    if ($workerCount === 0) {
+        $message = "Pole, hakuna wafanyakazi eneo hili kwa sasa (ndani ya km {$radiusKm}). Unaweza kuendelea lakini muda wa kupata mfanyakazi unaweza kuwa mrefu.";
+        $status = 'no_workers';
+    } elseif ($workerCount === 1) {
+        $message = "Kuna mfanyakazi 1 karibu nawe ndani ya km {$radiusKm}!";
+        $status = 'workers_found';
+    } else {
+        $message = "Kuna wafanyakazi {$workerCount} karibu nawe ndani ya km {$radiusKm}!";
+        $status = 'workers_found';
+    }
+    
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'worker_count' => $workerCount,
+            'radius_km' => $radiusKm,
+            'status' => $status,
+            'message' => $message,
+            // Don't expose worker details for privacy, just counts by distance
+            'by_distance' => [
+                'within_1km' => $workers->where('distance_km', '<=', 1)->count(),
+                'within_3km' => $workers->where('distance_km', '<=', 3)->count(),
+                'within_5km' => $workers->where('distance_km', '<=', 5)->count(),
+            ]
+        ]
+    ]);
+});
+
 // ============================================================================
 // 3. PROTECTED APIs (Authentication Required)
 // ============================================================================
@@ -225,7 +285,7 @@ Route::middleware(['force.json', 'auth'])->group(function () {
                 'lat' => $validated['lat'],
                 'lng' => $validated['lng'],
                 'address_text' => $validated['address_text'] ?? null,
-                'status' => 'posted',
+                'status' => 'pending_payment',
                 'published_at' => now(),
             ]);
             
@@ -245,7 +305,8 @@ Route::middleware(['force.json', 'auth'])->group(function () {
                 'buyer_name' => $user->name ?? 'Client',
                 'buyer_phone' => $validated['phone'],
                 'amount' => $job->price,
-                'webhook_url' => route('zeno.webhook'),
+                'amount' => $job->price,
+                // 'webhook_url' => route('zeno.webhook'), // User requested polling only
             ];
             
             $res = $zenoService->startPayment($payload);
@@ -355,12 +416,20 @@ Route::middleware(['force.json', 'auth'])->group(function () {
             $zenoService = app(\App\Services\ZenoPayService::class);
             $resp = $zenoService->checkOrder($payment->order_id);
             
-            if ($resp['ok'] && (($resp['json']['result'] ?? null) === 'SUCCESS' || ($resp['json']['payment_status'] ?? null) === 'COMPLETED')) {
+            if ($resp['ok'] && ($resp['json']['payment_status'] ?? null) === 'COMPLETED') {
                 $payment->update([
                     'status' => 'COMPLETED',
                     'resultcode' => $resp['json']['resultcode'] ?? null,
                     'reference' => $resp['json']['reference'] ?? null,
                     'meta' => $resp['json'],
+                ]);
+            }
+            
+            // Activate the job if payment completed
+            if ($payment->status === 'COMPLETED' && $job->status === 'pending_payment') {
+                $job->update([
+                    'status' => 'posted',
+                    'published_at' => now(),
                 ]);
             }
             
@@ -468,7 +537,8 @@ Route::middleware(['force.json', 'auth'])->group(function () {
                     'buyer_name' => $user->name ?? 'Worker',
                     'buyer_phone' => $validated['phone'],
                     'amount' => $postingFee,
-                    'webhook_url' => route('zeno.webhook'),
+
+                    // 'webhook_url' => route('zeno.webhook'), // User requested polling only
                 ];
                 
                 $res = $zenoService->startPayment($payload);

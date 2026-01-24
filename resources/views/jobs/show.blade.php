@@ -124,6 +124,11 @@
     color: #065f46;
   }
 
+  .job-status.pending_payment {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
   /* Map Section */
   .map-section {
     background: rgba(255,255,255,0.95);
@@ -535,6 +540,11 @@
         <p style="margin: 8px 0 0 0; color: var(--text-muted); font-size: 0.875rem;">
           Bei hii ni ya escrow - utalipa tu mfanyakazi akimaliza kazi kwa usahihi.
         </p>
+        @if(auth()->check() && auth()->user()->role === 'mfanyakazi')
+            <p style="margin: 8px 0 0 0; color: #ef4444; font-size: 0.875rem; font-weight: 600;">
+              ⚠️ Kumbuka: Makato ya 10% (Service Fee) yatakatwa wakati wa malipo.
+            </p>
+        @endif
       </div>
 
       @auth
@@ -584,6 +594,16 @@
             <p style="color: #92400e; margin: 0; font-size: 0.875rem;">
               Chagua mfanyakazi kupitia maoni (comments) hapa chini. Angalia profile na uwezo wa mfanyakazi kabla ya kumchagua.
             </p>
+          </div>
+        @endif
+        @if(auth()->user()->role === 'muhitaji' && auth()->id() === $job->user_id && $job->status === 'posted')
+          <div style="margin-top: 16px;">
+             <form action="{{ route('jobs.cancel', $job) }}" method="POST" onsubmit="return confirm('Una uhakika unataka kufuta kazi hii? Pesa itarudishwa kwenye wallet yako.');">
+                @csrf
+                <button type="submit" class="btn" style="background: #fee2e2; color: #ef4444; width: 100%; justify-content: center;">
+                  <span>🗑️</span> Futa Kazi na Rudisha Pesa
+                </button>
+             </form>
           </div>
         @endif
       @endauth

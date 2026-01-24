@@ -1177,6 +1177,9 @@
             <div class="stat-change {{ $available > 0 ? 'positive' : 'negative' }}">
               <span>{{ $available > 0 ? 'Unaweza kutoa sasa' : 'Hakuna salio' }}</span>
             </div>
+            <div style="font-size: 0.65rem; color: var(--text-muted); margin-top: 4px; font-weight: 600;">
+              ⚠️ Makato ya 10% tayari yameshatolewa kwenye mapato yako.
+            </div>
           </div>
         </div>
       </div>

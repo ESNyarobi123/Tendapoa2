@@ -19,6 +19,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Share system settings with all views
+        try {
+            if (\Schema::hasTable('settings')) {
+                $settings = \App\Models\Setting::pluck('value', 'key')->toArray();
+                view()->share('settings', $settings);
+            }
+        } catch (\Exception $e) {
+            // Table might not exist during migration
+        }
     }
 }

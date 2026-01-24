@@ -349,6 +349,17 @@
         </div>
       @endif
 
+      <!-- Worker Check Notification -->
+      <div id="workerCheckNotification" style="display: none; padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid transparent;">
+        <div style="display: flex; gap: 12px; align-items: flex-start;">
+          <div id="workerCheckNotifIcon" style="font-size: 24px;"></div>
+          <div>
+            <h4 id="workerCheckNotifTitle" style="margin: 0 0 4px 0; font-weight: 700; font-size: 1rem;"></h4>
+            <p id="workerCheckNotifMessage" style="margin: 0; font-size: 0.875rem;"></p>
+          </div>
+        </div>
+      </div>
+
       <form method="post" action="{{ route('jobs.store') }}">
         @csrf
 
@@ -470,6 +481,22 @@
   </div>
 </div>
 
+  <!-- Worker Check Modal -->
+  <div class="modal-overlay" id="workerCheckModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 2000; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: white; border-radius: 20px; padding: 32px; width: 90%; max-width: 450px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div id="workerCheckIcon" style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+        <h3 id="workerCheckTitle" style="font-size: 1.5rem; font-weight: 700; color: #1f2937; margin: 0 0 8px 0;">Inatafuta Wafanyakazi...</h3>
+        <p id="workerCheckMessage" style="color: #6b7280; font-size: 1rem; margin: 0;">Tafadhali subiri wakati tunaangalia wafanyakazi walio karibu.</p>
+      </div>
+      
+      <div class="modal-footer" style="display: flex; gap: 12px; justify-content: center;">
+        <button type="button" id="btnCancelLocation" class="btn btn-outline" style="display: none;">Badilisha Eneo</button>
+        <button type="button" id="btnConfirmLocation" class="btn btn-primary" style="display: none;">Endelea Hivyo Hivyo</button>
+      </div>
+    </div>
+  </div>
+
 @push('scripts')
 <script>
   // Initialize map
@@ -493,6 +520,106 @@
     document.getElementById('lat').value = lat;
     document.getElementById('lng').value = lng;
     isLocationSet = true;
+    
+    // Check for nearby workers
+    checkNearbyWorkers(lat, lng);
+  }
+
+  // Check nearby workers API
+  function checkNearbyWorkers(lat, lng) {
+    // Show loading modal
+    const modal = document.getElementById('workerCheckModal');
+    const icon = document.getElementById('workerCheckIcon');
+    const title = document.getElementById('workerCheckTitle');
+    const message = document.getElementById('workerCheckMessage');
+    const btnCancel = document.getElementById('btnCancelLocation');
+    const btnConfirm = document.getElementById('btnConfirmLocation');
+    
+    // Reset modal state
+    modal.style.display = 'flex';
+    icon.innerHTML = '🔍';
+    title.textContent = 'Inatafuta Wafanyakazi...';
+    message.textContent = 'Tafadhali subiri wakati tunaangalia wafanyakazi walio karibu.';
+    btnCancel.style.display = 'none';
+    btnConfirm.style.display = 'none';
+    
+    // Call API
+    fetch(`/api/workers/nearby?lat=${lat}&lng=${lng}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const result = data.data;
+          
+          if (result.status === 'no_workers') {
+            // No workers found
+            icon.innerHTML = '⚠️';
+            title.textContent = 'Hakuna Wafanyakazi Eneo Hili';
+            message.textContent = result.message;
+            title.style.color = '#ef4444'; // Red
+            
+            // Update notification on form
+            showNotification('error', 'Hakuna Wafanyakazi', result.message);
+          } else {
+            // Workers found
+            icon.innerHTML = '✅';
+            title.textContent = 'Wafanyakazi Wamepatikana!';
+            message.textContent = result.message;
+            title.style.color = '#10b981'; // Green
+            
+            // Update notification on form
+            showNotification('success', 'Wafanyakazi Wapo!', result.message);
+          }
+          
+          // Show buttons
+          btnCancel.style.display = 'block';
+          btnConfirm.style.display = 'block';
+          
+          // Handle button clicks
+          btnCancel.onclick = function() {
+            modal.style.display = 'none';
+          };
+          
+          btnConfirm.onclick = function() {
+            modal.style.display = 'none';
+            document.getElementById('location-status').style.display = 'none';
+          };
+          
+        } else {
+          // API Error
+          modal.style.display = 'none';
+          console.error('API Error:', data);
+        }
+      })
+      .catch(error => {
+        console.error('Fetch Error:', error);
+        modal.style.display = 'none';
+      });
+  }
+
+  function showNotification(type, title, message) {
+    const notif = document.getElementById('workerCheckNotification');
+    const icon = document.getElementById('workerCheckNotifIcon');
+    const titleEl = document.getElementById('workerCheckNotifTitle');
+    const msgEl = document.getElementById('workerCheckNotifMessage');
+    
+    notif.style.display = 'block';
+    titleEl.textContent = title;
+    msgEl.textContent = message;
+    
+    if (type === 'success') {
+      notif.style.background = 'rgba(16, 185, 129, 0.1)';
+      notif.style.border = '1px solid rgba(16, 185, 129, 0.3)';
+      icon.innerHTML = '✅';
+      titleEl.style.color = '#059669';
+    } else {
+      notif.style.background = 'rgba(239, 68, 68, 0.1)';
+      notif.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+      icon.innerHTML = '⚠️';
+      titleEl.style.color = '#dc2626';
+    }
+    
+    // Scroll to notification
+    notif.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   // Map click handler

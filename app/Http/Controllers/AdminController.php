@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Job;
 use App\Models\User;
+use App\Models\Category;
 use App\Models\PrivateMessage;
 use App\Models\Payment;
 use App\Models\Withdrawal;
 use App\Models\WalletTransaction;
 use App\Models\AppVersion;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -464,14 +466,44 @@ class AdminController extends Controller
      */
     public function analytics(Request $request)
     {
-        $period = $request->get('period', '30'); // days
+        $period = $request->get('period', '30');
+        $startDateStr = $request->get('start_date');
+        $endDateStr = $request->get('end_date');
+
+        if ($startDateStr && $endDateStr) {
+            $startDate = \Carbon\Carbon::parse($startDateStr)->startOfDay();
+            $endDate = \Carbon\Carbon::parse($endDateStr)->endOfDay();
+            $period = $startDate->diffInDays($endDate);
+        } else {
+            $startDate = now()->subDays($period)->startOfDay();
+            $endDate = now()->endOfDay();
+        }
+
+        // Key Metrics
+        $totalJobs = Job::whereBetween('created_at', [$startDate, $endDate])->count();
+        $totalRevenue = Payment::where('status', 'paid')
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->sum('amount');
+        
+        // Commission is dynamic from settings (default 10%)
+        $commissionRate = (float) Setting::get('commission_rate', 10) / 100;
+        $totalCommissions = Job::where('status', 'completed')
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->sum(DB::raw("price * $commissionRate"));
+
+        $activeUsers = User::where('is_active', true)->count();
+        
+        $completedJobsCount = Job::where('status', 'completed')
+            ->whereBetween('updated_at', [$startDate, $endDate])
+            ->count();
+        $completionRate = $totalJobs > 0 ? ($completedJobsCount / $totalJobs) * 100 : 0;
 
         // User growth
         $userGrowth = User::select(
                 DB::raw('DATE(created_at) as date'),
                 DB::raw('COUNT(*) as count')
             )
-            ->where('created_at', '>=', now()->subDays($period))
+            ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -481,37 +513,64 @@ class AdminController extends Controller
                 DB::raw('DATE(created_at) as date'),
                 DB::raw('COUNT(*) as count')
             )
-            ->where('created_at', '>=', now()->subDays($period))
+            ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
-        // Revenue
-        $revenue = Payment::select(
+        // Revenue Trend
+        $revenueTrend = Payment::select(
                 DB::raw('DATE(created_at) as date'),
                 DB::raw('SUM(amount) as total')
             )
             ->where('status', 'paid')
-            ->where('created_at', '>=', now()->subDays($period))
+            ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
         // Top workers
         $topWorkers = User::where('role', 'mfanyakazi')
-            ->withCount(['assignedJobs as completed_jobs' => function($q) {
-                $q->where('status', 'completed');
+            ->withCount(['assignedJobs as completed_jobs' => function($q) use ($startDate, $endDate) {
+                $q->where('status', 'completed')->whereBetween('updated_at', [$startDate, $endDate]);
             }])
+            ->withSum(['assignedJobs as total_earned' => function($q) use ($startDate, $endDate) {
+                $q->where('status', 'completed')->whereBetween('updated_at', [$startDate, $endDate]);
+            }], 'price')
             ->orderBy('completed_jobs', 'desc')
-            ->limit(10)
+            ->limit(5)
             ->get();
 
+        // Job Categories Distribution
+        $categoryDistribution = Category::withCount(['jobs' => function($q) use ($startDate, $endDate) {
+                $q->whereBetween('created_at', [$startDate, $endDate]);
+            }])
+            ->orderBy('jobs_count', 'desc')
+            ->limit(5)
+            ->get();
+
+        // Job Status Distribution
+        $jobStatuses = Job::whereBetween('created_at', [$startDate, $endDate])
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
         return view('admin.analytics', compact(
+            'totalJobs',
+            'totalRevenue',
+            'totalCommissions',
+            'activeUsers',
+            'completionRate',
             'userGrowth',
             'jobStats',
-            'revenue',
+            'revenueTrend',
             'topWorkers',
-            'period'
+            'categoryDistribution',
+            'jobStatuses',
+            'period',
+            'startDate',
+            'endDate'
         ));
     }
 
@@ -676,7 +735,8 @@ class AdminController extends Controller
      */
     public function systemSettings()
     {
-        return view('admin.system-settings');
+        $settings = Setting::pluck('value', 'key')->toArray();
+        return view('admin.system-settings', compact('settings'));
     }
 
     /**
@@ -722,8 +782,36 @@ class AdminController extends Controller
             return back()->with('success', "APK version {$version} uploaded successfully and set as active!");
         }
 
-        // Here you can add other system-wide settings
-        return back()->with('success', 'System settings updated!');
+        // Handle Platform Logo upload
+        if ($request->hasFile('platform_logo')) {
+            $request->validate([
+                'platform_logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            ]);
+            $logoPath = $request->file('platform_logo')->store('platform', 'public');
+            Setting::set('platform_logo', $logoPath);
+        }
+
+        // Handle other system settings
+        $settings = $request->except(['_token', 'apk_file', 'apk_version', 'apk_description', 'platform_logo']);
+        
+        foreach ($settings as $key => $value) {
+            // Handle checkboxes (toggles)
+            if ($value === 'on') $value = '1';
+            
+            Setting::set($key, $value);
+        }
+
+        // Special case for toggles that might be missing from request if unchecked
+        $toggles = ['email_notifications', 'sms_notifications', 'push_notifications', 'payments_enabled'];
+        foreach ($toggles as $toggle) {
+            if (!$request->has($toggle)) {
+                Setting::set($toggle, '0');
+            } else {
+                Setting::set($toggle, '1');
+            }
+        }
+
+        return back()->with('success', 'System settings updated successfully!');
     }
 
     /**
@@ -1061,6 +1149,93 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', "Found and activated APK: {$fileName} (Version: {$version})");
+    }
+
+    /**
+     * CATEGORY MANAGEMENT - List all categories
+     */
+    public function categories()
+    {
+        $categories = Category::withCount('jobs')->orderBy('name')->get();
+        return view('admin.categories', compact('categories'));
+    }
+
+    /**
+     * CATEGORY MANAGEMENT - Store new category
+     */
+    public function storeCategory(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:categories,name',
+        ], [
+            'name.required' => 'Category name is required.',
+            'name.unique' => 'This category already exists.',
+        ]);
+
+        $slug = \Illuminate\Support\Str::slug($request->name);
+        
+        // Ensure unique slug
+        $originalSlug = $slug;
+        $counter = 1;
+        while (Category::where('slug', $slug)->exists()) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+
+        Category::create([
+            'name' => $request->name,
+            'slug' => $slug,
+        ]);
+
+        return back()->with('success', "Category '{$request->name}' created successfully!");
+    }
+
+    /**
+     * CATEGORY MANAGEMENT - Update category
+     */
+    public function updateCategory(Request $request, Category $category)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:categories,name,' . $category->id,
+        ], [
+            'name.required' => 'Category name is required.',
+            'name.unique' => 'This category already exists.',
+        ]);
+
+        $slug = \Illuminate\Support\Str::slug($request->name);
+        
+        // Ensure unique slug (exclude current)
+        $originalSlug = $slug;
+        $counter = 1;
+        while (Category::where('slug', $slug)->where('id', '!=', $category->id)->exists()) {
+            $slug = $originalSlug . '-' . $counter;
+            $counter++;
+        }
+
+        $category->update([
+            'name' => $request->name,
+            'slug' => $slug,
+        ]);
+
+        return back()->with('success', "Category updated to '{$request->name}' successfully!");
+    }
+
+    /**
+     * CATEGORY MANAGEMENT - Delete category
+     */
+    public function deleteCategory(Category $category)
+    {
+        // Check if category has jobs
+        $jobCount = Job::where('category_id', $category->id)->count();
+        
+        if ($jobCount > 0) {
+            return back()->with('error', "Cannot delete '{$category->name}' - it has {$jobCount} jobs. Please reassign or delete those jobs first.");
+        }
+
+        $categoryName = $category->name;
+        $category->delete();
+
+        return back()->with('success', "Category '{$categoryName}' deleted successfully!");
     }
 }
 

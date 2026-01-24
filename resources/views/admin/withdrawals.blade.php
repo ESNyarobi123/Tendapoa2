@@ -619,7 +619,12 @@
                   <div class="withdrawal-status {{ strtolower($w->status) }}">
                     {{ strtoupper($w->status) }}
                   </div>
-                  <h3>{{ $w->user->name ?? 'Unknown User' }}</h3>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <h3>{{ $w->user->name ?? 'Unknown User' }}</h3>
+                    <span class="monitoring-status {{ $w->user->role === 'mfanyakazi' ? 'active' : 'pending' }}" style="font-size: 0.65rem; padding: 2px 8px;">
+                      {{ strtoupper($w->user->role ?? 'USER') }}
+                    </span>
+                  </div>
                   <div class="withdrawal-meta">
                     <span>📱 {{ $w->account ?? 'N/A' }}</span>
                     <span>📧 {{ $w->user->email ?? 'N/A' }}</span>

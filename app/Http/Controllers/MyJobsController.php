@@ -12,10 +12,15 @@ class MyJobsController extends Controller
         $u = Auth::user();
         if (!$u || !in_array($u->role,['muhitaji','admin'])) abort(403);
 
-        $jobs = Job::withCount('comments')
+        $query = Job::withCount('comments')
             ->with('acceptedWorker')
-            ->where('user_id', $u->id)
-            ->latest()->paginate(12);
+            ->where('user_id', $u->id);
+
+        if (request()->has('status')) {
+            $query->where('status', request('status'));
+        }
+
+        $jobs = $query->latest()->paginate(12);
 
         return view('muhitaji.my_jobs', compact('jobs'));
     }

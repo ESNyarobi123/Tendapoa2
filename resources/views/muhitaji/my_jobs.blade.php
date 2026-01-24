@@ -453,6 +453,10 @@
       font-size: 1.25rem;
     }
   }
+  .job-status.pending-payment {
+    background: #fee2e2;
+    color: #991b1b;
+  }
 </style>
 
 <div class="my-jobs-page">
@@ -542,6 +546,12 @@
 
             <!-- Action Buttons -->
             <div style="margin-top: 16px; display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
+              @if($job->status === 'pending_payment')
+                <a class="btn btn-primary" href="{{ route('jobs.pay.wait', $job) }}" style="background: linear-gradient(135deg, #ef4444, #dc2626); box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.4);">
+                  <span>💳</span>
+                  Kamilisha Malipo
+                </a>
+              @endif
               @if(in_array($job->status, ['posted', 'assigned']))
                 <a class="btn btn-outline" href="{{ route('jobs.edit', $job) }}">
                   <span>✏️</span>

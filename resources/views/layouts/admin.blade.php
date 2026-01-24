@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Admin — TendaPoa')</title>
+    <title>@yield('title', 'Admin — ' . ($settings['platform_name'] ?? 'TendaPoa'))</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
@@ -53,11 +53,12 @@
             left: 0;
             top: 0;
             height: 100vh;
-            width: 280px;
-            background: var(--sidebar-bg);
-            backdrop-filter: blur(20px);
+            width: 260px;
+            background: rgba(15, 15, 35, 0.85);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
             border-right: 1px solid var(--border);
-            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             z-index: 1000;
             overflow: hidden;
             box-shadow: var(--shadow-lg);
@@ -68,18 +69,18 @@
         }
 
         .admin-sidebar:hover:not(.sidebar-collapsed) {
-            width: 280px;
+            width: 260px;
         }
 
         /* Sidebar Header */
         .sidebar-header {
-            padding: 24px 20px;
-            border-bottom: 1px solid var(--border);
+            padding: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            min-height: 80px;
+            min-height: 70px;
         }
 
         .sidebar-logo {
@@ -91,14 +92,18 @@
         }
 
         .sidebar-logo-icon {
-            font-size: 28px;
+            font-size: 24px;
             min-width: 32px;
         }
 
         .sidebar-logo-text {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 800;
-            color: var(--text-primary);
+            letter-spacing: 1px;
+            color: #fff;
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
             opacity: 1;
             transition: opacity 0.3s;
         }
@@ -109,31 +114,34 @@
         }
 
         .sidebar-toggle {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: var(--text-primary);
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
+            font-size: 14px;
             transition: all 0.3s;
             min-width: 32px;
             flex-shrink: 0;
         }
 
         .sidebar-toggle:hover {
-            background: rgba(255,255,255,0.2);
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
             transform: scale(1.1);
         }
 
         /* User Profile Section */
         .sidebar-profile {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
+            padding: 16px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(255, 255, 255, 0.02);
         }
 
         .profile-info {
@@ -145,17 +153,18 @@
         }
 
         .profile-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 12px;
             flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         }
 
         .profile-details {
@@ -169,24 +178,36 @@
         }
 
         .profile-name {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
-            color: var(--text-primary);
+            color: #fff;
             margin-bottom: 2px;
         }
 
         .profile-role {
-            font-size: 12px;
+            font-size: 11px;
             color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .profile-role::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            display: inline-block;
         }
 
         /* Sidebar Menu */
         .sidebar-menu {
-            padding: 16px 0;
+            padding: 12px 0;
             overflow-y: auto;
             overflow-x: hidden;
             flex: 1;
-            height: calc(100vh - 240px);
+            height: calc(100vh - 220px);
             scrollbar-width: thin;
             scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
         }
@@ -195,48 +216,57 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            padding: 12px 20px;
-            color: var(--text-muted);
+            padding: 10px 16px;
+            color: rgba(255, 255, 255, 0.6);
             text-decoration: none;
-            transition: all 0.3s;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             white-space: nowrap;
             position: relative;
-            margin: 4px 12px;
-            border-radius: 12px;
+            margin: 2px 12px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 500;
         }
 
         .sidebar-menu-item:hover {
-            background: var(--card-bg);
-            color: var(--text-primary);
-            transform: translateX(4px);
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            transform: translateX(5px);
         }
 
         .sidebar-menu-item.active {
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: var(--text-primary);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.2) 0%, rgba(99, 102, 241, 0.05) 100%);
+            color: #fff;
+            border-left: 3px solid var(--primary);
+            border-radius: 4px 10px 10px 4px;
+            margin-left: 12px;
+            padding-left: 13px;
         }
 
-        .sidebar-menu-item.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 60%;
-            background: var(--text-primary);
-            border-radius: 0 4px 4px 0;
+        .sidebar-menu-item.active .sidebar-menu-icon {
+            color: var(--primary);
+            filter: drop-shadow(0 0 5px rgba(99, 102, 241, 0.5));
         }
+
+
+
+
+
+
+
+
+
+
 
         .sidebar-menu-icon {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
-            min-width: 28px;
-            width: 28px;
-            height: 28px;
+            font-size: 18px;
+            min-width: 24px;
+            width: 24px;
+            height: 24px;
+            transition: all 0.3s;
             text-align: center;
             flex-shrink: 0;
             opacity: 1 !important;
@@ -264,7 +294,7 @@
         /* Main Content Area */
         .admin-main {
             flex: 1;
-            margin-left: 280px;
+            margin-left: 260px;
             transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             min-height: 100vh;
             padding: 24px;
@@ -464,8 +494,12 @@
             <!-- Sidebar Header -->
             <div class="sidebar-header">
                 <div class="sidebar-logo">
-                    <span class="sidebar-logo-icon">🧹</span>
-                    <span class="sidebar-logo-text">TENDAPOA</span>
+                    @if(isset($settings['platform_logo']))
+                        <img src="{{ asset('storage/' . $settings['platform_logo']) }}" alt="Logo" style="height: 32px; width: 32px; object-fit: contain; border-radius: 6px;">
+                    @else
+                        <span class="sidebar-logo-icon">🧹</span>
+                    @endif
+                    <span class="sidebar-logo-text">{{ strtoupper($settings['platform_name'] ?? 'TendaPoa') }}</span>
                 </div>
                 <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">
                     <span id="toggleIcon">◀</span>
@@ -501,9 +535,17 @@
                     <span class="sidebar-menu-icon">💼</span>
                     <span class="sidebar-menu-text">Jobs</span>
                 </a>
+                <a href="{{ route('admin.categories') }}" class="sidebar-menu-item {{ request()->routeIs('admin.categories') || request()->routeIs('admin.categories.*') ? 'active' : '' }}">
+                    <span class="sidebar-menu-icon">📁</span>
+                    <span class="sidebar-menu-text">Categories</span>
+                </a>
                 <a href="{{ route('admin.withdrawals') }}" class="sidebar-menu-item {{ request()->routeIs('admin.withdrawals') || request()->routeIs('admin.withdrawals.*') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">💰</span>
                     <span class="sidebar-menu-text">Withdrawals</span>
+                </a>
+                <a href="{{ route('admin.commissions') }}" class="sidebar-menu-item {{ request()->routeIs('admin.commissions') ? 'active' : '' }}">
+                    <span class="sidebar-menu-icon">🏦</span>
+                    <span class="sidebar-menu-text">Commissions</span>
                 </a>
                 <a href="{{ route('admin.chats') }}" class="sidebar-menu-item {{ request()->routeIs('admin.chats') || request()->routeIs('admin.chat.*') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">💬</span>
@@ -527,7 +569,7 @@
             <div class="sidebar-footer">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="sidebar-menu-item" style="width: 100%; margin: 0; border-radius: 12px; cursor: pointer; background: none; font: inherit;">
+                    <button type="submit" class="sidebar-menu-item" style="width: 100%; margin: 0; border-radius: 10px; cursor: pointer; background: rgba(244, 63, 94, 0.1); color: #f43f5e; font: inherit; border: 1px solid rgba(244, 63, 94, 0.2);">
                         <span class="sidebar-menu-icon">🚪</span>
                         <span class="sidebar-menu-text">Logout</span>
                     </button>

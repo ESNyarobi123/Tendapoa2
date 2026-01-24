@@ -379,6 +379,27 @@
     margin-top: 32px;
   }
 
+  .pagination-wrapper nav svg {
+    width: 20px;
+  }
+
+  .pagination-wrapper nav div div p {
+    color: var(--text-muted) !important;
+    margin: 0 10px;
+  }
+
+  .pagination-wrapper nav div span span,
+  .pagination-wrapper nav div a {
+    background: var(--card-bg) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border) !important;
+  }
+
+  .pagination-wrapper nav div span[aria-current="page"] span {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+  }
+
   /* Responsive */
   @media (max-width: 768px) {
     .page-header {

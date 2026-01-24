@@ -1142,6 +1142,22 @@
     </div>
   </div>
 
+  <div class="stat-card" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1px solid var(--primary);">
+    <div class="stat-header">
+      <div class="stat-icon" style="background: var(--success);">💳</div>
+      <div class="stat-info">
+        <h3>Salio la Wallet</h3>
+        <div class="stat-value" style="color: var(--success);">{{ number_format($available) }}</div>
+        <div class="stat-change positive">
+          <a href="{{ route('withdraw.form') }}" style="color: var(--primary); font-weight: 700; text-decoration: none;">
+            Toa Pesa au Angalia Wallet →
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
     <!-- Progress Section -->
     <div class="progress-section">
       <div class="progress-content">

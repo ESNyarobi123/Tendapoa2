@@ -41,7 +41,11 @@ class DashboardController extends Controller
                 ->limit(10)
                 ->get();
 
-            return view('muhitaji.dashboard', compact('posted', 'completed', 'totalPaid', 'paymentHistory', 'allJobs'));
+            // Get wallet balance for muhitaji
+            $wallet = $u->ensureWallet();
+            $available = $wallet->balance;
+
+            return view('muhitaji.dashboard', compact('posted', 'completed', 'totalPaid', 'paymentHistory', 'allJobs', 'available'));
         }
 
         // default: mfanyakazi
