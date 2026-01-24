@@ -41,6 +41,7 @@ Route::prefix('auth')->group(function () {
     // Register new user
     Route::post('/register', [AuthController::class, 'apiRegister']);
     
+    
     // Login user
     Route::post('/login', [AuthController::class, 'apiLogin']);
     
