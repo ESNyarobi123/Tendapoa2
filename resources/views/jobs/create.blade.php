@@ -4,7 +4,7 @@
 @section('content')
 <style>
   /* ====== Modern Job Creation Form ====== */
-  .create-job-page {
+  :root {
     --primary: #3b82f6;
     --success: #10b981;
     --warning: #f59e0b;
