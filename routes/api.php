@@ -45,7 +45,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthController::class, 'apiLogin']);
     
     // Logout user (protected)
-    Route::post('/logout', [AuthController::class, 'apiLogout'])->middleware('auth');
+    Route::post('/logout', [AuthController::class, 'apiLogout'])->middleware('auth:sanctum');
     
     // Get current authenticated user
     Route::get('/user', function (Request $request) {
@@ -60,10 +60,10 @@ Route::prefix('auth')->group(function () {
             'success' => true,
             'data' => $user
         ]);
-    })->middleware('auth');
+    })->middleware('auth:sanctum');
     
     // Get user profile details
-    Route::get('/getuser', [AuthController::class, 'getuser'])->middleware('auth');
+    Route::get('/getuser', [AuthController::class, 'getuser'])->middleware('auth:sanctum');
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -176,7 +176,7 @@ Route::get('/settings', function () {
 
 // Using 'auth' for session-based authentication (works with web login)
 // To use API tokens, install Laravel Sanctum and change to 'auth:sanctum'
-Route::middleware(['force.json', 'auth'])->group(function () {
+Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
     
     // ========================================================================
     // DASHBOARD APIs
