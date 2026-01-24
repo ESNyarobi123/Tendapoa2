@@ -159,23 +159,20 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt(['email'=>$cred['email'], 'password'=>$cred['password']], $r->boolean('remember'))) {
-            if ($r->hasSession()) {
-                $r->session()->regenerate();
-            }
             $user = Auth::user();
+            
+            // HAPA NDIPO TUNAPOTENGENEZA TOKEN
+            // Futa token za zamani (optional, kwa usalama)
+            $user->tokens()->delete();
+            
+            // Tengeneza token mpya
+            $token = $user->createToken('mobile-app')->plainTextToken;
             
             return response()->json([
                 'success' => true,
                 'message' => 'Umeingia kwa mafanikio!',
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                    'phone' => $user->phone,
-                    'lat' => $user->lat,
-                    'lng' => $user->lng,
-                ]
+                'token' => $token, // <--- HII NDIO MUHIMU SANA
+                'user' => $user,
             ]);
         }
 
@@ -219,6 +216,21 @@ class AuthController extends Controller
                 'lat' => $user->lat,
                 'lng' => $user->lng,
             ]
+        ]);
+    }
+
+    // Njia ya kusajili FCM Token
+    public function updateToken(Request $request)
+    {
+        $request->validate([
+            'token' => 'required|string',
+        ]);
+        $user = auth()->user();
+        $user->fcm_token = $request->token; // Hakikisha una column 'fcm_token' kwenye users table
+        $user->save();
+        return response()->json([
+            'success' => true,
+            'message' => 'FCM token updated successfully'
         ]);
     }
 }

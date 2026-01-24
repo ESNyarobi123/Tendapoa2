@@ -18,6 +18,7 @@ use App\Http\Controllers\{
 };
 use App\Http\Controllers\Admin\WithdrawalAdminController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
+use App\Models\Setting;
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +64,11 @@ Route::prefix('auth')->group(function () {
     
     // Get user profile details
     Route::get('/getuser', [AuthController::class, 'getuser'])->middleware('auth');
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+    // Njia ya kusajili FCM Token
+    Route::post('/fcm-token', [AuthController::class, 'updateToken']);
 });
 
 // ============================================================================
@@ -153,6 +159,15 @@ Route::get('/workers/nearby', function (Request $request) {
             ]
         ]
     ]);
+});
+
+// Get system settings (Public)
+Route::get('/settings', function () {
+    $settings = Setting::pluck('value', 'key')->toArray();
+    $publicKeys = ['platform_name', 'platform_version', 'system_currency', 'commission_rate', 'min_withdrawal', 'withdrawal_fee', 'job_posting_fee', 'payments_enabled', 'platform_logo'];
+    $filtered = [];
+    foreach ($publicKeys as $k) $filtered[$k] = $settings[$k] ?? null;
+    return response()->json(['success' => true, 'data' => $filtered]);
 });
 
 // ============================================================================
@@ -276,6 +291,7 @@ Route::middleware(['force.json', 'auth'])->group(function () {
                 'address_text' => ['nullable'],
             ]);
             
+            $paymentsEnabled = Setting::get('payments_enabled', '1') == '1';
             $job = \App\Models\Job::create([
                 'user_id' => $user->id,
                 'category_id' => $validated['category_id'],
@@ -285,9 +301,20 @@ Route::middleware(['force.json', 'auth'])->group(function () {
                 'lat' => $validated['lat'],
                 'lng' => $validated['lng'],
                 'address_text' => $validated['address_text'] ?? null,
-                'status' => 'pending_payment',
-                'published_at' => now(),
+                'status' => $paymentsEnabled ? 'pending_payment' : 'posted',
+                'published_at' => $paymentsEnabled ? null : now(),
             ]);
+
+            if (!$paymentsEnabled) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'job' => $job->load('category'),
+                        'payment_required' => false
+                    ],
+                    'message' => 'Kazi imechapishwa kwa mafanikio!'
+                ], 201);
+            }
             
             // Create payment record
             $orderId = (string) \Illuminate\Support\Str::ulid();
@@ -470,8 +497,27 @@ Route::middleware(['force.json', 'auth'])->group(function () {
                 'address_text' => ['nullable'],
             ]);
             
-            $postingFee = 2000;
+            $postingFee = (int) Setting::get('job_posting_fee', 0);
+            $paymentsEnabled = Setting::get('payments_enabled', '1') == '1';
             $wallet = $user->ensureWallet();
+            
+            if ($postingFee <= 0) {
+                $job = \App\Models\Job::create([
+                    'user_id' => $user->id,
+                    'category_id' => $validated['category_id'],
+                    'title' => $validated['title'],
+                    'description' => $validated['description'],
+                    'price' => $validated['price'],
+                    'lat' => $validated['lat'],
+                    'lng' => $validated['lng'],
+                    'address_text' => $validated['address_text'] ?? null,
+                    'status' => 'posted',
+                    'published_at' => now(),
+                    'poster_type' => 'mfanyakazi',
+                    'posting_fee' => 0,
+                ]);
+                return response()->json(['success' => true, 'message' => 'Kazi imechapishwa kwa mafanikio!', 'payment_method' => 'free'], 201);
+            }
             
             if ($wallet->balance >= $postingFee) {
                 // Deduct from wallet
@@ -839,7 +885,7 @@ Route::middleware(['force.json', 'auth'])->group(function () {
             }
             
             $validated = $request->validate([
-                'amount' => ['required', 'integer', 'min:5000'],
+                'amount' => ['required', 'integer', 'min:' . (Setting::get('min_withdrawal', 5000))],
                 'phone_number' => ['required', 'string', 'min:10'],
                 'registered_name' => ['required', 'string', 'min:2'],
                 'network_type' => ['required', 'string', 'in:vodacom,tigo,airtel,halotel,ttcl'],
@@ -847,16 +893,18 @@ Route::middleware(['force.json', 'auth'])->group(function () {
             ]);
             
             $wallet = $user->ensureWallet();
-            if ($wallet->balance < $validated['amount']) {
+            $withdrawalFee = (int) Setting::get('withdrawal_fee', 0);
+            $totalToDebit = $validated['amount'] + $withdrawalFee;
+            if ($wallet->balance < $totalToDebit) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hauna salio la kutosha.'
+                    'message' => 'Salio lako halitoshi kulipia kiasi unachotoa pamoja na makato ya TZS ' . number_format($withdrawalFee)
                 ], 422);
             }
             
             // Debit wallet
             $walletService = app(\App\Services\WalletService::class);
-            $walletService->debit($user, $validated['amount'], 'WITHDRAW', 'Withdrawal request');
+            $walletService->debit($user, $totalToDebit, 'WITHDRAW', 'Withdrawal request (inc. fee: TZS ' . $withdrawalFee . ')');
             
             $withdrawal = \App\Models\Withdrawal::create([
                 'user_id' => $user->id,

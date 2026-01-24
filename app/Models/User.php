@@ -6,9 +6,10 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
+use Laravel\Sanctum\HasApiTokens; // <--- Hakikisha hii ipo
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable; // <--- Ongeza HasApiTokens hapa
 
     protected $fillable = ['name','email','password','phone','role','lat','lng','is_active'];
     protected $hidden = ['password','remember_token'];
