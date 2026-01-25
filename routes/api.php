@@ -625,7 +625,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         Route::match(['get', 'post'], '/', [FeedController::class, 'apiIndex']);
         
         // Get jobs for map view
-        Route::get('/map', [FeedController::class, 'apiMap']);
+        Route::match(['get', 'post'], '/map', [FeedController::class, 'apiMap']);
     });
     
     // ========================================================================
