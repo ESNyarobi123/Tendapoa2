@@ -622,7 +622,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
     
     Route::prefix('feed')->group(function () {
         // Get jobs feed with distance calculation
-        Route::get('/', [FeedController::class, 'apiIndex']);
+        Route::match(['get', 'post'], '/', [FeedController::class, 'apiIndex']);
         
         // Get jobs for map view
         Route::get('/map', [FeedController::class, 'apiMap']);
