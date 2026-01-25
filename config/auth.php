@@ -40,8 +40,11 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
-        // Note: 'auth:sanctum' middleware handles API token authentication.
-        // No custom guard needed - Sanctum uses its own driver internally.
+
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
     ],
 
     /*
