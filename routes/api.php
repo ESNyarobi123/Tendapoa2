@@ -185,7 +185,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
     
     Route::prefix('dashboard')->group(function () {
         // Get dashboard data (role-based)
-        Route::get('/', function (Request $request) {
+        Route::match(['get', 'post'], '/', function (Request $request) {
             $user = $request->user();
             
             if ($user->role === 'admin') {
