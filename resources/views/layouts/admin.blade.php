@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="sw">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,11 +17,11 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #f43f5e;
-            --card-bg: rgba(255,255,255,0.05);
-            --card-bg-hover: rgba(255,255,255,0.08);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-bg-hover: rgba(255, 255, 255, 0.08);
             --text-primary: #ffffff;
             --text-muted: #94a3b8;
-            --border: rgba(255,255,255,0.1);
+            --border: rgba(255, 255, 255, 0.1);
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
         }
@@ -300,7 +301,7 @@
             padding: 24px;
         }
 
-        .admin-sidebar.sidebar-collapsed + .admin-main {
+        .admin-sidebar.sidebar-collapsed+.admin-main {
             margin-left: 70px;
         }
 
@@ -374,8 +375,17 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
         }
 
         /* Mobile Overlay */
@@ -465,7 +475,7 @@
         .sidebar-menu::-webkit-scrollbar-thumb:hover {
             background: rgba(255, 255, 255, 0.5);
         }
-        
+
         /* Ensure icons are always visible */
         .sidebar-menu-icon {
             display: flex;
@@ -481,6 +491,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="admin-container">
         <!-- Mobile Menu Button -->
@@ -495,7 +506,8 @@
             <div class="sidebar-header">
                 <div class="sidebar-logo">
                     @if(isset($settings['platform_logo']))
-                        <img src="{{ asset('storage/' . $settings['platform_logo']) }}" alt="Logo" style="height: 32px; width: 32px; object-fit: contain; border-radius: 6px;">
+                        <img src="{{ asset('storage/' . $settings['platform_logo']) }}" alt="Logo"
+                            style="height: 32px; width: 32px; object-fit: contain; border-radius: 6px;">
                     @else
                         <span class="sidebar-logo-icon">🧹</span>
                     @endif
@@ -508,58 +520,79 @@
 
             <!-- User Profile -->
             @auth
-            <div class="sidebar-profile">
-                <div class="profile-info">
-                    <div class="profile-avatar">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
-                    </div>
-                    <div class="profile-details">
-                        <div class="profile-name">{{ auth()->user()->name }}</div>
-                        <div class="profile-role">@admin • Super Admin</div>
+                <div class="sidebar-profile">
+                    <div class="profile-info">
+                        <div class="profile-avatar">
+                            {{ strtoupper(substr(auth()->user()->name, 0, 2)) }}
+                        </div>
+                        <div class="profile-details">
+                            <div class="profile-name">{{ auth()->user()->name }}</div>
+                            <div class="profile-role">@admin • Super Admin</div>
+                        </div>
                     </div>
                 </div>
-            </div>
             @endauth
 
             <!-- Sidebar Menu -->
             <nav class="sidebar-menu">
-                <a href="{{ route('admin.dashboard') }}" class="sidebar-menu-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                <a href="{{ route('admin.dashboard') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">📊</span>
                     <span class="sidebar-menu-text">Dashboard</span>
                 </a>
-                <a href="{{ route('admin.users') }}" class="sidebar-menu-item {{ request()->routeIs('admin.users') || request()->routeIs('admin.user.*') ? 'active' : '' }}">
+                <a href="{{ route('notifications.index') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('notifications.index') ? 'active' : '' }}">
+                    <span class="sidebar-menu-icon">🔔</span>
+                    <span class="sidebar-menu-text">
+                        Notifications
+                        @if(auth()->user()->unreadNotifications->count() > 0)
+                            <span
+                                style="background: var(--danger); color: white; border-radius: 50%; padding: 2px 6px; font-size: 10px; margin-left: 5px;">{{ auth()->user()->unreadNotifications->count() }}</span>
+                        @endif
+                    </span>
+                </a>
+                <a href="{{ route('admin.users') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.users') || request()->routeIs('admin.user.*') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">👥</span>
                     <span class="sidebar-menu-text">Users</span>
                 </a>
-                <a href="{{ route('admin.jobs') }}" class="sidebar-menu-item {{ request()->routeIs('admin.jobs') || request()->routeIs('admin.job.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.jobs') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.jobs') || request()->routeIs('admin.job.*') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">💼</span>
                     <span class="sidebar-menu-text">Jobs</span>
                 </a>
-                <a href="{{ route('admin.categories') }}" class="sidebar-menu-item {{ request()->routeIs('admin.categories') || request()->routeIs('admin.categories.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.categories') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.categories') || request()->routeIs('admin.categories.*') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">📁</span>
                     <span class="sidebar-menu-text">Categories</span>
                 </a>
-                <a href="{{ route('admin.withdrawals') }}" class="sidebar-menu-item {{ request()->routeIs('admin.withdrawals') || request()->routeIs('admin.withdrawals.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.withdrawals') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.withdrawals') || request()->routeIs('admin.withdrawals.*') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">💰</span>
                     <span class="sidebar-menu-text">Withdrawals</span>
                 </a>
-                <a href="{{ route('admin.commissions') }}" class="sidebar-menu-item {{ request()->routeIs('admin.commissions') ? 'active' : '' }}">
+                <a href="{{ route('admin.commissions') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.commissions') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">🏦</span>
                     <span class="sidebar-menu-text">Commissions</span>
                 </a>
-                <a href="{{ route('admin.chats') }}" class="sidebar-menu-item {{ request()->routeIs('admin.chats') || request()->routeIs('admin.chat.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.chats') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.chats') || request()->routeIs('admin.chat.*') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">💬</span>
                     <span class="sidebar-menu-text">Conversations</span>
                 </a>
-                <a href="{{ route('admin.analytics') }}" class="sidebar-menu-item {{ request()->routeIs('admin.analytics') ? 'active' : '' }}">
+                <a href="{{ route('admin.analytics') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.analytics') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">📈</span>
                     <span class="sidebar-menu-text">Analytics</span>
                 </a>
-                <a href="{{ route('admin.system-logs') }}" class="sidebar-menu-item {{ request()->routeIs('admin.system-logs') ? 'active' : '' }}">
+                <a href="{{ route('admin.system-logs') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.system-logs') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">📋</span>
                     <span class="sidebar-menu-text">System Logs</span>
                 </a>
-                <a href="{{ route('admin.system-settings') }}" class="sidebar-menu-item {{ request()->routeIs('admin.system-settings') || request()->routeIs('admin.system-settings.*') ? 'active' : '' }}">
+                <a href="{{ route('admin.system-settings') }}"
+                    class="sidebar-menu-item {{ request()->routeIs('admin.system-settings') || request()->routeIs('admin.system-settings.*') ? 'active' : '' }}">
                     <span class="sidebar-menu-icon">⚙️</span>
                     <span class="sidebar-menu-text">Settings</span>
                 </a>
@@ -569,7 +602,8 @@
             <div class="sidebar-footer">
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="sidebar-menu-item" style="width: 100%; margin: 0; border-radius: 10px; cursor: pointer; background: rgba(244, 63, 94, 0.1); color: #f43f5e; font: inherit; border: 1px solid rgba(244, 63, 94, 0.2);">
+                    <button type="submit" class="sidebar-menu-item"
+                        style="width: 100%; margin: 0; border-radius: 10px; cursor: pointer; background: rgba(244, 63, 94, 0.1); color: #f43f5e; font: inherit; border: 1px solid rgba(244, 63, 94, 0.2);">
                         <span class="sidebar-menu-icon">🚪</span>
                         <span class="sidebar-menu-text">Logout</span>
                     </button>
@@ -607,7 +641,7 @@
             const isCollapsed = sidebar.classList.contains('sidebar-collapsed');
             toggleIcon.textContent = isCollapsed ? '▶' : '◀';
             localStorage.setItem('sidebarCollapsed', isCollapsed);
-            
+
             // Clear auto-hide timer
             if (autoHideTimer) {
                 clearTimeout(autoHideTimer);
@@ -667,4 +701,5 @@
     </script>
     @stack('scripts')
 </body>
+
 </html>

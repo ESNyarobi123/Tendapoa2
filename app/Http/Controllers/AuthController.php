@@ -146,6 +146,8 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'lat' => $user->lat,
                 'lng' => $user->lng,
+                'profile_photo_path' => $user->profile_photo_path,
+                'profile_photo_url' => $user->profile_photo_url,
             ]
         ]);
     }
@@ -159,6 +161,7 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt(['email'=>$cred['email'], 'password'=>$cred['password']], $r->boolean('remember'))) {
+            /** @var \App\Models\User $user */
             $user = Auth::user();
             
             // HAPA NDIPO TUNAPOTENGENEZA TOKEN
@@ -215,6 +218,8 @@ class AuthController extends Controller
                 'phone' => $user->phone,
                 'lat' => $user->lat,
                 'lng' => $user->lng,
+                'profile_photo_path' => $user->profile_photo_path,
+                'profile_photo_url' => $user->profile_photo_url,
             ]
         ]);
     }
@@ -225,12 +230,53 @@ class AuthController extends Controller
         $request->validate([
             'token' => 'required|string',
         ]);
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         $user->fcm_token = $request->token; // Hakikisha una column 'fcm_token' kwenye users table
         $user->save();
         return response()->json([
             'success' => true,
             'message' => 'FCM token updated successfully'
+        ]);
+    }
+
+    // Update Profile (Photo & Details)
+    public function updateProfile(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'photo' => ['nullable', 'image', 'max:5120'], // 5MB Max
+        ]);
+
+        if ($request->hasFile('photo')) {
+            // Delete old photo if exists
+            if ($user->profile_photo_path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
+            }
+            
+            $path = $request->file('photo')->store('profile-photos', 'public');
+            $user->profile_photo_path = $path;
+        }
+
+        if ($request->filled('name')) {
+            $user->name = $request->name;
+        }
+        
+        if ($request->filled('phone')) {
+            $user->phone = $request->phone;
+        }
+
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Wasifu umesasishwa kikamilifu.',
+            'user' => $user->fresh(),
+            'photo_url' => $user->profile_photo_url
         ]);
     }
 }

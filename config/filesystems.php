@@ -33,7 +33,7 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            'serve' => false, // Disabled - we handle storage serving via custom route
             'throw' => false,
             'report' => false,
         ],

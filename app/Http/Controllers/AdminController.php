@@ -57,10 +57,10 @@ class AdminController extends Controller
 
         // Search
         if ($search = $request->get('search')) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -84,13 +84,13 @@ class AdminController extends Controller
             \Log::info('Admin userDetails - Requested User ID: ' . $user->id);
             \Log::info('Admin userDetails - Requested User Name: ' . $user->name);
             \Log::info('Admin userDetails - Requested User Email: ' . $user->email);
-            
+
             // Force refresh the user from database
             $user = User::find($user->id);
             if (!$user) {
                 abort(404, 'User not found');
             }
-            
+
             // Load all user relationships
             $user->load([
                 'jobs' => fn($q) => $q->with(['acceptedWorker', 'category'])->latest(),
@@ -108,134 +108,134 @@ class AdminController extends Controller
             \Log::info('Admin userDetails - Jobs count: ' . $user->jobs->count());
             \Log::info('Admin userDetails - Assigned jobs count: ' . $user->assignedJobs->count());
 
-        // Get comprehensive user statistics
-        $stats = [
-            'jobs_posted' => $user->jobs()->count(),
-            'jobs_assigned' => $user->assignedJobs()->count(),
-            'jobs_completed' => $user->assignedJobs()->where('status', 'completed')->count(),
-            'jobs_in_progress' => $user->assignedJobs()->where('status', 'in_progress')->count(),
-            'jobs_cancelled' => $user->jobs()->where('status', 'cancelled')->count(),
-            'wallet_balance' => $user->wallet->balance ?? 0,
-            'total_earned' => WalletTransaction::where('user_id', $user->id)
-                ->where('type', 'credit')
-                ->sum('amount'),
-            'total_spent' => WalletTransaction::where('user_id', $user->id)
-                ->where('type', 'debit')
-                ->sum('amount'),
-            'total_withdrawn' => Withdrawal::where('user_id', $user->id)
-                ->where('status', 'paid')
-                ->sum('amount'),
-            'pending_withdrawals' => Withdrawal::where('user_id', $user->id)
-                ->where('status', 'pending')
-                ->sum('amount'),
-            'messages_sent' => PrivateMessage::where('sender_id', $user->id)->count(),
-            'messages_received' => PrivateMessage::where('receiver_id', $user->id)->count(),
-            'total_conversations' => PrivateMessage::where('sender_id', $user->id)
+            // Get comprehensive user statistics
+            $stats = [
+                'jobs_posted' => $user->jobs()->count(),
+                'jobs_assigned' => $user->assignedJobs()->count(),
+                'jobs_completed' => $user->assignedJobs()->where('status', 'completed')->count(),
+                'jobs_in_progress' => $user->assignedJobs()->where('status', 'in_progress')->count(),
+                'jobs_cancelled' => $user->jobs()->where('status', 'cancelled')->count(),
+                'wallet_balance' => $user->wallet->balance ?? 0,
+                'total_earned' => WalletTransaction::where('user_id', $user->id)
+                    ->where('type', 'credit')
+                    ->sum('amount'),
+                'total_spent' => WalletTransaction::where('user_id', $user->id)
+                    ->where('type', 'debit')
+                    ->sum('amount'),
+                'total_withdrawn' => Withdrawal::where('user_id', $user->id)
+                    ->where('status', 'paid')
+                    ->sum('amount'),
+                'pending_withdrawals' => Withdrawal::where('user_id', $user->id)
+                    ->where('status', 'pending')
+                    ->sum('amount'),
+                'messages_sent' => PrivateMessage::where('sender_id', $user->id)->count(),
+                'messages_received' => PrivateMessage::where('receiver_id', $user->id)->count(),
+                'total_conversations' => PrivateMessage::where('sender_id', $user->id)
+                    ->orWhere('receiver_id', $user->id)
+                    ->distinct('work_order_id')
+                    ->count('work_order_id'),
+            ];
+
+            // Get ALL activities timeline
+            $activities = collect();
+
+            // Jobs posted
+            foreach ($user->jobs as $job) {
+                $activities->push([
+                    'type' => 'job_posted',
+                    'icon' => '📝',
+                    'color' => 'blue',
+                    'title' => 'Posted Job',
+                    'description' => $job->title,
+                    'details' => "Budget: Tsh " . number_format($job->budget ?? $job->amount) . " | Status: " . ucfirst($job->status),
+                    'timestamp' => $job->created_at,
+                    'link' => route('admin.job.details', $job),
+                    'data' => $job,
+                ]);
+            }
+
+            // Jobs assigned (as worker)
+            foreach ($user->assignedJobs as $job) {
+                $activities->push([
+                    'type' => 'job_assigned',
+                    'icon' => '✅',
+                    'color' => 'green',
+                    'title' => 'Assigned to Job',
+                    'description' => $job->title,
+                    'details' => "By: " . $job->muhitaji->name . " | Amount: Tsh " . number_format($job->amount),
+                    'timestamp' => $job->accepted_at ?? $job->updated_at,
+                    'link' => route('admin.job.details', $job),
+                    'data' => $job,
+                ]);
+            }
+
+            // Messages sent
+            foreach ($user->sentMessages as $message) {
+                $activities->push([
+                    'type' => 'message_sent',
+                    'icon' => '💬',
+                    'color' => 'purple',
+                    'title' => 'Sent Message',
+                    'description' => "To: " . $message->receiver->name,
+                    'details' => substr($message->message, 0, 100) . (strlen($message->message) > 100 ? '...' : ''),
+                    'timestamp' => $message->created_at,
+                    'link' => route('admin.chat.view', $message->work_order_id),
+                    'data' => $message,
+                ]);
+            }
+
+            // Messages received
+            foreach ($user->receivedMessages as $message) {
+                $activities->push([
+                    'type' => 'message_received',
+                    'icon' => '📨',
+                    'color' => 'indigo',
+                    'title' => 'Received Message',
+                    'description' => "From: " . $message->sender->name,
+                    'details' => substr($message->message, 0, 100) . (strlen($message->message) > 100 ? '...' : ''),
+                    'timestamp' => $message->created_at,
+                    'link' => route('admin.chat.view', $message->work_order_id),
+                    'data' => $message,
+                ]);
+            }
+
+            // Withdrawals
+            foreach ($user->withdrawals as $withdrawal) {
+                $activities->push([
+                    'type' => 'withdrawal',
+                    'icon' => '💰',
+                    'color' => 'orange',
+                    'title' => 'Withdrawal Request',
+                    'description' => "Amount: Tsh " . number_format($withdrawal->amount),
+                    'details' => "Status: " . ucfirst($withdrawal->status) . " | Method: " . ($withdrawal->method ?? 'N/A'),
+                    'timestamp' => $withdrawal->created_at,
+                    'link' => null,
+                    'data' => $withdrawal,
+                ]);
+            }
+
+            // Sort all activities by timestamp (newest first)
+            $activities = $activities->sortByDesc('timestamp')->values();
+
+            // Recent wallet transactions
+            $transactions = WalletTransaction::where('user_id', $user->id)
+                ->latest()
+                ->limit(50)
+                ->get();
+
+            // Get user's active conversations
+            $conversations = PrivateMessage::where('sender_id', $user->id)
                 ->orWhere('receiver_id', $user->id)
-                ->distinct('work_order_id')
-                ->count('work_order_id'),
-        ];
-
-        // Get ALL activities timeline
-        $activities = collect();
-
-        // Jobs posted
-        foreach ($user->jobs as $job) {
-            $activities->push([
-                'type' => 'job_posted',
-                'icon' => '📝',
-                'color' => 'blue',
-                'title' => 'Posted Job',
-                'description' => $job->title,
-                'details' => "Budget: Tsh " . number_format($job->budget ?? $job->amount) . " | Status: " . ucfirst($job->status),
-                'timestamp' => $job->created_at,
-                'link' => route('admin.job.details', $job),
-                'data' => $job,
-            ]);
-        }
-
-        // Jobs assigned (as worker)
-        foreach ($user->assignedJobs as $job) {
-            $activities->push([
-                'type' => 'job_assigned',
-                'icon' => '✅',
-                'color' => 'green',
-                'title' => 'Assigned to Job',
-                'description' => $job->title,
-                'details' => "By: " . $job->muhitaji->name . " | Amount: Tsh " . number_format($job->amount),
-                'timestamp' => $job->accepted_at ?? $job->updated_at,
-                'link' => route('admin.job.details', $job),
-                'data' => $job,
-            ]);
-        }
-
-        // Messages sent
-        foreach ($user->sentMessages as $message) {
-            $activities->push([
-                'type' => 'message_sent',
-                'icon' => '💬',
-                'color' => 'purple',
-                'title' => 'Sent Message',
-                'description' => "To: " . $message->receiver->name,
-                'details' => substr($message->message, 0, 100) . (strlen($message->message) > 100 ? '...' : ''),
-                'timestamp' => $message->created_at,
-                'link' => route('admin.chat.view', $message->work_order_id),
-                'data' => $message,
-            ]);
-        }
-
-        // Messages received
-        foreach ($user->receivedMessages as $message) {
-            $activities->push([
-                'type' => 'message_received',
-                'icon' => '📨',
-                'color' => 'indigo',
-                'title' => 'Received Message',
-                'description' => "From: " . $message->sender->name,
-                'details' => substr($message->message, 0, 100) . (strlen($message->message) > 100 ? '...' : ''),
-                'timestamp' => $message->created_at,
-                'link' => route('admin.chat.view', $message->work_order_id),
-                'data' => $message,
-            ]);
-        }
-
-        // Withdrawals
-        foreach ($user->withdrawals as $withdrawal) {
-            $activities->push([
-                'type' => 'withdrawal',
-                'icon' => '💰',
-                'color' => 'orange',
-                'title' => 'Withdrawal Request',
-                'description' => "Amount: Tsh " . number_format($withdrawal->amount),
-                'details' => "Status: " . ucfirst($withdrawal->status) . " | Method: " . ($withdrawal->method ?? 'N/A'),
-                'timestamp' => $withdrawal->created_at,
-                'link' => null,
-                'data' => $withdrawal,
-            ]);
-        }
-
-        // Sort all activities by timestamp (newest first)
-        $activities = $activities->sortByDesc('timestamp')->values();
-
-        // Recent wallet transactions
-        $transactions = WalletTransaction::where('user_id', $user->id)
-            ->latest()
-            ->limit(50)
-            ->get();
-
-        // Get user's active conversations
-        $conversations = PrivateMessage::where('sender_id', $user->id)
-            ->orWhere('receiver_id', $user->id)
-            ->select('work_order_id')
-            ->distinct()
-            ->with(['job' => fn($q) => $q->with(['muhitaji', 'acceptedWorker'])])
-            ->get();
+                ->select('work_order_id')
+                ->distinct()
+                ->with(['job' => fn($q) => $q->with(['muhitaji', 'acceptedWorker'])])
+                ->get();
 
             return view('admin.user-details', compact('user', 'stats', 'transactions', 'activities', 'conversations'));
         } catch (\Exception $e) {
             // Log error for debugging
             \Log::error('Admin userDetails error: ' . $e->getMessage());
-            
+
             // Return basic user data if there's an error
             $user->load(['wallet']);
             $stats = [
@@ -256,7 +256,7 @@ class AdminController extends Controller
             $activities = collect();
             $conversations = collect();
             $transactions = collect();
-            
+
             return view('admin.user-details', compact('user', 'stats', 'transactions', 'activities', 'conversations'))
                 ->with('error', 'Error loading user details: ' . $e->getMessage());
         }
@@ -326,7 +326,7 @@ class AdminController extends Controller
             ->keyBy('id');
 
         // Merge data
-        $conversations->getCollection()->transform(function($conv) use ($jobs) {
+        $conversations->getCollection()->transform(function ($conv) use ($jobs) {
             $job = $jobs->get($conv->work_order_id);
             $conv->job = $job;
             return $conv;
@@ -484,7 +484,7 @@ class AdminController extends Controller
         $totalRevenue = Payment::where('status', 'paid')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->sum('amount');
-        
+
         // Commission is dynamic from settings (default 10%)
         $commissionRate = (float) Setting::get('commission_rate', 10) / 100;
         $totalCommissions = Job::where('status', 'completed')
@@ -492,7 +492,7 @@ class AdminController extends Controller
             ->sum(DB::raw("price * $commissionRate"));
 
         $activeUsers = User::where('is_active', true)->count();
-        
+
         $completedJobsCount = Job::where('status', 'completed')
             ->whereBetween('updated_at', [$startDate, $endDate])
             ->count();
@@ -500,9 +500,9 @@ class AdminController extends Controller
 
         // User growth
         $userGrowth = User::select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('COUNT(*) as count')
-            )
+            DB::raw('DATE(created_at) as date'),
+            DB::raw('COUNT(*) as count')
+        )
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
             ->orderBy('date')
@@ -510,9 +510,9 @@ class AdminController extends Controller
 
         // Job statistics
         $jobStats = Job::select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('COUNT(*) as count')
-            )
+            DB::raw('DATE(created_at) as date'),
+            DB::raw('COUNT(*) as count')
+        )
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
             ->orderBy('date')
@@ -520,9 +520,9 @@ class AdminController extends Controller
 
         // Revenue Trend
         $revenueTrend = Payment::select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('SUM(amount) as total')
-            )
+            DB::raw('DATE(created_at) as date'),
+            DB::raw('SUM(amount) as total')
+        )
             ->where('status', 'paid')
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('date')
@@ -531,20 +531,26 @@ class AdminController extends Controller
 
         // Top workers
         $topWorkers = User::where('role', 'mfanyakazi')
-            ->withCount(['assignedJobs as completed_jobs' => function($q) use ($startDate, $endDate) {
-                $q->where('status', 'completed')->whereBetween('updated_at', [$startDate, $endDate]);
-            }])
-            ->withSum(['assignedJobs as total_earned' => function($q) use ($startDate, $endDate) {
-                $q->where('status', 'completed')->whereBetween('updated_at', [$startDate, $endDate]);
-            }], 'price')
+            ->withCount([
+                'assignedJobs as completed_jobs' => function ($q) use ($startDate, $endDate) {
+                    $q->where('status', 'completed')->whereBetween('updated_at', [$startDate, $endDate]);
+                }
+            ])
+            ->withSum([
+                'assignedJobs as total_earned' => function ($q) use ($startDate, $endDate) {
+                    $q->where('status', 'completed')->whereBetween('updated_at', [$startDate, $endDate]);
+                }
+            ], 'price')
             ->orderBy('completed_jobs', 'desc')
             ->limit(5)
             ->get();
 
         // Job Categories Distribution
-        $categoryDistribution = Category::withCount(['jobs' => function($q) use ($startDate, $endDate) {
+        $categoryDistribution = Category::withCount([
+            'jobs' => function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('created_at', [$startDate, $endDate]);
-            }])
+            }
+        ])
             ->orderBy('jobs_count', 'desc')
             ->limit(5)
             ->get();
@@ -581,11 +587,12 @@ class AdminController extends Controller
     {
         // Store original admin ID
         Session::put('admin_id', Auth::id());
-        
+
         // Login as the target user
         Auth::login($user);
-        
-        return redirect()->route('dashboard')->with('success', 
+
+        return redirect()->route('dashboard')->with(
+            'success',
             "Umeingia kama {$user->name}. <a href='" . route('admin.stop-impersonate') . "' class='text-red-600 font-bold'>Rudi kwa Admin</a>"
         );
     }
@@ -596,15 +603,15 @@ class AdminController extends Controller
     public function stopImpersonate()
     {
         $adminId = Session::get('admin_id');
-        
+
         if ($adminId) {
             $admin = User::find($adminId);
             Auth::login($admin);
             Session::forget('admin_id');
-            
+
             return redirect()->route('admin.dashboard')->with('success', 'Umerudi kwa Admin Dashboard');
         }
-        
+
         return redirect()->route('admin.dashboard')->with('error', 'Hakuna admin session');
     }
 
@@ -662,7 +669,7 @@ class AdminController extends Controller
         $user->save();
 
         $status = $user->is_active ? 'activated' : 'suspended';
-        
+
         return back()->with('success', "User {$user->name} has been {$status}!");
     }
 
@@ -672,16 +679,16 @@ class AdminController extends Controller
     public function systemLogs()
     {
         $logs = [];
-        
+
         // Get recent activities
         $activities = collect();
-        
+
         // Recent jobs
         $recentJobs = Job::with(['muhitaji', 'acceptedWorker'])
             ->latest()
             ->limit(50)
             ->get();
-            
+
         foreach ($recentJobs as $job) {
             $activities->push([
                 'type' => 'job_created',
@@ -697,7 +704,7 @@ class AdminController extends Controller
             ->latest()
             ->limit(50)
             ->get();
-            
+
         foreach ($recentMessages as $message) {
             $activities->push([
                 'type' => 'message_sent',
@@ -713,7 +720,7 @@ class AdminController extends Controller
             ->latest()
             ->limit(50)
             ->get();
-            
+
         foreach ($recentPayments as $payment) {
             $activities->push([
                 'type' => 'payment_made',
@@ -793,11 +800,12 @@ class AdminController extends Controller
 
         // Handle other system settings
         $settings = $request->except(['_token', 'apk_file', 'apk_version', 'apk_description', 'platform_logo']);
-        
+
         foreach ($settings as $key => $value) {
             // Handle checkboxes (toggles)
-            if ($value === 'on') $value = '1';
-            
+            if ($value === 'on')
+                $value = '1';
+
             Setting::set($key, $value);
         }
 
@@ -823,7 +831,7 @@ class AdminController extends Controller
         set_time_limit(3600); // 1 hour
         ini_set('max_execution_time', '3600');
         ini_set('memory_limit', '512M');
-        
+
         try {
             // Check if file is provided
             if (!$request->hasFile('apk_file')) {
@@ -832,14 +840,14 @@ class AdminController extends Controller
                     'message' => 'APK file is required. Please select a file to upload.'
                 ], 400);
             }
-            
+
             // Check PHP configuration before processing
             $uploadMaxFilesize = $this->parseSize(ini_get('upload_max_filesize'));
             $postMaxSize = $this->parseSize(ini_get('post_max_size'));
             $maxExecutionTime = ini_get('max_execution_time');
-            
+
             $file = $request->file('apk_file');
-            
+
             // Check if file is valid
             if (!$file->isValid()) {
                 return response()->json([
@@ -849,14 +857,14 @@ class AdminController extends Controller
             }
 
             $fileSize = $file->getSize();
-            
+
             if ($fileSize > $uploadMaxFilesize) {
                 return response()->json([
                     'success' => false,
                     'message' => "File size ({$this->formatBytes($fileSize)}) exceeds PHP upload_max_filesize limit ({$this->formatBytes($uploadMaxFilesize)}). Please increase upload_max_filesize in php.ini or use a smaller file."
                 ], 400);
             }
-            
+
             if ($fileSize > $postMaxSize) {
                 return response()->json([
                     'success' => false,
@@ -873,7 +881,7 @@ class AdminController extends Controller
                 'apk_file.required' => 'Please select an APK file to upload.',
                 'apk_file.file' => 'The uploaded file is not valid.',
                 'apk_file.mimes' => 'Only .apk files are allowed. Please upload a valid APK file.',
-                'apk_file.max' => 'The APK file is too large. Maximum size is 100MB. Your file size: ' . 
+                'apk_file.max' => 'The APK file is too large. Maximum size is 100MB. Your file size: ' .
                     number_format($request->file('apk_file')->getSize() / 1024 / 1024, 2) . ' MB',
                 'apk_version.required' => 'Version number is required.',
                 'apk_version.regex' => 'Version number must be in format: X.Y.Z (e.g., 1.0.0, 2.1.3)',
@@ -897,7 +905,7 @@ class AdminController extends Controller
             if ($existingVersion) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Version {$version} already exists. Please use a different version number (e.g., " . 
+                    'message' => "Version {$version} already exists. Please use a different version number (e.g., " .
                         $this->suggestNextVersion($version) . ")."
                 ], 400);
             }
@@ -907,11 +915,11 @@ class AdminController extends Controller
             if (!file_exists($apkDir)) {
                 mkdir($apkDir, 0755, true);
             }
-            
+
             // Store file in storage/app/public/apk/ using stream for large files
             $fileName = 'tendapoa-' . $version . '-' . time() . '.apk';
             $destinationPath = $apkDir . '/' . $fileName;
-            
+
             // Use move_uploaded_file for better performance with large files
             if (!move_uploaded_file($file->getPathname(), $destinationPath)) {
                 // Fallback to Laravel's store method
@@ -949,7 +957,7 @@ class AdminController extends Controller
             ]) . "\n";
             file_put_contents($logFile, $logEntry, FILE_APPEND);
             // #endregion
-            
+
             $appVersion = AppVersion::create([
                 'version' => $version,
                 'file_path' => $filePath,
@@ -972,7 +980,7 @@ class AdminController extends Controller
         } catch (\Illuminate\Validation\ValidationException $e) {
             $errors = $e->errors();
             $firstError = collect($errors)->flatten()->first();
-            
+
             return response()->json([
                 'success' => false,
                 'message' => $firstError ?? 'Validation failed. Please check your input.',
@@ -986,7 +994,7 @@ class AdminController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => 'An error occurred while uploading the APK: ' . $e->getMessage() . 
+                'message' => 'An error occurred while uploading the APK: ' . $e->getMessage() .
                     '. Please try again or contact support if the problem persists.'
             ], 500);
         }
@@ -1025,7 +1033,7 @@ class AdminController extends Controller
     {
         $parts = explode('.', $currentVersion);
         if (count($parts) === 3) {
-            $parts[2] = (int)$parts[2] + 1;
+            $parts[2] = (int) $parts[2] + 1;
             return implode('.', $parts);
         }
         return $currentVersion . '.1';
@@ -1076,7 +1084,7 @@ class AdminController extends Controller
     public function scanManualApk()
     {
         $apkDir = storage_path('app/public/apk');
-        
+
         // Ensure directory exists
         if (!file_exists($apkDir)) {
             mkdir($apkDir, 0755, true);
@@ -1085,7 +1093,7 @@ class AdminController extends Controller
 
         // Scan for .apk files
         $files = glob($apkDir . '/*.apk');
-        
+
         if (empty($files)) {
             return back()->with('error', "No APK files found in {$apkDir}. Please upload a file via FTP/File Manager first.");
         }
@@ -1109,7 +1117,7 @@ class AdminController extends Controller
         $fileName = basename($latestFile);
         $filePath = 'apk/' . $fileName;
         $fileSize = filesize($latestFile);
-        
+
         // Guess version from filename (e.g., tendapoa-1.0.0.apk)
         $version = '1.0.0'; // Default
         if (preg_match('/(\d+\.\d+\.\d+)/', $fileName, $matches)) {
@@ -1120,7 +1128,7 @@ class AdminController extends Controller
             if ($lastVersion) {
                 $parts = explode('.', $lastVersion->version);
                 if (count($parts) === 3) {
-                    $parts[2] = (int)$parts[2] + 1;
+                    $parts[2] = (int) $parts[2] + 1;
                     $version = implode('.', $parts);
                 }
             }
@@ -1173,7 +1181,7 @@ class AdminController extends Controller
         ]);
 
         $slug = \Illuminate\Support\Str::slug($request->name);
-        
+
         // Ensure unique slug
         $originalSlug = $slug;
         $counter = 1;
@@ -1203,7 +1211,7 @@ class AdminController extends Controller
         ]);
 
         $slug = \Illuminate\Support\Str::slug($request->name);
-        
+
         // Ensure unique slug (exclude current)
         $originalSlug = $slug;
         $counter = 1;
@@ -1227,7 +1235,7 @@ class AdminController extends Controller
     {
         // Check if category has jobs
         $jobCount = Job::where('category_id', $category->id)->count();
-        
+
         if ($jobCount > 0) {
             return back()->with('error', "Cannot delete '{$category->name}' - it has {$jobCount} jobs. Please reassign or delete those jobs first.");
         }
@@ -1236,6 +1244,59 @@ class AdminController extends Controller
         $category->delete();
 
         return back()->with('success', "Category '{$categoryName}' deleted successfully!");
+    }
+    /**
+     * Show broadcast form
+     */
+    public function showBroadcast()
+    {
+        return view('admin.broadcast');
+    }
+
+    /**
+     * Send broadcast notification
+     */
+    public function sendBroadcast(Request $request)
+    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'required|string',
+            'target' => 'required|in:all,muhitaji,mfanyakazi',
+        ]);
+
+        $target = $request->target;
+        $users = User::query();
+
+        if ($target !== 'all') {
+            $users->where('role', $target);
+        }
+
+        // Count users to notify
+        $count = $users->count();
+
+        // Chunking for performance if many users
+        $users->chunk(100, function ($chunk) use ($request) {
+            foreach ($chunk as $user) {
+                try {
+                    $user->notify(new \App\Notifications\AdminMessageNotification(
+                        $request->title,
+                        $request->message
+                    ));
+                } catch (\Exception $e) {
+                    \Log::error('Broadcast error for user ' . $user->id . ': ' . $e->getMessage());
+                }
+            }
+        });
+
+        // Also save to SystemNotification table for history
+        \App\Models\SystemNotification::create([
+            'title' => $request->title,
+            'message' => $request->message,
+            'target' => $target,
+            'sent_by' => Auth::id(),
+        ]);
+
+        return back()->with('success', "Taarifa imetumwa kwa watumiaji {$count} (" . ($target == 'all' ? 'Wote' : ucfirst($target)) . ').');
     }
 }
 

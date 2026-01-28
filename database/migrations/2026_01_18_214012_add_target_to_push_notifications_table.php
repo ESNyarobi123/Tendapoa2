@@ -11,9 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('push_notifications', function (Blueprint $table) {
-            $table->string('target')->nullable()->after('body');
-        });
+        if (Schema::hasTable('push_notifications')) {
+            Schema::table('push_notifications', function (Blueprint $table) {
+                if (!Schema::hasColumn('push_notifications', 'target')) {
+                    $table->string('target')->nullable()->after('body');
+                }
+            });
+        }
     }
 
     /**
@@ -21,8 +25,12 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('push_notifications', function (Blueprint $table) {
-            $table->dropColumn('target');
-        });
+        if (Schema::hasTable('push_notifications')) {
+            Schema::table('push_notifications', function (Blueprint $table) {
+                if (Schema::hasColumn('push_notifications', 'target')) {
+                    $table->dropColumn('target');
+                }
+            });
+        }
     }
 };

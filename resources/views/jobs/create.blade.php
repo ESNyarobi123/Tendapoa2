@@ -360,7 +360,7 @@
         </div>
       </div>
 
-      <form method="post" action="{{ route('jobs.store') }}">
+      <form method="post" action="{{ route('jobs.store') }}" enctype="multipart/form-data">
         @csrf
 
         <!-- Job Title -->
@@ -425,6 +425,49 @@
           <small style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px; display: block;">
             Namba hii itatumika kwa malipo ya escrow.
           </small>
+        </div>
+
+        <!-- Image Upload -->
+        <div class="form-group">
+          <label class="form-label" for="image">📷 Picha ya Kazi (Hiari)</label>
+          <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center; background: #f9fafb; transition: all 0.3s ease; cursor: pointer;" id="image-upload-area" onclick="document.getElementById('image').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+            <input 
+              type="file" 
+              id="image"
+              name="image" 
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              style="display: none;"
+              onchange="handleImageSelect(event)"
+            >
+            <div id="image-upload-placeholder">
+              <div style="font-size: 48px; margin-bottom: 12px;">📷</div>
+              <p style="color: var(--text-muted); margin: 0 0 8px 0; font-weight: 600;">Bofya au vuta picha hapa</p>
+              <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">PNG, JPG, WEBP (max 5MB)</p>
+              <button type="button" onclick="document.getElementById('image').click()" class="btn btn-outline" style="margin-top: 16px;">
+                <span>📁</span>
+                Chagua Picha
+              </button>
+            </div>
+            <div id="image-preview" style="display: none;">
+              <img id="image-preview-img" src="" alt="Preview" style="max-width: 100%; max-height: 300px; border-radius: 12px; margin-bottom: 12px; box-shadow: var(--shadow);">
+              <div style="display: flex; gap: 8px; justify-content: center;">
+                <button type="button" onclick="document.getElementById('image').click()" class="btn btn-outline" style="font-size: 0.875rem; padding: 8px 16px;">
+                  <span>🔄</span>
+                  Badilisha
+                </button>
+                <button type="button" onclick="removeImage()" class="btn btn-outline" style="font-size: 0.875rem; padding: 8px 16px; color: var(--danger); border-color: var(--danger);">
+                  <span>🗑️</span>
+                  Ondoa
+                </button>
+              </div>
+            </div>
+          </div>
+          <small style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px; display: block;">
+            Picha itapunguzwa kwa ukubwa unaofaa (max 1200px). Format: JPEG, PNG, au WEBP.
+          </small>
+          @error('image')
+            <div style="color: var(--danger); font-size: 0.875rem; margin-top: 4px; font-weight: 500;">{{ $message }}</div>
+          @enderror
         </div>
 
         <!-- Map Section -->
@@ -680,6 +723,74 @@
 
   // Update status on page load
   updateLocationStatus();
+
+  // Image upload handling
+  function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Picha ni kubwa sana! Tafadhali chagua picha isiyozidi 5MB.');
+      event.target.value = '';
+      return;
+    }
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Aina ya faili si sahihi! Tafadhali chagua picha (JPEG, PNG, au WEBP).');
+      event.target.value = '';
+      return;
+    }
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('image-preview-img').src = e.target.result;
+      document.getElementById('image-upload-placeholder').style.display = 'none';
+      document.getElementById('image-preview').style.display = 'block';
+      document.getElementById('image-upload-area').style.borderColor = 'var(--success)';
+      document.getElementById('image-upload-area').style.background = '#f0fdf4';
+    };
+    reader.readAsDataURL(file);
+  }
+  
+  function removeImage() {
+    document.getElementById('image').value = '';
+    document.getElementById('image-upload-placeholder').style.display = 'block';
+    document.getElementById('image-preview').style.display = 'none';
+    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
+    document.getElementById('image-upload-area').style.background = '#f9fafb';
+  }
+
+  // Drag and drop handlers
+  function handleDragOver(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('image-upload-area').style.borderColor = 'var(--primary)';
+    document.getElementById('image-upload-area').style.background = '#eff6ff';
+  }
+
+  function handleDragLeave(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
+    document.getElementById('image-upload-area').style.background = '#f9fafb';
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
+    document.getElementById('image-upload-area').style.background = '#f9fafb';
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      document.getElementById('image').files = files;
+      handleImageSelect({ target: { files: files } });
+    }
+  }
 
   // Add some interactive animations
   document.addEventListener('DOMContentLoaded', function() {

@@ -6,6 +6,7 @@ use App\Models\Job;
 use App\Services\LocationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class FeedController extends Controller
 {
@@ -36,6 +37,16 @@ class FeedController extends Controller
                 );
                 
                 $job->distance_info = $distanceInfo;
+                if ($job->image) {
+                    $job->image_url = asset('storage/' . $job->image);
+                    // Add cache busting
+                    if (Storage::disk('public')->exists($job->image)) {
+                        $timestamp = filemtime(storage_path('app/public/' . $job->image));
+                        $job->image_url = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                    }
+                } else {
+                    $job->image_url = null;
+                }
                 return $job;
             });
         } else {
@@ -49,6 +60,16 @@ class FeedController extends Controller
                     'text_color' => '#6b7280',
                     'label' => 'Umbali haujulikani'
                 ];
+                if ($job->image) {
+                    $job->image_url = asset('storage/' . $job->image);
+                    // Add cache busting
+                    if (Storage::disk('public')->exists($job->image)) {
+                        $timestamp = filemtime(storage_path('app/public/' . $job->image));
+                        $job->image_url = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                    }
+                } else {
+                    $job->image_url = null;
+                }
                 return $job;
             });
         }
@@ -113,6 +134,16 @@ class FeedController extends Controller
                 );
                 
                 $job->distance_info = $distanceInfo;
+                if ($job->image) {
+                    $job->image_url = asset('storage/' . $job->image);
+                    // Add cache busting
+                    if (Storage::disk('public')->exists($job->image)) {
+                        $timestamp = filemtime(storage_path('app/public/' . $job->image));
+                        $job->image_url = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                    }
+                } else {
+                    $job->image_url = null;
+                }
                 return $job;
             });
         } else {
@@ -126,6 +157,16 @@ class FeedController extends Controller
                     'text_color' => '#6b7280',
                     'label' => 'Umbali haujulikani'
                 ];
+                if ($job->image) {
+                    $job->image_url = asset('storage/' . $job->image);
+                    // Add cache busting
+                    if (Storage::disk('public')->exists($job->image)) {
+                        $timestamp = filemtime(storage_path('app/public/' . $job->image));
+                        $job->image_url = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                    }
+                } else {
+                    $job->image_url = null;
+                }
                 return $job;
             });
         }
@@ -208,6 +249,16 @@ class FeedController extends Controller
                 );
                 
                 $job->distance_info = $distanceInfo;
+                if ($job->image) {
+                    $job->image_url = asset('storage/' . $job->image);
+                    // Add cache busting
+                    if (Storage::disk('public')->exists($job->image)) {
+                        $timestamp = filemtime(storage_path('app/public/' . $job->image));
+                        $job->image_url = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                    }
+                } else {
+                    $job->image_url = null;
+                }
                 return $job;
             });
         } else {
@@ -220,6 +271,16 @@ class FeedController extends Controller
                     'text_color' => '#6b7280',
                     'label' => 'Umbali haujulikani'
                 ];
+                if ($job->image) {
+                    $job->image_url = asset('storage/' . $job->image);
+                    // Add cache busting
+                    if (Storage::disk('public')->exists($job->image)) {
+                        $timestamp = filemtime(storage_path('app/public/' . $job->image));
+                        $job->image_url = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                    }
+                } else {
+                    $job->image_url = null;
+                }
                 return $job;
             });
         }

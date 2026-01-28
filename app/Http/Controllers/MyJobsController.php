@@ -13,7 +13,7 @@ class MyJobsController extends Controller
         if (!$u || !in_array($u->role,['muhitaji','admin'])) abort(403);
 
         $query = Job::withCount('comments')
-            ->with('acceptedWorker')
+            ->with(['acceptedWorker', 'category'])
             ->where('user_id', $u->id);
 
         if (request()->has('status')) {
@@ -41,8 +41,21 @@ class MyJobsController extends Controller
             ->latest()
             ->paginate(12);
 
+        // Add image URLs to jobs
+        $jobsData = $jobs->items();
+        foreach ($jobsData as $job) {
+            if ($job->image) {
+                $job->image_url = asset('storage/' . $job->image);
+                // Add cache busting
+                if (\Illuminate\Support\Facades\Storage::disk('public')->exists($job->image)) {
+                    $timestamp = filemtime(storage_path('app/public/' . $job->image));
+                    $job->image_url = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                }
+            }
+        }
+
         return response()->json([
-            'jobs' => $jobs->items(),
+            'jobs' => $jobsData,
             'pagination' => [
                 'current_page' => $jobs->currentPage(),
                 'last_page' => $jobs->lastPage(),

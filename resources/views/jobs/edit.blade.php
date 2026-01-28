@@ -1,6 +1,10 @@
 @extends('layouts.app')
 @section('title', 'Badilisha Kazi')
 
+@php
+use Illuminate\Support\Facades\Storage;
+@endphp
+
 @section('content')
 <style>
   /* ====== Job Edit Page ====== */
@@ -341,7 +345,7 @@
 
     <!-- Form -->
     <div class="form-container">
-      <form method="POST" action="{{ route('jobs.update', $job) }}" id="editJobForm">
+      <form method="POST" action="{{ route('jobs.update', $job) }}" id="editJobForm" enctype="multipart/form-data">
         @csrf
         @method('PUT')
 
@@ -382,6 +386,56 @@
           @enderror
         </div>
 
+        <!-- Image Upload -->
+        <div class="form-group">
+          <label for="image" class="form-label">📷 Picha ya Kazi (Hiari)</label>
+          <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center; background: #f9fafb; transition: all 0.3s ease; cursor: pointer;" id="image-upload-area" onclick="if(!document.getElementById('image-preview').style.display || document.getElementById('image-preview').style.display === 'none') document.getElementById('image').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+            <input 
+              type="file" 
+              id="image"
+              name="image" 
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              style="display: none;"
+              onchange="handleImageSelect(event)"
+            >
+            @if($job->image)
+              <div id="image-current" style="margin-bottom: 16px;">
+                <p style="color: var(--text-muted); margin: 0 0 8px 0; font-size: 0.875rem; font-weight: 600;">Picha ya Sasa:</p>
+                <img src="{{ Storage::url($job->image) }}" alt="Current image" style="max-width: 100%; max-height: 200px; border-radius: 12px; box-shadow: var(--shadow);" onerror="this.parentElement.style.display='none';">
+              </div>
+            @endif
+            <div id="image-upload-placeholder" @if($job->image) style="display: none;" @endif>
+              <div style="font-size: 48px; margin-bottom: 12px;">📷</div>
+              <p style="color: var(--text-muted); margin: 0 0 8px 0; font-weight: 600;">Bofya au vuta picha hapa</p>
+              <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">PNG, JPG, WEBP (max 5MB)</p>
+              <button type="button" onclick="document.getElementById('image').click()" class="btn btn-outline" style="margin-top: 16px;">
+                <span>📁</span>
+                {{ $job->image ? 'Badilisha Picha' : 'Chagua Picha' }}
+              </button>
+            </div>
+            <div id="image-preview" style="display: none;">
+              <p style="color: var(--text-muted); margin: 0 0 8px 0; font-size: 0.875rem; font-weight: 600;">Picha Mpya:</p>
+              <img id="image-preview-img" src="" alt="Preview" style="max-width: 100%; max-height: 300px; border-radius: 12px; margin-bottom: 12px; box-shadow: var(--shadow);">
+              <div style="display: flex; gap: 8px; justify-content: center;">
+                <button type="button" onclick="document.getElementById('image').click()" class="btn btn-outline" style="font-size: 0.875rem; padding: 8px 16px;">
+                  <span>🔄</span>
+                  Badilisha
+                </button>
+                <button type="button" onclick="removeImage()" class="btn btn-outline" style="font-size: 0.875rem; padding: 8px 16px; color: var(--danger); border-color: var(--danger);">
+                  <span>🗑️</span>
+                  Ondoa
+                </button>
+              </div>
+            </div>
+          </div>
+          <small style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px; display: block;">
+            Picha itapunguzwa kwa ukubwa unaofaa (max 1200px). Format: JPEG, PNG, au WEBP.
+          </small>
+          @error('image')
+            <div class="error-message">{{ $message }}</div>
+          @enderror
+        </div>
+
         <!-- Price Section -->
         <div class="price-section">
           <div class="price-header">
@@ -398,7 +452,8 @@
             <label for="price" class="form-label">Bei Mpya (TZS)</label>
             <input type="number" id="price" name="price" class="form-input" 
                    value="{{ old('price', $job->price) }}" required min="{{ $job->price }}" 
-                   step="100" placeholder="Weka bei mpya">
+                   step="100" placeholder="Weka bei mpya" 
+                   data-current-price="{{ $job->price ?? 0 }}">
             @error('price')
               <div class="error-message">{{ $message }}</div>
             @enderror
@@ -501,16 +556,18 @@
   });
 
   // Price validation
-  document.getElementById('price').addEventListener('input', function() {
-    const currentPrice = {{ $job->price }};
-    const newPrice = parseInt(this.value);
+  const priceInput = document.getElementById('price');
+  const currentJobPrice = parseInt(priceInput.getAttribute('data-current-price')) || 0;
+  
+  priceInput.addEventListener('input', function() {
+    const newPrice = parseInt(this.value) || 0;
     
-    if (newPrice < currentPrice) {
+    if (newPrice < currentJobPrice) {
       this.style.borderColor = '#ef4444';
       showNotification('Huwezi kupunguza bei. Unaweza kuongeza tu.', 'error');
-    } else if (newPrice > currentPrice) {
+    } else if (newPrice > currentJobPrice) {
       this.style.borderColor = '#10b981';
-      const difference = newPrice - currentPrice;
+      const difference = newPrice - currentJobPrice;
       showNotification(`Utalipia ziada: ${difference.toLocaleString()} TZS`, 'info');
     } else {
       this.style.borderColor = '#e5e7eb';
@@ -519,15 +576,88 @@
 
   // Form validation
   document.getElementById('editJobForm').addEventListener('submit', function(e) {
-    const currentPrice = {{ $job->price }};
-    const newPrice = parseInt(document.getElementById('price').value);
+    const newPrice = parseInt(priceInput.value) || 0;
     
-    if (newPrice < currentPrice) {
+    if (newPrice < currentJobPrice) {
       e.preventDefault();
       showNotification('Huwezi kupunguza bei ya kazi!', 'error');
       return false;
     }
   });
+
+  // Image upload handling
+  function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Picha ni kubwa sana! Tafadhali chagua picha isiyozidi 5MB.');
+      event.target.value = '';
+      return;
+    }
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Aina ya faili si sahihi! Tafadhali chagua picha (JPEG, PNG, au WEBP).');
+      event.target.value = '';
+      return;
+    }
+    
+    // Show preview
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('image-preview-img').src = e.target.result;
+      document.getElementById('image-upload-placeholder').style.display = 'none';
+      if (document.getElementById('image-current')) {
+        document.getElementById('image-current').style.display = 'none';
+      }
+      document.getElementById('image-preview').style.display = 'block';
+      document.getElementById('image-upload-area').style.borderColor = 'var(--success)';
+      document.getElementById('image-upload-area').style.background = '#f0fdf4';
+    };
+    reader.readAsDataURL(file);
+  }
+  
+  function removeImage() {
+    document.getElementById('image').value = '';
+    document.getElementById('image-upload-placeholder').style.display = 'block';
+    if (document.getElementById('image-current')) {
+      document.getElementById('image-current').style.display = 'block';
+    }
+    document.getElementById('image-preview').style.display = 'none';
+    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
+    document.getElementById('image-upload-area').style.background = '#f9fafb';
+  }
+
+  // Drag and drop handlers
+  function handleDragOver(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('image-upload-area').style.borderColor = 'var(--primary)';
+    document.getElementById('image-upload-area').style.background = '#eff6ff';
+  }
+
+  function handleDragLeave(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
+    document.getElementById('image-upload-area').style.background = '#f9fafb';
+  }
+
+  function handleDrop(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
+    document.getElementById('image-upload-area').style.background = '#f9fafb';
+    
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      document.getElementById('image').files = files;
+      handleImageSelect({ target: { files: files } });
+    }
+  }
 
   // Show notification
   function showNotification(message, type) {

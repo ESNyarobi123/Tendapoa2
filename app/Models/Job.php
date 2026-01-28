@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class Job extends Model
 {
@@ -19,6 +20,7 @@ class Job extends Model
         'category_id',
         'title',
         'description',
+        'image',
         'price',
         'lat',
         'lng',
@@ -50,6 +52,9 @@ class Job extends Model
         'lat'          => 'float',
         'lng'          => 'float',
     ];
+
+    /** Appended attributes */
+    protected $appends = ['image_url'];
 
     /** STATUS constants (hiari kutumia) */
     public const S_OFFERED     = 'offered';
@@ -150,5 +155,64 @@ class Job extends Model
         if (Schema::hasColumn($table, 'worker_response'))     return 'worker_response';
         if (Schema::hasColumn($table, 'assignee_response'))   return 'assignee_response';
         return null;
+    }
+
+    /**
+     * Get image URL attribute
+     * More robust implementation that checks multiple locations and handles edge cases
+     */
+    public function getImageUrlAttribute(): ?string
+    {
+        if (!$this->image) {
+            return null;
+        }
+        
+        // Generate base URL using asset() for public storage
+        $url = asset('storage/' . $this->image);
+        
+        // Try multiple methods to check if file exists and get timestamp for cache busting
+        $fileExists = false;
+        $timestamp = null;
+        
+        // Method 1: Check using Storage facade (preferred for Laravel)
+        try {
+            if (Storage::disk('public')->exists($this->image)) {
+                $fileExists = true;
+                // Try to get file modification time
+                $filePath = storage_path('app/public/' . $this->image);
+                if (file_exists($filePath)) {
+                    $timestamp = filemtime($filePath);
+                }
+            }
+        } catch (\Exception $e) {
+            // Storage check failed, continue with other methods
+        }
+        
+        // Method 2: Direct file system check (fallback)
+        if (!$fileExists) {
+            $filePath = storage_path('app/public/' . $this->image);
+            if (file_exists($filePath) && is_file($filePath)) {
+                $fileExists = true;
+                $timestamp = filemtime($filePath);
+            }
+        }
+        
+        // Method 3: Check if symbolic link exists and points to valid file
+        if (!$fileExists) {
+            $publicPath = public_path('storage/' . $this->image);
+            if (file_exists($publicPath) && is_file($publicPath)) {
+                $fileExists = true;
+                $timestamp = filemtime($publicPath);
+            }
+        }
+        
+        // Add cache busting parameter if we found the file
+        // Even if file check fails, return URL anyway and let browser handle 404
+        // This prevents false negatives where file exists but our checks fail
+        if ($fileExists && $timestamp) {
+            $url .= '?v=' . $timestamp;
+        }
+        
+        return $url;
     }
 }

@@ -20,10 +20,10 @@ class ChatController extends Controller
 
         // Check if user is muhitaji (job owner)
         $isMuhitaji = $job->user_id === $user->id;
-        
+
         // Check if user is mfanyakazi who has commented on this job
         $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-        
+
         // Check if user is accepted worker
         $isAcceptedWorker = $job->accepted_worker_id === $user->id;
 
@@ -84,10 +84,10 @@ class ChatController extends Controller
 
         // Check if user is muhitaji (job owner)
         $isMuhitaji = $job->user_id === $user->id;
-        
+
         // Check if user is mfanyakazi who has commented on this job
         $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-        
+
         // Check if user is accepted worker
         $isAcceptedWorker = $job->accepted_worker_id === $user->id;
 
@@ -138,45 +138,55 @@ class ChatController extends Controller
     {
         $user = Auth::user();
 
-        // Get unique conversations grouped by job
-        $conversations = DB::table('private_messages')
+        // Get conversations from messages
+        $messageConversations = DB::table('private_messages')
             ->select(
                 'work_order_id',
                 DB::raw('MAX(created_at) as last_message_at'),
                 DB::raw("COUNT(CASE WHEN receiver_id = {$user->id} AND is_read = 0 THEN 1 END) as unread_count")
             )
-            ->where(function($query) use ($user) {
+            ->where(function ($query) use ($user) {
                 $query->where('sender_id', $user->id)
-                      ->orWhere('receiver_id', $user->id);
+                    ->orWhere('receiver_id', $user->id);
             })
             ->groupBy('work_order_id')
-            ->orderBy('last_message_at', 'desc')
+            ->get()
+            ->keyBy('work_order_id');
+
+        // Get jobs where user is muhitaji with accepted worker OR user is accepted worker
+        // These should appear in chat even if no messages yet
+        $activeJobs = Job::with(['muhitaji', 'acceptedWorker', 'category'])
+            ->whereNotNull('accepted_worker_id')
+            ->where(function ($query) use ($user) {
+                $query->where('user_id', $user->id) // User is muhitaji
+                    ->orWhere('accepted_worker_id', $user->id); // User is accepted worker
+            })
             ->get();
 
-        // Load job details
-        $jobIds = $conversations->pluck('work_order_id');
-        $jobs = Job::with(['muhitaji', 'acceptedWorker', 'category'])
-            ->whereIn('id', $jobIds)
-            ->get()
-            ->keyBy('id');
+        // Build conversations list
+        $conversations = collect();
 
-        // Merge conversation data with jobs
-        $conversations = $conversations->map(function($conv) use ($jobs, $user) {
-            $job = $jobs->get($conv->work_order_id);
-            if (!$job) return null;
+        foreach ($activeJobs as $job) {
+            $messageData = $messageConversations->get($job->id);
 
             // Determine the other user
-            $otherUser = $user->id === $job->user_id 
-                ? $job->acceptedWorker 
+            $otherUser = $user->id === $job->user_id
+                ? $job->acceptedWorker
                 : $job->muhitaji;
 
-            return (object)[
+            if (!$otherUser)
+                continue;
+
+            $conversations->push((object) [
                 'job' => $job,
                 'other_user' => $otherUser,
-                'last_message_at' => $conv->last_message_at,
-                'unread_count' => $conv->unread_count,
-            ];
-        })->filter();
+                'last_message_at' => $messageData->last_message_at ?? $job->updated_at,
+                'unread_count' => $messageData->unread_count ?? 0,
+            ]);
+        }
+
+        // Sort by last message date
+        $conversations = $conversations->sortByDesc('last_message_at');
 
         return view('chat.index', compact('conversations'));
     }
@@ -199,10 +209,10 @@ class ChatController extends Controller
 
         $lastId = $request->get('last_id', 0);
         $otherUserId = $request->get('other_user_id');
-        
+
         if (!$otherUserId) {
-            $otherUserId = $user->id === $job->user_id 
-                ? $job->accepted_worker_id 
+            $otherUserId = $user->id === $job->user_id
+                ? $job->accepted_worker_id
                 : $job->user_id;
         }
 

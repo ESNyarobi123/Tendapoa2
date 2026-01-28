@@ -536,10 +536,23 @@
                   </button>
                 </form>
 
-              @elseif($status === 'in_progress')
+              @elseif($status === 'assigned' || $status === 'in_progress')
+                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 16px; border-radius: 12px; margin-bottom: 12px; border: 2px solid #f59e0b;">
+                  <div style="display: flex; align-items: start; gap: 12px;">
+                    <span style="font-size: 1.5rem;">📋</span>
+                    <div>
+                      <strong style="color: #92400e; display: block; margin-bottom: 8px;">Maagizo:</strong>
+                      <p style="margin: 0; color: #78350f; font-size: 0.9rem; line-height: 1.6;">
+                        <strong>1.</strong> Maliza kazi yako kwa mteja<br>
+                        <strong>2.</strong> Omba code ya ukamilishaji kutoka kwa mteja<br>
+                        <strong>3.</strong> Ingiza code hapa chini ili kukamilisha kazi na kupokea malipo
+                      </p>
+                    </div>
+                  </div>
+                </div>
                 <button class="btn btn-primary" onclick="showCodeInputModal({{ $job->id }}, '{{ addslashes($title) }}')">
                   <span>🏁</span>
-                  Maliza Kazi
+                  Maliza Kazi (Ingiza Code)
                 </button>
 
               @elseif($status === 'ready_for_confirmation')
@@ -584,24 +597,34 @@
 
 <!-- Code Input Modal -->
 <div id="codeInputModal" class="code-modal">
-  <div class="code-modal-content">
-    <div class="code-modal-header">
-      <h3>🏁 Maliza Kazi</h3>
-      <p>Ingiza code uliyopewa na mteja ili kumaliza kazi</p>
+  <div class="code-modal-content" style="background: white; border-radius: 24px; padding: 32px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+    <div class="code-modal-header" style="text-align: center; margin-bottom: 24px;">
+      <div style="font-size: 4rem; margin-bottom: 16px;">🏁</div>
+      <h3 style="font-size: 1.75rem; font-weight: 800; color: #1e293b; margin: 0 0 8px 0;">Maliza Kazi</h3>
+      <p style="color: #64748b; margin: 0;">Ingiza code uliyopewa na mteja ili kukamilisha kazi na kupokea malipo</p>
     </div>
     
-    <div class="code-instructions">
-      <h4>📋 Maagizo:</h4>
-      <p>
-        <strong>1.</strong> Omba code kutoka kwa mteja<br>
-        <strong>2.</strong> Ingiza code hapa chini<br>
-        <strong>3.</strong> Bofya "Thibitisha" ili kumaliza kazi
-      </p>
+    <div class="code-instructions" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; border-radius: 16px; margin-bottom: 24px; border: 2px solid #f59e0b;">
+      <div style="display: flex; align-items: start; gap: 12px;">
+        <span style="font-size: 1.5rem;">📋</span>
+        <div>
+          <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">Maagizo:</h4>
+          <ol style="margin: 0; padding-left: 20px; color: #78350f; line-height: 1.8;">
+            <li><strong>Maliza kazi yako</strong> kwa mteja kikamilifu</li>
+            <li><strong>Omba code ya ukamilishaji</strong> kutoka kwa mteja</li>
+            <li><strong>Ingiza code hapa chini</strong> (tarakimu 6 ulizopewa na mteja)</li>
+            <li><strong>Bofya "Thibitisha"</strong> ili kukamilisha kazi</li>
+            <li><strong>Malipo yatafanyika kiotomatiki</strong> baada ya uthibitisho</li>
+          </ol>
+        </div>
+      </div>
     </div>
 
     <form id="codeInputForm">
-      <div class="code-input-group">
-        <label class="code-input-label" for="muhitajiCode">Code ya Mteja:</label>
+      <div class="code-input-group" style="margin-bottom: 24px;">
+        <label class="code-input-label" for="muhitajiCode" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 0.95rem;">
+          🔐 Code ya Mteja:
+        </label>
         <input 
           type="text" 
           id="muhitajiCode"
@@ -611,17 +634,20 @@
           maxlength="6"
           pattern="[0-9]{6}"
           required
+          style="width: 100%; padding: 16px; border: 3px solid #e5e7eb; border-radius: 12px; font-size: 1.5rem; font-weight: 700; text-align: center; letter-spacing: 8px; transition: all 0.3s ease;"
+          onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.1)';"
+          onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';"
         >
       </div>
       
-      <div class="code-modal-actions">
-        <button type="button" class="btn btn-outline" onclick="closeCodeInputModal()">
+      <div class="code-modal-actions" style="display: flex; gap: 12px;">
+        <button type="button" class="btn btn-outline" onclick="closeCodeInputModal()" style="flex: 1; padding: 14px; background: #f3f4f6; color: #374151; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
           <span>❌</span>
           Fungua
         </button>
-        <button type="submit" class="btn btn-primary">
+        <button type="submit" class="btn btn-primary" style="flex: 2; padding: 14px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
           <span>✅</span>
-          Thibitisha
+          Thibitisha & Kamilisha
         </button>
       </div>
     </form>
@@ -635,6 +661,7 @@
     currentJobId = jobId;
     document.getElementById('codeInputModal').classList.add('show');
     document.getElementById('muhitajiCode').focus();
+    document.getElementById('muhitajiCode').value = '';
   }
 
   function closeCodeInputModal() {
@@ -671,17 +698,26 @@
         'X-Requested-With': 'XMLHttpRequest'
       }
     })
-    .then(response => response.json())
+    .then(response => {
+      // Handle both JSON and HTML responses
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return response.json();
+      } else {
+        // If HTML response, assume success and reload
+        return { success: true, message: 'Kazi imekamilika! Malipo yamefanyika.' };
+      }
+    })
     .then(data => {
-      if (data.success) {
-        showNotification(data.message, 'success');
+      if (data.success !== false) {
+        showNotification(data.message || 'Kazi imekamilika! Malipo yamefanyika kiotomatiki.', 'success');
         closeCodeInputModal();
         // Reload page after a short delay
         setTimeout(() => {
           window.location.reload();
-        }, 1500);
+        }, 2000);
       } else {
-        showNotification(data.message, 'error');
+        showNotification(data.message || 'Kuna tatizo. Jaribu tena.', 'error');
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
       }

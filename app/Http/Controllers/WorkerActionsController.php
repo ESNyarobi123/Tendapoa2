@@ -11,20 +11,24 @@ class WorkerActionsController extends Controller
 {
     protected function responseColumn(): ?string
     {
-        if (Schema::hasColumn('work_orders', 'mfanyakazi_response')) return 'mfanyakazi_response';
-        if (Schema::hasColumn('work_orders', 'worker_response'))     return 'worker_response';
-        if (Schema::hasColumn('work_orders', 'assignee_response'))   return 'assignee_response';
+        if (Schema::hasColumn('work_orders', 'mfanyakazi_response'))
+            return 'mfanyakazi_response';
+        if (Schema::hasColumn('work_orders', 'worker_response'))
+            return 'worker_response';
+        if (Schema::hasColumn('work_orders', 'assignee_response'))
+            return 'assignee_response';
         return null;
     }
 
     public function assigned()
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi','admin'])) abort(403);
+        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin']))
+            abort(403);
 
-        $jobs = Job::with('muhitaji','category')
+        $jobs = Job::with('muhitaji', 'category')
             ->where('accepted_worker_id', $u->id)
-            ->whereIn('status', ['assigned','in_progress','ready_for_confirmation'])
+            ->whereIn('status', ['assigned', 'in_progress', 'ready_for_confirmation'])
             ->latest()->paginate(12);
 
         return view('mfanyakazi.assigned', compact('jobs'));
@@ -33,8 +37,10 @@ class WorkerActionsController extends Controller
     public function accept(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role,['mfanyakazi','admin'])) abort(403);
-        if ($job->accepted_worker_id !== $u->id) abort(403);
+        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin']))
+            abort(403);
+        if ($job->accepted_worker_id !== $u->id)
+            abort(403);
 
         if (!$job->completion_code) {
             $job->completion_code = (string) random_int(100000, 999999);
@@ -46,14 +52,22 @@ class WorkerActionsController extends Controller
         }
         $job->save();
 
-        return redirect()->route('mfanyakazi.assigned')->with('status','Umeikubali kazi.');
+        // Notify Client
+        try {
+            $job->muhitaji->notify(new \App\Notifications\WorkerAcceptedNotification($job, $u));
+        } catch (\Exception $e) {
+        }
+
+        return redirect()->route('mfanyakazi.assigned')->with('status', 'Umeikubali kazi.');
     }
 
     public function decline(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role,['mfanyakazi','admin'])) abort(403);
-        if ($job->accepted_worker_id !== $u->id) abort(403);
+        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin']))
+            abort(403);
+        if ($job->accepted_worker_id !== $u->id)
+            abort(403);
 
         if ($col = $this->responseColumn()) {
             $job->{$col} = 'no'; // Use shorter value
@@ -62,23 +76,23 @@ class WorkerActionsController extends Controller
         $job->accepted_worker_id = null;
         $job->save();
 
-        return redirect()->route('mfanyakazi.assigned')->with('status','Umeikataa kazi.');
+        return redirect()->route('mfanyakazi.assigned')->with('status', 'Umeikataa kazi.');
     }
 
     // API Methods for Worker Actions
     public function apiAssigned()
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi','admin'])) {
+        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
             ], 403);
         }
 
-        $jobs = Job::with('muhitaji','category')
+        $jobs = Job::with('muhitaji', 'category')
             ->where('accepted_worker_id', $u->id)
-            ->whereIn('status', ['assigned','in_progress','ready_for_confirmation'])
+            ->whereIn('status', ['assigned', 'in_progress', 'ready_for_confirmation'])
             ->latest()
             ->paginate(12);
 
@@ -91,13 +105,13 @@ class WorkerActionsController extends Controller
     public function apiAccept(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role,['mfanyakazi','admin'])) {
+        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
             ], 403);
         }
-        
+
         if ($job->accepted_worker_id !== $u->id) {
             return response()->json([
                 'success' => false,
@@ -115,6 +129,12 @@ class WorkerActionsController extends Controller
         }
         $job->save();
 
+        // Notify Client
+        try {
+            $job->muhitaji->notify(new \App\Notifications\WorkerAcceptedNotification($job, $u));
+        } catch (\Exception $e) {
+        }
+
         return response()->json([
             'success' => true,
             'data' => $job->load('muhitaji', 'category'),
@@ -126,13 +146,13 @@ class WorkerActionsController extends Controller
     public function apiDecline(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role,['mfanyakazi','admin'])) {
+        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
             ], 403);
         }
-        
+
         if ($job->accepted_worker_id !== $u->id) {
             return response()->json([
                 'success' => false,
@@ -156,13 +176,13 @@ class WorkerActionsController extends Controller
     public function apiComplete(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role,['mfanyakazi','admin'])) {
+        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin'])) {
             return response()->json([
                 'success' => false,
                 'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
             ], 403);
         }
-        
+
         if ($job->accepted_worker_id !== $u->id) {
             return response()->json([
                 'success' => false,
@@ -212,15 +232,17 @@ class WorkerActionsController extends Controller
     public function complete(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role,['mfanyakazi','admin'])) abort(403);
-        if ($job->accepted_worker_id !== $u->id) abort(403);
+        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin']))
+            abort(403);
+        if ($job->accepted_worker_id !== $u->id)
+            abort(403);
 
-        // Check if job is in the right status
-        if ($job->status !== 'in_progress') {
+        // Check if job is in the right status (allow both assigned and in_progress)
+        if (!in_array($job->status, ['assigned', 'in_progress'])) {
             if (request()->expectsJson()) {
                 return response()->json(['success' => false, 'message' => 'Kazi hii haijaendelea au imekamilika tayari.']);
             }
-            return back()->withErrors(['code'=>'Kazi hii haijaendelea au imekamilika tayari.']);
+            return back()->withErrors(['code' => 'Kazi hii haijaendelea au imekamilika tayari.']);
         }
 
         // Validate the completion code from muhitaji
@@ -235,7 +257,7 @@ class WorkerActionsController extends Controller
             if (request()->expectsJson()) {
                 return response()->json(['success' => false, 'message' => 'Code si sahihi. Angalia code uliyopewa na mteja.']);
             }
-            return back()->withErrors(['code'=>'Code si sahihi. Angalia code uliyopewa na mteja.']);
+            return back()->withErrors(['code' => 'Code si sahihi. Angalia code uliyopewa na mteja.']);
         }
 
         // Mark job as completed and process payment
@@ -253,7 +275,7 @@ class WorkerActionsController extends Controller
             return response()->json(['success' => true, 'message' => 'Kazi imethibitishwa! Utapokea malipo yako.']);
         }
 
-        return redirect()->route('mfanyakazi.assigned')->with('status','Kazi imethibitishwa! Utapokea malipo yako.');
+        return redirect()->route('mfanyakazi.assigned')->with('status', 'Kazi imethibitishwa! Utapokea malipo yako.');
     }
 
     private function processPaymentToWorker(Job $job)
@@ -266,25 +288,31 @@ class WorkerActionsController extends Controller
             }
 
             $amount = $job->amount; // This uses the getAmountAttribute() method
-            
+
             // Calculate Commission (Dynamic from settings, default 10%)
             $commissionRate = (float) Setting::get('commission_rate', 10) / 100;
             $commission = (int) ($amount * $commissionRate);
             $netAmount = $amount - $commission;
 
             \Log::info("Processing payment: Total TZS {$amount}, Commission TZS {$commission}, Net TZS {$netAmount} to worker {$worker->id} for job {$job->id}");
-            
+
             // Check if worker has wallet
             $wallet = $worker->ensureWallet();
             \Log::info("Worker wallet before payment: TZS {$wallet->balance}");
-            
+
             // Add money to worker's wallet (Net Amount)
             $walletService = app(\App\Services\WalletService::class);
             $updatedWallet = $walletService->credit($worker, $netAmount, 'EARN', "Job completion payment (Job #{$job->id}) - 10% Service Fee Deducted");
 
             \Log::info("Payment processed successfully: Net TZS {$netAmount} to worker {$worker->id} for job {$job->id}");
             \Log::info("Worker wallet after payment: TZS {$updatedWallet->balance}");
-            
+
+            // Notification to Worker
+            try {
+                $worker->notify(new \App\Notifications\JobCompletedNotification($job, $netAmount));
+            } catch (\Exception $e) {
+            }
+
         } catch (\Exception $e) {
             \Log::error('Payment processing failed for job ' . $job->id . ': ' . $e->getMessage());
             \Log::error('Error details: ' . $e->getTraceAsString());

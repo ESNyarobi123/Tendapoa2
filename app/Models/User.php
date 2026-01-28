@@ -5,18 +5,35 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens; // <--- Hakikisha hii ipo
 class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable; // <--- Ongeza HasApiTokens hapa
 
-    protected $fillable = ['name','email','password','phone','role','lat','lng','is_active'];
+    protected $fillable = ['name','email','password','phone','role','lat','lng','is_active', 'profile_photo_path'];
     protected $hidden = ['password','remember_token'];
+    protected $appends = ['profile_photo_url'];
     
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    public function getProfilePhotoUrlAttribute()
+    {
+        if ($this->profile_photo_path) {
+            // Check if file exists in storage
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($this->profile_photo_path)) {
+                // Return full URL with cache busting timestamp
+                $url = asset('storage/' . $this->profile_photo_path);
+                $timestamp = $this->updated_at ? $this->updated_at->timestamp : time();
+                return $url . '?v=' . $timestamp;
+            }
+        }
+        
+        // Default avatar
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name ?? 'User') . '&color=7F9CF5&background=EBF4FF';
+    }
 
     public function jobs(){ return $this->hasMany(Job::class, 'user_id'); } // as muhitaji
     public function assignedJobs(){ return $this->hasMany(Job::class,'accepted_worker_id'); }
