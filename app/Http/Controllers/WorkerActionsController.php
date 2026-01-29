@@ -72,7 +72,7 @@ class WorkerActionsController extends Controller
         if ($col = $this->responseColumn()) {
             $job->{$col} = 'no'; // Use shorter value
         }
-        $job->status = 'offered';
+        $job->status = 'posted';
         $job->accepted_worker_id = null;
         $job->save();
 
@@ -163,7 +163,7 @@ class WorkerActionsController extends Controller
         if ($col = $this->responseColumn()) {
             $job->{$col} = 'no';
         }
-        $job->status = 'offered';
+        $job->status = 'posted';
         $job->accepted_worker_id = null;
         $job->save();
 
