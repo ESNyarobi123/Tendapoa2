@@ -941,12 +941,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         // Get wallet balance
         Route::get('/wallet', function (Request $request) {
             $user = $request->user();
-            if (!in_array($user->role, ['mfanyakazi', 'admin'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
-                ], 403);
-            }
+            // Allow all authenticated users to check their wallet
 
             $wallet = $user->ensureWallet();
             return response()->json([
@@ -962,12 +957,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         // Submit withdrawal request
         Route::post('/submit', function (Request $request) {
             $user = $request->user();
-            if (!in_array($user->role, ['mfanyakazi', 'admin'])) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
-                ], 403);
-            }
+            // Allow all authenticated users except restricted roles if any (for now allow all)
 
             $validated = $request->validate([
                 'amount' => ['required', 'integer', 'min:' . (Setting::get('min_withdrawal', 5000))],

@@ -10,7 +10,8 @@ class MyJobsController extends Controller
     public function index()
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role,['muhitaji','admin'])) abort(403);
+        if (!$u || !in_array($u->role, ['muhitaji', 'admin']))
+            abort(403);
 
         $query = Job::withCount('comments')
             ->with(['acceptedWorker', 'category'])
@@ -28,18 +29,22 @@ class MyJobsController extends Controller
     public function apiIndex()
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role,['muhitaji','admin'])) {
+        if (!$u || !in_array($u->role, ['muhitaji', 'admin'])) {
             return response()->json([
                 'error' => 'Huna ruhusa ya kupata kazi hizi.',
                 'status' => 'forbidden'
             ], 403);
         }
 
-        $jobs = Job::withCount('comments')
+        $query = Job::withCount('comments')
             ->with(['acceptedWorker', 'category', 'payment'])
-            ->where('user_id', $u->id)
-            ->latest()
-            ->paginate(12);
+            ->where('user_id', $u->id);
+
+        if (request()->has('status')) {
+            $query->where('status', request('status'));
+        }
+
+        $jobs = $query->latest()->paginate(12);
 
         // Add image URLs to jobs
         $jobsData = $jobs->items();
