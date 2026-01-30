@@ -482,15 +482,33 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 ], 403);
             }
 
+            // Generate completion code if missing
+            if (!$job->completion_code) {
+                $job->completion_code = (string) random_int(100000, 999999);
+            }
+
             $job->update([
                 'accepted_worker_id' => $comment->user_id,
                 'status' => 'assigned',
+                'completion_code' => $job->completion_code,
             ]);
+
+            // Create automatic welcome message
+            \App\Models\PrivateMessage::create([
+                'work_order_id' => $job->id,
+                'sender_id' => $user->id,
+                'receiver_id' => $comment->user_id,
+                'message' => '🎉 Hongera! Umechaguliwa kufanya kazi hii: "' . $job->title . '". Tafadhali wasiliana nami kuzungumza maelezo zaidi.',
+            ]);
+
+            // Notify worker (Optional: Notifications table)
+            // $worker = \App\Models\User::find($comment->user_id);
+            // $worker->notify(new \App\Notifications\JobAssignedNotification($job));
 
             return response()->json([
                 'success' => true,
                 'data' => $job->load('acceptedWorker'),
-                'message' => 'Umemchagua mfanyakazi.'
+                'message' => 'Umemchagua mfanyakazi na ujumbe umetumwa.'
             ]);
         });
 
