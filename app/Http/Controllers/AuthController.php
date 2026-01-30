@@ -20,15 +20,15 @@ class AuthController extends Controller
     public function register(Request $r)
     {
         $data = $r->validate([
-            'name'     => ['required','string','min:2','max:120'],
-            'email'    => ['required','email', Rule::unique('users','email')],
-            'password' => ['required','confirmed', Password::min(6)],
-            'role'     => ['required', Rule::in(['muhitaji','mfanyakazi'])],
-            'phone'    => ['nullable','regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
+            'name' => ['required', 'string', 'min:2', 'max:120'],
+            'email' => ['required', 'email', Rule::unique('users', 'email')],
+            'password' => ['required', 'confirmed', Password::min(6)],
+            'role' => ['required', Rule::in(['muhitaji', 'mfanyakazi'])],
+            'phone' => ['nullable', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
             // ✅ Enforce valid geo ranges
-            'lat'      => ['nullable','numeric','between:-90,90'],
-            'lng'      => ['nullable','numeric','between:-180,180'],
-        ],[
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+        ], [
             'phone.regex' => 'Weka 06/07xxxxxxxx au 2556/2557xxxxxxxx.',
             'lat.between' => 'Lat lazima iwe kati ya -90 na 90.',
             'lng.between' => 'Lng lazima iwe kati ya -180 na 180.',
@@ -38,20 +38,28 @@ class AuthController extends Controller
         $lat = $r->filled('lat') ? (float) $r->input('lat') : null;
         $lng = $r->filled('lng') ? (float) $r->input('lng') : null;
 
-        if ($lat !== null && ($lat < -90 || $lat > 90))   { $lat = null; }
-        if ($lng !== null && ($lng < -180 || $lng > 180)) { $lng = null; }
+        if ($lat !== null && ($lat < -90 || $lat > 90)) {
+            $lat = null;
+        }
+        if ($lng !== null && ($lng < -180 || $lng > 180)) {
+            $lng = null;
+        }
 
-        if ($lat !== null) { $lat = round($lat, 6); }
-        if ($lng !== null) { $lng = round($lng, 6); }
+        if ($lat !== null) {
+            $lat = round($lat, 6);
+        }
+        if ($lng !== null) {
+            $lng = round($lng, 6);
+        }
 
         $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
+            'name' => $data['name'],
+            'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'role'     => $data['role'],
-            'phone'    => $data['phone'] ?? null,
-            'lat'      => $lat,
-            'lng'      => $lng,
+            'role' => $data['role'],
+            'phone' => $data['phone'] ?? null,
+            'lat' => $lat,
+            'lng' => $lng,
         ]);
 
         Auth::login($user);
@@ -71,17 +79,17 @@ class AuthController extends Controller
     public function login(Request $r)
     {
         $cred = $r->validate([
-            'email'    => ['required','email'],
-            'password' => ['required','string'],
-            'remember' => ['nullable','boolean'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+            'remember' => ['nullable', 'boolean'],
         ]);
 
-        if (Auth::attempt(['email'=>$cred['email'], 'password'=>$cred['password']], $r->boolean('remember'))) {
+        if (Auth::attempt(['email' => $cred['email'], 'password' => $cred['password']], $r->boolean('remember'))) {
             $r->session()->regenerate();
             return redirect()->intended(route('dashboard'));
         }
 
-        return back()->withErrors(['email'=>'Taarifa si sahihi au akaunti haipo.'])->onlyInput('email');
+        return back()->withErrors(['email' => 'Taarifa si sahihi au akaunti haipo.'])->onlyInput('email');
     }
 
     /* LOGOUT */
@@ -97,14 +105,14 @@ class AuthController extends Controller
     public function apiRegister(Request $r)
     {
         $data = $r->validate([
-            'name'     => ['required','string','min:2','max:120'],
-            'email'    => ['required','email', Rule::unique('users','email')],
-            'password' => ['required','confirmed', Password::min(6)],
-            'role'     => ['required', Rule::in(['muhitaji','mfanyakazi'])],
-            'phone'    => ['nullable','regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
-            'lat'      => ['nullable','numeric','between:-90,90'],
-            'lng'      => ['nullable','numeric','between:-180,180'],
-        ],[
+            'name' => ['required', 'string', 'min:2', 'max:120'],
+            'email' => ['required', 'email', Rule::unique('users', 'email')],
+            'password' => ['required', 'confirmed', Password::min(6)],
+            'role' => ['required', Rule::in(['muhitaji', 'mfanyakazi'])],
+            'phone' => ['nullable', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
+            'lat' => ['nullable', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'numeric', 'between:-180,180'],
+        ], [
             'phone.regex' => 'Weka 06/07xxxxxxxx au 2556/2557xxxxxxxx.',
             'lat.between' => 'Lat lazima iwe kati ya -90 na 90.',
             'lng.between' => 'Lng lazima iwe kati ya -180 na 180.',
@@ -114,20 +122,28 @@ class AuthController extends Controller
         $lat = $r->filled('lat') ? (float) $r->input('lat') : null;
         $lng = $r->filled('lng') ? (float) $r->input('lng') : null;
 
-        if ($lat !== null && ($lat < -90 || $lat > 90))   { $lat = null; }
-        if ($lng !== null && ($lng < -180 || $lng > 180)) { $lng = null; }
+        if ($lat !== null && ($lat < -90 || $lat > 90)) {
+            $lat = null;
+        }
+        if ($lng !== null && ($lng < -180 || $lng > 180)) {
+            $lng = null;
+        }
 
-        if ($lat !== null) { $lat = round($lat, 6); }
-        if ($lng !== null) { $lng = round($lng, 6); }
+        if ($lat !== null) {
+            $lat = round($lat, 6);
+        }
+        if ($lng !== null) {
+            $lng = round($lng, 6);
+        }
 
         $user = User::create([
-            'name'     => $data['name'],
-            'email'    => $data['email'],
+            'name' => $data['name'],
+            'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'role'     => $data['role'],
-            'phone'    => $data['phone'] ?? null,
-            'lat'      => $lat,
-            'lng'      => $lng,
+            'role' => $data['role'],
+            'phone' => $data['phone'] ?? null,
+            'lat' => $lat,
+            'lng' => $lng,
         ]);
 
         Auth::login($user);
@@ -155,22 +171,22 @@ class AuthController extends Controller
     public function apiLogin(Request $r)
     {
         $cred = $r->validate([
-            'email'    => ['required','email'],
-            'password' => ['required','string'],
-            'remember' => ['nullable','boolean'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+            'remember' => ['nullable', 'boolean'],
         ]);
 
-        if (Auth::attempt(['email'=>$cred['email'], 'password'=>$cred['password']], $r->boolean('remember'))) {
+        if (Auth::attempt(['email' => $cred['email'], 'password' => $cred['password']], $r->boolean('remember'))) {
             /** @var \App\Models\User $user */
             $user = Auth::user();
-            
+
             // HAPA NDIPO TUNAPOTENGENEZA TOKEN
             // Futa token za zamani (optional, kwa usalama)
             $user->tokens()->delete();
-            
+
             // Tengeneza token mpya
             $token = $user->createToken('mobile-app')->plainTextToken;
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Umeingia kwa mafanikio!',
@@ -186,12 +202,12 @@ class AuthController extends Controller
         ], 401);
     }
 
-    public function apiLogout(Request $r)
+    public function apiLogout(Request $request)
     {
-        Auth::logout();
-        $r->session()->invalidate();
-        $r->session()->regenerateToken();
-        
+        if ($request->user()) {
+            $request->user()->currentAccessToken()->delete();
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Umetoka kwa mafanikio!'
@@ -245,7 +261,7 @@ class AuthController extends Controller
     {
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        
+
         $request->validate([
             'name' => ['nullable', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:20'],
@@ -257,7 +273,7 @@ class AuthController extends Controller
             if ($user->profile_photo_path) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
             }
-            
+
             $path = $request->file('photo')->store('profile-photos', 'public');
             $user->profile_photo_path = $path;
         }
@@ -265,7 +281,7 @@ class AuthController extends Controller
         if ($request->filled('name')) {
             $user->name = $request->name;
         }
-        
+
         if ($request->filled('phone')) {
             $user->phone = $request->phone;
         }

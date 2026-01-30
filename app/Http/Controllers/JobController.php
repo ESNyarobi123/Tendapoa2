@@ -1102,6 +1102,60 @@ class JobController extends Controller
             'message' => 'Huwezi ku-cancel kazi hii kwa sasa (huenda imeshaanza au imekamilika).'
         ], 400);
     }
+    public function apiRetryPayment(Job $job, ZenoPayService $zeno)
+    {
+        $this->ensureMuhitajiOrAdmin();
+
+        if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Huna ruhusa.'], 403);
+        }
+
+        if ($job->status !== 'pending_payment') {
+            return response()->json(['success' => false, 'message' => 'Kazi hii haidaiwi malipo.'], 400);
+        }
+
+        // Create new payment record
+        $orderId = (string) Str::ulid();
+
+        // Futa payment ya zamani iliyo pending kama ipo
+        $job->payment()->where('status', 'PENDING')->delete();
+
+        $payment = $job->payment()->create([
+            'order_id' => $orderId,
+            'amount' => $job->price,
+            'status' => 'PENDING',
+        ]);
+
+        $buyer = Auth::user();
+        $payload = [
+            'order_id' => $orderId,
+            'buyer_email' => $buyer?->email ?? 'client@tendapoa.local',
+            'buyer_name' => $buyer?->name ?? 'Client',
+            'buyer_phone' => $buyer?->phone ?? '000000000',
+            'amount' => $job->price,
+        ];
+
+        $res = $zeno->startPayment($payload);
+
+        if (!$res['ok']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Imeshindikana kuanzisha malipo. Jaribu tena.',
+                'error' => $res
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Malipo yameanzishwa upya. Tafadhali thibitisha kwenye simu yako.',
+            'data' => [
+                'job_id' => $job->id,
+                'payment' => $payment,
+                'zenopay_response' => $res
+            ]
+        ]);
+    }
+
     /**
      * Notify nearby workers
      */

@@ -407,6 +407,30 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         // Get my jobs (Muhitaji) - using controller method
         Route::get('/my', [MyJobsController::class, 'apiIndex']);
 
+        Route::prefix('notifications')->group(function () {
+            Route::get('/', function (Request $request) {
+                $user = $request->user();
+                return response()->json([
+                    'success' => true,
+                    'notifications' => $user->notifications()->latest()->paginate(20),
+                    'unread_count' => $user->unreadNotifications()->count()
+                ]);
+            });
+
+            Route::post('/{id}/read', function (Request $request, $id) {
+                $user = $request->user();
+                $notification = $user->notifications()->findOrFail($id);
+                $notification->markAsRead();
+
+                return response()->json(['success' => true]);
+            });
+
+            Route::post('/read-all', function (Request $request) {
+                $request->user()->unreadNotifications->markAsRead();
+                return response()->json(['success' => true]);
+            });
+        });
+
         // Get job details - using controller method
         Route::get('/{job}', [JobViewController::class, 'apiShow']);
 
@@ -525,32 +549,13 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         // Check payment status (API method)
         Route::get('/{job}/payment-status', [PaymentController::class, 'apiPoll']);
 
+        // Retry payment (API method)
+        Route::post('/{job}/retry-payment', [JobController::class, 'apiRetryPayment']);
+
         // Cancel job (API method)
         Route::post('/{job}/cancel', [JobController::class, 'apiCancel']);
 
-        Route::prefix('notifications')->group(function () {
-            Route::get('/', function (Request $request) {
-                $user = $request->user();
-                return response()->json([
-                    'success' => true,
-                    'notifications' => $user->notifications()->latest()->paginate(20),
-                    'unread_count' => $user->unreadNotifications()->count()
-                ]);
-            });
 
-            Route::post('/{id}/read', function (Request $request, $id) {
-                $user = $request->user();
-                $notification = $user->notifications()->findOrFail($id);
-                $notification->markAsRead();
-
-                return response()->json(['success' => true]);
-            });
-
-            Route::post('/read-all', function (Request $request) {
-                $request->user()->unreadNotifications->markAsRead();
-                return response()->json(['success' => true]);
-            });
-        });
 
         Route::post('/{job}/send', [\App\Http\Controllers\ChatController::class, 'apiSend']);
     });
