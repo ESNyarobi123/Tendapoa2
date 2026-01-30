@@ -132,6 +132,73 @@ class ChatController extends Controller
     }
 
     /**
+     * Send a message (API)
+     */
+    public function apiSend(Request $request, Job $job)
+    {
+        $user = Auth::user();
+
+        // Check if user is muhitaji (job owner)
+        $isMuhitaji = $job->user_id === $user->id;
+
+        // Check if user is mfanyakazi who has commented on this job
+        $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
+
+        // Check if user is accepted worker
+        $isAcceptedWorker = $job->accepted_worker_id === $user->id;
+
+        // Allow sending if: muhitaji, commented mfanyakazi, or accepted worker
+        if (!$isMuhitaji && !$hasCommented && !$isAcceptedWorker) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Huna ruhusa ya kutuma ujumbe. Tuma comment kwanza.'
+            ], 403);
+        }
+
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'message' => 'required|string|max:5000',
+            'receiver_id' => 'nullable|exists:users,id', // Allow specifying receiver
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Taarifa hazujakamilika',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Determine receiver
+        if ($isMuhitaji) {
+            // Muhitaji can specify which mfanyakazi to send to
+            $receiverId = $request->input('receiver_id') ?? $job->accepted_worker_id;
+        } else {
+            // Mfanyakazi always sends to muhitaji
+            $receiverId = $job->user_id;
+        }
+
+        if (!$receiverId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Mpokeaji hajapatikana in this context.'
+            ], 404);
+        }
+
+        $message = PrivateMessage::create([
+            'work_order_id' => $job->id,
+            'sender_id' => $user->id,
+            'receiver_id' => $receiverId,
+            'message' => $request->message,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Ujumbe umetumwa',
+            'data' => $message->load('sender'),
+        ]);
+    }
+
+    /**
      * List all conversations for current user
      */
     public function index()
