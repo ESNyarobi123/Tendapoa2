@@ -280,17 +280,19 @@ class JobController extends Controller
         if (file_exists($fullPath)) {
             @chmod($fullPath, 0644);
 
-            // FORCE COPY TO PUBLIC/STORAGE (Ili uzione kote mbili)
+            // FORCE COPY TO STORAGE/JOBS (Maombi ya Mteja: Nakala Halisi)
             try {
-                $publicPath = public_path('storage/' . $filename);
-                $publicDir = dirname($publicPath);
+                // $filename ni mfano 'jobs/xxxxx.jpg'
+                // storage_path($filename) inapeleka kwenye '.../storage/jobs/xxxxx.jpg'
+                $storageDirectPath = storage_path($filename);
+                $storageDirectDir = dirname($storageDirectPath);
 
-                if (!is_dir($publicDir)) {
-                    @mkdir($publicDir, 0755, true);
+                if (!is_dir($storageDirectDir)) {
+                    @mkdir($storageDirectDir, 0755, true);
                 }
 
                 // Copy file if it doesn't exist or update it
-                @copy($fullPath, $publicPath);
+                @copy($fullPath, $storageDirectPath);
             } catch (\Exception $e) {
                 // Ignore copy errors, main file is safe
             }
@@ -303,7 +305,7 @@ class JobController extends Controller
             \Log::info('Image uploaded successfully', [
                 'filename' => $filename,
                 'fullPath' => $fullPath,
-                'publicPath' => public_path('storage/' . $filename), // Log public path too
+                'storageCopyPath' => storage_path($filename), // Log storage copy path
                 'fileExists' => true,
                 'fileSize' => $fileSize,
                 'isReadable' => $isReadable,
