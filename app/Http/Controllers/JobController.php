@@ -1061,9 +1061,16 @@ class JobController extends Controller
                 ]);
 
                 try {
-                    // Notify user about cancellation
-                    $job->user->notify(new JobStatusNotification($job, 'cancelled'));
+                    // Notify user about cancellation safely
+                    // Reload user to be sure
+                    $job->load('muhitaji');
+                    $userToNotify = $job->muhitaji ?? $job->user;
+
+                    if ($userToNotify) {
+                        $userToNotify->notify(new JobStatusNotification($job, 'cancelled'));
+                    }
                 } catch (\Exception $e) {
+                    \Log::warning('Cancel notification failed for Job #' . $job->id . ': ' . $e->getMessage());
                 }
             });
 

@@ -45,30 +45,39 @@ class Job extends Model
     protected $casts = [
         'published_at' => 'datetime',
         'completed_at' => 'datetime',
-        'price'        => 'integer',
-        'budget'       => 'integer',
-        'payout'       => 'integer',
-        'posting_fee'  => 'decimal:2',
-        'lat'          => 'float',
-        'lng'          => 'float',
+        'price' => 'integer',
+        'budget' => 'integer',
+        'payout' => 'integer',
+        'posting_fee' => 'decimal:2',
+        'lat' => 'float',
+        'lng' => 'float',
     ];
 
     /** Appended attributes */
     protected $appends = ['image_url'];
 
     /** STATUS constants (hiari kutumia) */
-    public const S_OFFERED     = 'offered';
-    public const S_ASSIGNED    = 'assigned';
+    public const S_OFFERED = 'offered';
+    public const S_ASSIGNED = 'assigned';
     public const S_IN_PROGRESS = 'in_progress';
     public const S_READY_FOR_CONFIRMATION = 'ready_for_confirmation';
-    public const S_COMPLETED   = 'completed';
+    public const S_COMPLETED = 'completed';
 
     /* ===========================
      |  Mahusiano
      * =========================== */
-    public function muhitaji()       { return $this->belongsTo(User::class, 'user_id'); }
-    public function acceptedWorker() { return $this->belongsTo(User::class, 'accepted_worker_id'); }
-    public function category()       { return $this->belongsTo(Category::class); }
+    public function muhitaji()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+    public function acceptedWorker()
+    {
+        return $this->belongsTo(User::class, 'accepted_worker_id');
+    }
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     // imerudi kwenye jedwali jipya work_order_comments
     public function comments()
@@ -95,7 +104,7 @@ class Job extends Model
     public function scopeActiveForMfanyakazi($q, int $mfanyakaziId)
     {
         return $q->where('accepted_worker_id', $mfanyakaziId)
-                 ->whereIn('status', [self::S_ASSIGNED, self::S_IN_PROGRESS, self::S_READY_FOR_CONFIRMATION]);
+            ->whereIn('status', [self::S_ASSIGNED, self::S_IN_PROGRESS, self::S_READY_FOR_CONFIRMATION]);
     }
 
     public function scopeAssignedTo($q, int $mfanyakaziId)
@@ -110,13 +119,14 @@ class Job extends Model
     // Amount inayopatikana (priority: payout -> price -> budget)
     public function getAmountAttribute(): int
     {
-        return (int)($this->payout ?? $this->price ?? $this->budget ?? 0);
+        return (int) ($this->payout ?? $this->price ?? $this->budget ?? 0);
     }
 
     // Soma response bila kujali jina la column (mfanyakazi_response > worker_response > assignee_response)
     public function getMfanyakaziResponseAttribute($value)
     {
-        if (!is_null($value)) return $value;
+        if (!is_null($value))
+            return $value;
 
         // Ikiwa column ya juu haipo kwenye schema/record, jaribu nyingine
         if (array_key_exists('worker_response', $this->attributes) && $this->attributes['worker_response'] !== null) {
@@ -151,9 +161,12 @@ class Job extends Model
     public static function responseColumn(): ?string
     {
         $table = (new static)->getTable();
-        if (Schema::hasColumn($table, 'mfanyakazi_response')) return 'mfanyakazi_response';
-        if (Schema::hasColumn($table, 'worker_response'))     return 'worker_response';
-        if (Schema::hasColumn($table, 'assignee_response'))   return 'assignee_response';
+        if (Schema::hasColumn($table, 'mfanyakazi_response'))
+            return 'mfanyakazi_response';
+        if (Schema::hasColumn($table, 'worker_response'))
+            return 'worker_response';
+        if (Schema::hasColumn($table, 'assignee_response'))
+            return 'assignee_response';
         return null;
     }
 
@@ -166,53 +179,7 @@ class Job extends Model
         if (!$this->image) {
             return null;
         }
-        
-        // Generate base URL using asset() for public storage
-        $url = asset('storage/' . $this->image);
-        
-        // Try multiple methods to check if file exists and get timestamp for cache busting
-        $fileExists = false;
-        $timestamp = null;
-        
-        // Method 1: Check using Storage facade (preferred for Laravel)
-        try {
-            if (Storage::disk('public')->exists($this->image)) {
-                $fileExists = true;
-                // Try to get file modification time
-                $filePath = storage_path('app/public/' . $this->image);
-                if (file_exists($filePath)) {
-                    $timestamp = filemtime($filePath);
-                }
-            }
-        } catch (\Exception $e) {
-            // Storage check failed, continue with other methods
-        }
-        
-        // Method 2: Direct file system check (fallback)
-        if (!$fileExists) {
-            $filePath = storage_path('app/public/' . $this->image);
-            if (file_exists($filePath) && is_file($filePath)) {
-                $fileExists = true;
-                $timestamp = filemtime($filePath);
-            }
-        }
-        
-        // Method 3: Check if symbolic link exists and points to valid file
-        if (!$fileExists) {
-            $publicPath = public_path('storage/' . $this->image);
-            if (file_exists($publicPath) && is_file($publicPath)) {
-                $fileExists = true;
-                $timestamp = filemtime($publicPath);
-            }
-        }
-        
-        // Add cache busting parameter if we found the file
-        // Even if file check fails, return URL anyway and let browser handle 404
-        // This prevents false negatives where file exists but our checks fail
-        if ($fileExists && $timestamp) {
-            $url .= '?v=' . $timestamp;
-        }
-        
-        return $url;
+
+        return asset('storage/' . $this->image);
     }
 }
