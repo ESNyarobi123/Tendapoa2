@@ -143,182 +143,26 @@ class JobController extends Controller
             }
         }
 
-        // Create image resource based on type
-        $source = null;
-        switch ($type) {
-            case IMAGETYPE_JPEG:
-                if (function_exists('imagecreatefromjpeg')) {
-                    $source = imagecreatefromjpeg($file->getRealPath());
-                }
-                break;
-            case IMAGETYPE_PNG:
-                if (function_exists('imagecreatefrompng')) {
-                    $source = imagecreatefrompng($file->getRealPath());
-                }
-                break;
-            case IMAGETYPE_WEBP:
-                if (function_exists('imagecreatefromwebp')) {
-                    $source = imagecreatefromwebp($file->getRealPath());
-                }
-                break;
-            default:
-                // Unsupported type - save as-is
-                $extension = $file->getClientOriginalExtension();
-                $filename = 'jobs/' . Str::random(40) . '.' . $extension;
+        // Use Laravel's storeAs instead of manual handling to ensure proper storage path
+        $extension = $file->getClientOriginalExtension();
+        $filename = 'jobs/' . Str::random(40) . '.' . $extension;
 
-                // Ensure directory exists
-                $dir = storage_path('app/public/jobs');
-                if (!is_dir($dir)) {
-                    mkdir($dir, 0755, true);
-                    chmod($dir, 0755);
-                }
+        // Store the file
+        $path = $file->storeAs('public', $filename);
 
-                $stored = $file->storeAs('public', $filename);
-
-                // Set file permissions
-                $fullPath = storage_path('app/public/' . $filename);
-                if (file_exists($fullPath)) {
-                    chmod($fullPath, 0644);
-                    \Log::info('Image uploaded (unsupported type) - File saved', [
-                        'filename' => $filename,
-                        'storedPath' => $stored,
-                        'fullPath' => $fullPath,
-                        'fileSize' => filesize($fullPath)
-                    ]);
-                } else {
-                    \Log::error('Image upload (unsupported type) - File not found after storeAs', [
-                        'filename' => $filename,
-                        'storedPath' => $stored,
-                        'fullPath' => $fullPath
-                    ]);
-                }
-
-                return $filename;
-        }
-
-        if (!$source) {
-            // If we can't create source, save file as-is
-            $extension = $file->getClientOriginalExtension();
-            $filename = 'jobs/' . Str::random(40) . '.' . $extension;
-
-            // Ensure directory exists
-            $dir = storage_path('app/public/jobs');
-            if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
-                chmod($dir, 0755);
-            }
-
-            $stored = $file->storeAs('public', $filename);
-
-            // Set file permissions
-            $fullPath = storage_path('app/public/' . $filename);
-            if (file_exists($fullPath)) {
-                chmod($fullPath, 0644);
-                \Log::info('Image uploaded (no source) - File saved', [
-                    'filename' => $filename,
-                    'storedPath' => $stored,
-                    'fullPath' => $fullPath,
-                    'fileSize' => filesize($fullPath)
-                ]);
-            } else {
-                \Log::error('Image upload (no source) - File not found after storeAs', [
-                    'filename' => $filename,
-                    'storedPath' => $stored,
-                    'fullPath' => $fullPath
-                ]);
-            }
-
-            return $filename;
-        }
-
-        // Create resized image
-        $resized = imagecreatetruecolor($newWidth, $newHeight);
-
-        // Preserve transparency for PNG
-        if ($type == IMAGETYPE_PNG) {
-            imagealphablending($resized, false);
-            imagesavealpha($resized, true);
-            $transparent = imagecolorallocatealpha($resized, 255, 255, 255, 127);
-            imagefill($resized, 0, 0, $transparent);
-        }
-
-        // Resize
-        imagecopyresampled($resized, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
-
-        // Save as JPEG with 85% quality
-        $saved = @imagejpeg($resized, $fullPath, 85);
-
-        if (!$saved || !file_exists($fullPath)) {
-            \Log::error('Failed to save resized image', [
-                'fullPath' => $fullPath,
+        // Log for debugging
+        if ($path) {
+            \Log::info('Image uploaded via storeAs', [
                 'filename' => $filename,
-                'saved' => $saved,
-                'fileExists' => file_exists($fullPath),
-                'directoryExists' => is_dir(dirname($fullPath)),
-                'directoryWritable' => is_writable(dirname($fullPath))
+                'path' => $path,
+                'fullPath' => storage_path('app/public/' . $filename)
             ]);
-            // Fallback: try to save original file using Laravel's storeAs
-            $extension = $file->getClientOriginalExtension();
-            $filename = 'jobs/' . Str::random(40) . '.' . $extension;
-            $dir = storage_path('app/public/jobs');
-            if (!is_dir($dir)) {
-                mkdir($dir, 0755, true);
-                chmod($dir, 0755);
-            }
-            $stored = $file->storeAs('public', $filename);
-            $fullPath = storage_path('app/public/' . $filename);
-
-            \Log::info('Image saved using fallback method', [
-                'filename' => $filename,
-                'stored' => $stored,
-                'fullPath' => $fullPath,
-                'fileExists' => file_exists($fullPath)
-            ]);
-        }
-
-        // Set file permissions (Windows compatible)
-        if (file_exists($fullPath)) {
-            @chmod($fullPath, 0644);
-
-            // Verify file is readable and has content
-            $fileSize = filesize($fullPath);
-            $isReadable = is_readable($fullPath);
-
-            // Log successful upload for debugging
-            \Log::info('Image uploaded successfully', [
-                'filename' => $filename,
-                'fullPath' => $fullPath,
-                'fileExists' => true,
-                'fileSize' => $fileSize,
-                'isReadable' => $isReadable,
-                'permissions' => substr(sprintf('%o', fileperms($fullPath)), -4),
-                'expectedUrl' => asset('storage/' . $filename)
-            ]);
-
-            // Verify the file has content
-            if ($fileSize === 0) {
-                \Log::error('Image file is empty after save', [
-                    'filename' => $filename,
-                    'fullPath' => $fullPath
-                ]);
-            }
         } else {
-            \Log::error('Image file not found after save', [
-                'filename' => $filename,
-                'fullPath' => $fullPath,
-                'directoryExists' => is_dir(dirname($fullPath)),
-                'directoryWritable' => is_writable(dirname($fullPath))
+            \Log::error('Image upload failed via storeAs', [
+                'filename' => $filename
             ]);
-            // Return null so we don't save invalid path to database
-            imagedestroy($source);
-            if (isset($resized))
-                imagedestroy($resized);
             return null;
         }
-
-        // Clean up
-        imagedestroy($source);
-        imagedestroy($resized);
 
         return $filename;
     }
