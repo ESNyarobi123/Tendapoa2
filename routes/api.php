@@ -546,13 +546,24 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             $zenoService = app(\App\Services\ZenoPayService::class);
             $resp = $zenoService->checkOrder($payment->order_id);
 
-            if ($resp['ok'] && ($resp['json']['payment_status'] ?? null) === 'COMPLETED') {
-                $payment->update([
-                    'status' => 'COMPLETED',
-                    'resultcode' => $resp['json']['resultcode'] ?? null,
-                    'reference' => $resp['json']['reference'] ?? null,
-                    'meta' => $resp['json'],
-                ]);
+            if ($resp['ok']) {
+                $isCompleted = false;
+                if (($resp['json']['payment_status'] ?? '') === 'COMPLETED') {
+                    $isCompleted = true;
+                } elseif (($resp['json']['data'][0]['payment_status'] ?? '') === 'COMPLETED') {
+                    $isCompleted = true;
+                } elseif (($resp['json']['status'] ?? '') === 'COMPLETED') {
+                    $isCompleted = true;
+                }
+
+                if ($isCompleted) {
+                    $payment->update([
+                        'status' => 'COMPLETED',
+                        'resultcode' => $resp['json']['resultcode'] ?? null,
+                        'reference' => $resp['json']['reference'] ?? null,
+                        'meta' => $resp['json'],
+                    ]);
+                }
             }
 
             // Activate the job if payment completed
