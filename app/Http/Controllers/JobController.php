@@ -861,6 +861,47 @@ class JobController extends Controller
         return view('jobs.wait', ['job' => $job]);
     }
 
+    public function retryPayment(Job $job, ZenoPayService $zeno)
+    {
+        $this->ensureMuhitajiOrAdmin();
+
+        if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Huna ruhusa.');
+        }
+
+        if ($job->status !== 'pending_payment') {
+            return back()->with('error', 'Kazi hii haidaiwi malipo.');
+        }
+
+        // Futa payment ya zamani iliyo pending kama ipo
+        $job->payment()->where('status', 'PENDING')->delete();
+
+        // Create new
+        $orderId = (string) Str::ulid();
+        $job->payment()->create([
+            'order_id' => $orderId,
+            'amount' => $job->price,
+            'status' => 'PENDING',
+        ]);
+
+        $buyer = Auth::user();
+        $payload = [
+            'order_id' => $orderId,
+            'buyer_email' => $buyer?->email ?? 'client@tendapoa.local',
+            'buyer_name' => $buyer?->name ?? 'Client',
+            'buyer_phone' => $buyer?->phone ?? '000000000',
+            'amount' => $job->price,
+        ];
+
+        $res = $zeno->startPayment($payload);
+
+        if (!$res['ok']) {
+            return back()->withErrors(['pay' => 'Imeshindikana kuanzisha malipo. Jaribu tena.']);
+        }
+
+        return redirect()->route('jobs.pay.wait', $job)->with('success', 'Ombi la malipo limetumwa tena! Angalia simu yako.');
+    }
+
     // Mfanyakazi job posting methods
     public function createMfanyakazi()
     {

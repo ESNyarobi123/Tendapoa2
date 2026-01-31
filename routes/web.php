@@ -156,6 +156,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/jobs/{job}/wait', [JobController::class, 'wait'])->name('jobs.pay.wait');
     Route::get('/jobs/{job}/edit', [JobController::class, 'edit'])->name('jobs.edit');
     Route::put('/jobs/{job}', [JobController::class, 'update'])->name('jobs.update');
+    Route::post('/jobs/{job}/retry-payment', [JobController::class, 'retryPayment'])->name('jobs.pay.retry');
 
     // MFANYAKAZI: create + pay jobs (role check tutafanya ndani ya controller)
     Route::get('/jobs/create-mfanyakazi', [JobController::class, 'createMfanyakazi'])->name('jobs.create-mfanyakazi');
