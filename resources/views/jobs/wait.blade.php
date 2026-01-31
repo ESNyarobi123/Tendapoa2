@@ -26,16 +26,46 @@
         </button>
       </form>
     </div>
+    <p id="status-text" style="color: #666; font-style: italic; margin-top: 10px;">Inahakiki Malipo...</p>
   </div>
 
   <script>
+    let startTime = new Date().getTime();
+    const timeoutMs = 10 * 60 * 1000; // 10 minutes
+
+    // Visual text animation
+    setInterval(() => {
+      const el = document.getElementById('status-text');
+      if (el) {
+        if (el.textContent.includes('...')) el.textContent = 'Inahakiki Malipo';
+        else el.textContent += '.';
+      }
+    }, 500);
+
     setInterval(async () => {
+      // Check timeout
+      if (new Date().getTime() - startTime > timeoutMs) {
+        // Redirect to pending jobs list after 10 mins
+        window.location.href = '{{ route('my.jobs') }}';
+        return;
+      }
+
       try {
         const r = await fetch('{{ route('jobs.pay.poll', $job) }}?t=' + new Date().getTime());
         const j = await r.json();
+
         if (j.done) {
           document.getElementById('st').textContent = 'COMPLETED';
-          location.href = '{{ route('jobs.show', $job) }}';
+          document.getElementById('st').style.backgroundColor = 'green';
+          document.getElementById('st').style.color = 'white';
+
+          document.getElementById('status-text').textContent = 'Malipo Yamekamilika! Unapelekwa...';
+          document.getElementById('status-text').style.color = 'green';
+          document.getElementById('status-text').style.fontWeight = 'bold';
+
+          setTimeout(() => {
+            location.href = '{{ route('jobs.show', $job) }}';
+          }, 1000);
         }
       } catch (e) { console.error('Poll error', e); }
     }, 3000);
