@@ -27,7 +27,9 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 // Serve storage files - this route handles all storage requests
 // Must be before other routes to catch storage requests first
 // This is critical for php artisan serve which may not handle symlinks properly
-Route::match(['get', 'head', 'options'], '/storage/{path}', function ($path) {
+// Serve storage files via PHP to bypass symlink issues
+// Using /image/ prefix ensures request hits Laravel router instead of failing at web server level
+Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
     try {
         // Decode the path in case it's URL encoded
         $path = urldecode($path);

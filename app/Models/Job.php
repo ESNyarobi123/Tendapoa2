@@ -180,9 +180,9 @@ class Job extends Model
             return null;
         }
 
-        // Force Full URL generation to avoid any ambiguity on Shared Hosting/Apps
-        // Ensure APP_URL is set correctly in .env (e.g., https://tendapoa.com)
+        // Use the /image/ route to bypass symlink/static file issues
+        // This forces the request to go through Laravel's route handler
         $baseUrl = rtrim(config('app.url'), '/');
-        return $baseUrl . '/storage/' . $this->image;
+        return $baseUrl . '/image/' . $this->image;
     }
 }
