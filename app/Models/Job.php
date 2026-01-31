@@ -180,7 +180,9 @@ class Job extends Model
             return null;
         }
 
-        // Return relative path (e.g. /storage/jobs/file.jpg) as requested
-        return '/storage/' . $this->image;
+        // Force Full URL generation to avoid any ambiguity on Shared Hosting/Apps
+        // Ensure APP_URL is set correctly in .env (e.g., https://tendapoa.com)
+        $baseUrl = rtrim(config('app.url'), '/');
+        return $baseUrl . '/storage/' . $this->image;
     }
 }
