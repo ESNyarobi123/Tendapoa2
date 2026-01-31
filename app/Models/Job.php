@@ -180,7 +180,7 @@ class Job extends Model
             return null;
         }
 
-        // Return clean URL based on APP_URL in .env (e.g. https://tendapoa.com/storage/...)
-        return asset('storage/' . $this->image);
+        // Return relative path (e.g. /storage/jobs/file.jpg) as requested
+        return '/storage/' . $this->image;
     }
 }
