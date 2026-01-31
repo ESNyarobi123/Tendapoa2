@@ -180,9 +180,15 @@ class Job extends Model
             return null;
         }
 
-        // Use the /image/ route to bypass symlink/static file issues
-        // This forces the request to go through Laravel's route handler
-        $baseUrl = rtrim(config('app.url'), '/');
-        return $baseUrl . '/image/' . $this->image;
+        // Check if file exists in the private/root storage
+        if (Storage::disk('public')->exists($this->image)) {
+            // Get timestamp for cache busting
+            $timestamp = filemtime(storage_path('app/public/' . $this->image));
+            // Use the /image/ route which serves from storage_path()
+            return url('image/' . $this->image) . '?v=' . $timestamp;
+        }
+
+        // Fallback: return the path served via route (in case check failed but file exists)
+        return url('image/' . $this->image);
     }
 }
