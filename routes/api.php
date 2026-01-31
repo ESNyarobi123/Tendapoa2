@@ -115,7 +115,7 @@ Route::get('/workers/nearby', function (Request $request) {
 
     $lat = (float) $request->lat;
     $lng = (float) $request->lng;
-    $radiusKm = (float) ($request->radius ?? 5);
+    $radiusKm = (float) ($request->radius ?? 15);
 
     // Haversine formula to calculate distance in km
     // Earth radius = 6371 km
