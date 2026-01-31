@@ -180,52 +180,7 @@ class Job extends Model
             return null;
         }
 
-        // Generate base URL using asset() for public storage
-        $url = asset('storage/' . $this->image);
-
-        // Try multiple methods to check if file exists and get timestamp for cache busting
-        $fileExists = false;
-        $timestamp = null;
-
-        // Method 1: Check using Storage facade (preferred for Laravel)
-        try {
-            if (Storage::disk('public')->exists($this->image)) {
-                $fileExists = true;
-                // Try to get file modification time
-                $filePath = storage_path('app/public/' . $this->image);
-                if (file_exists($filePath)) {
-                    $timestamp = filemtime($filePath);
-                }
-            }
-        } catch (\Exception $e) {
-            // Storage check failed, continue with other methods
-        }
-
-        // Method 2: Direct file system check (fallback)
-        if (!$fileExists) {
-            $filePath = storage_path('app/public/' . $this->image);
-            if (file_exists($filePath) && is_file($filePath)) {
-                $fileExists = true;
-                $timestamp = filemtime($filePath);
-            }
-        }
-
-        // Method 3: Check if symbolic link exists and points to valid file
-        if (!$fileExists) {
-            $publicPath = public_path('storage/' . $this->image);
-            if (file_exists($publicPath) && is_file($publicPath)) {
-                $fileExists = true;
-                $timestamp = filemtime($publicPath);
-            }
-        }
-
-        // Add cache busting parameter if we found the file
-        // Even if file check fails, return URL anyway and let browser handle 404
-        // This prevents false negatives where file exists but our checks fail
-        if ($fileExists && $timestamp) {
-            $url .= '?v=' . $timestamp;
-        }
-
-        return $url;
+        // Return clean URL based on APP_URL in .env (e.g. https://tendapoa.com/storage/...)
+        return asset('storage/' . $this->image);
     }
 }
