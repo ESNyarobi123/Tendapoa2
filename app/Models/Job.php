@@ -70,6 +70,14 @@ class Job extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    /**
+     * Standard relationship for the job owner
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
     public function acceptedWorker()
     {
         return $this->belongsTo(User::class, 'accepted_worker_id');

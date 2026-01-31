@@ -1128,7 +1128,9 @@ class JobController extends Controller
 
                     try {
                         // Notify user about cancellation
-                        $user->notify(new JobStatusNotification($job, 'cancelled'));
+                        if ($user) {
+                            $user->notify(new JobStatusNotification($job, 'cancelled'));
+                        }
                     } catch (\Exception $e) {
                     }
                 });
@@ -1207,7 +1209,7 @@ class JobController extends Controller
     /**
      * Notify nearby workers
      */
-    private function notifyNearbyWorkers(Job $job)
+    public function notifyNearbyWorkers(Job $job)
     {
         // Pata wafanyakazi wote walio na location
         $workers = User::where('role', 'mfanyakazi')

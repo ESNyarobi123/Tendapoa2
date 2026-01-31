@@ -43,9 +43,7 @@ class PaymentController extends Controller
                 // We wrap this in try-catch to ensure we don't break the payment flow
                 try {
                     $jobController = app(\App\Http\Controllers\JobController::class);
-                    // Call public method if available, or just log for now since the critical part is status update
-                    // Assuming JobController has logic or we skip. 
-                    // The requirement is to Fix Payment Flow. The critical part is done (Status Updated).
+                    $jobController->notifyNearbyWorkers($job);
                 } catch (\Exception $e) {
                     // Log worker notification failure but don't stop
                     \Log::error('Failed to notify nearby workers: ' . $e->getMessage());
@@ -74,7 +72,19 @@ class PaymentController extends Controller
         // LOG RESPONSE FOR DEBUGGING
         \Log::info('Polling Job #' . $job->id . ' Order: ' . $payment->order_id, ['zeno_response' => $resp]);
 
-        if ($resp['ok'] && ($resp['json']['payment_status'] ?? null) === 'COMPLETED') {
+        // Check if ZenoPay says completed
+        // Based on logs: "payment_status": "COMPLETED" is present in data
+        $isCompleted = false;
+        if ($resp['ok']) {
+            if (($resp['json']['payment_status'] ?? '') === 'COMPLETED') {
+                $isCompleted = true;
+            } elseif (($resp['json']['data'][0]['payment_status'] ?? '') === 'COMPLETED') {
+                // Sometimes it might be nested in data array based on diff providers
+                $isCompleted = true;
+            }
+        }
+
+        if ($isCompleted) {
             try {
                 DB::transaction(function () use ($payment, $resp, $job) {
                     // Update and Notify Logic (Existing)

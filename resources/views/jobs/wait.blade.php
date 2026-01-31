@@ -64,7 +64,7 @@
           document.getElementById('status-text').style.fontWeight = 'bold';
 
           setTimeout(() => {
-            location.href = '{{ route('jobs.show', $job) }}';
+            location.href = '{{ route('my.jobs') }}';
           }, 1000);
         }
       } catch (e) { console.error('Poll error', e); }
