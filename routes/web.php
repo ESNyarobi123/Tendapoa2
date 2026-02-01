@@ -137,6 +137,11 @@ Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
 // HOME / LANDING
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
+// Fees & Payments Policy
+Route::get('/fees-payments-policy', function () {
+    return view('policy.fees-payments');
+})->name('policy.fees-payments');
+
 // APK Download (Public)
 Route::get('/download/app', [HomeController::class, 'downloadApp'])->name('app.download');
 
