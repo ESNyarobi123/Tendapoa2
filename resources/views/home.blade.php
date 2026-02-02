@@ -1138,6 +1138,7 @@
                     <a href="#services">Huduma</a>
                     <a href="#about">Kuhusu</a>
                     <a href="{{ route('policy.fees-payments') }}">Sera ya Malipo & Ada</a>
+                    <a href="{{ route('policy.terms') }}">Terms & Conditions</a>
                     <a href="{{ route('register') }}">Pata Huduma</a>
                 </div>
             </div>

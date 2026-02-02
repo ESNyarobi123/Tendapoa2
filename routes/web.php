@@ -142,6 +142,11 @@ Route::get('/fees-payments-policy', function () {
     return view('policy.fees-payments');
 })->name('policy.fees-payments');
 
+// Terms and Conditions Policy
+Route::get('/terms-and-conditions', function () {
+    return view('policy.terms');
+})->name('policy.terms');
+
 // APK Download (Public)
 Route::get('/download/app', [HomeController::class, 'downloadApp'])->name('app.download');
 

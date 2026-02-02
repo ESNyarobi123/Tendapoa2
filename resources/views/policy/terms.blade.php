@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>Sera ya Malipo na Ada - Tendapoa</title>
+    <title>Terms and Conditions - Tendapoa</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -201,6 +201,18 @@
             left: 0;
         }
 
+        .subsection {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .subsection h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.75rem;
+        }
+
         /* Footer (Copied from home.blade.php) */
         .footer {
             background: #1e293b;
@@ -281,7 +293,6 @@
 
             .nav-links {
                 display: none;
-                /* Simplify for mobile for now or copy script */
             }
         }
     </style>
@@ -308,8 +319,8 @@
     <!-- Page Header -->
     <div class="page-header">
         <div class="container">
-            <h1 class="page-title">Sera ya Malipo, Ada na<br>Kukamilisha Huduma</h1>
-            <p class="page-subtitle">Mwongozo kamili wa jinsi Tendapoa inavyofanya kazi kulinda maslahi yako</p>
+            <h1 class="page-title">TENDAPOA – TERMS AND CONDITIONS OF USE</h1>
+            <p class="page-subtitle">Last Update 1 February 2026</p>
         </div>
     </div>
 
@@ -317,234 +328,295 @@
     <div class="content-container">
         <div class="policy-card">
 
-            <!-- 1. Platform Role -->
+            <p style="margin-bottom: 2rem; color: #475569; font-size: 1.05rem;">
+                Welcome to Tendapoa. These Terms and Conditions (“Terms”) govern your access to and use of the Tendapoa
+                mobile application, website, and all related services (collectively, the “Platform”).<br><br>
+                By accessing, registering, or using Tendapoa, you acknowledge that you have read, understood, and agreed
+                to be bound by these Terms.
+            </p>
+
+            <!-- 1. About Tendapoa -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">01</span>
-                    <h2 class="section-title">Nafasi ya Mfumo (Platform Role)</h2>
+                    <h2 class="section-title">About Tendapoa</h2>
                 </div>
                 <div class="policy-content">
-                    <ul>
-                        <li>Tendapoa inafanya kazi kama soko la kidijitali linalounganisha wateja na watoa huduma
-                            binafsi.</li>
-                        <li>Tendapoa haitoi huduma za usafi au dobi moja kwa moja.</li>
-                        <li>Tendapoa inawezesha uchapishaji wa kazi, kuhifadhi malipo, kuunganisha watoa huduma, na
-                            malipo.</li>
-                    </ul>
+                    <p>Tendapoa is a digital marketplace that connects independent cleanliness and laundry service
+                        providers (“Service Providers”) with individuals or organizations seeking such services
+                        (“Customers”).</p>
+                    <p>Tendapoa does not provide cleaning, laundry, or physical services directly and does not employ
+                        Service Providers.</p>
                 </div>
             </div>
 
-            <!-- 2. Customer Upfront Payment -->
+            <!-- 2. Eligibility -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">02</span>
-                    <h2 class="section-title">Malipo ya Awali ya Mteja (Budget-Based)</h2>
+                    <h2 class="section-title">Eligibility</h2>
                 </div>
                 <div class="policy-content">
+                    <p>To use Tendapoa, you must:</p>
                     <ul>
-                        <li>Kabla ya kuchapisha kazi, wateja wanatakiwa kulipa kiasi cha bajeti yao iliyotajwa mapema.
-                        </li>
-                        <li>Mteja huweka bajeti ya huduma wakati wa kuchapisha kazi.</li>
-                        <li>Kazi itachapishwa na kuonekana kwa watoa huduma tu baada ya malipo hayo kufanikiwa.</li>
-                        <li>Malipo ya awali yanaonyesha kujitolea na kuhakikisha ombi la huduma.</li>
+                        <li>Be at least 18 years old</li>
+                        <li>Have legal capacity to enter into binding agreements</li>
+                        <li>Provide accurate, complete, and up-to-date registration information</li>
                     </ul>
+                    <p>Tendapoa reserves the right to suspend or terminate accounts that provide false, misleading, or
+                        incomplete information.</p>
                 </div>
             </div>
 
-            <!-- 3. Escrow Holding -->
+            <!-- 3. User Accounts -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">03</span>
-                    <h2 class="section-title">Kuhifadhi Malipo ya Mteja (Escrow)</h2>
+                    <h2 class="section-title">User Accounts</h2>
                 </div>
                 <div class="policy-content">
                     <ul>
-                        <li>Malipo yote ya mteja yanahifadhiwa kwa usalama na Tendapoa hadi huduma itakapokamilika.</li>
-                        <li>Fedha hazitolewi kwa mtoa huduma hadi kukamilika kwa kazi kudhibitishwe.</li>
-                        <li>Hii inalinda wateja na watoa huduma dhidi ya udanganyifu au kutokutekelezwa kwa kazi.</li>
+                        <li>Users must create an account to access the Platform.</li>
+                        <li>You are responsible for safeguarding your login credentials.</li>
+                        <li>All activities conducted through your account are your responsibility.</li>
+                        <li>Tendapoa is not liable for unauthorized access resulting from your failure to secure your
+                            account.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 4. Budget vs Final Price -->
+            <!-- 4. Roles and Responsibilities -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">04</span>
-                    <h2 class="section-title">Bajeti dhidi ya Bei ya Mwisho ya Huduma</h2>
+                    <h2 class="section-title">Roles and Responsibilities</h2>
                 </div>
                 <div class="policy-content">
-                    <ul>
-                        <li>Malipo ya awali yanawakilisha kiasi cha bajeti, siyo lazima iwe bei ya mwisho.</li>
-                        <li>Ikiwa bei ya mwisho iliyokubaliwa iko ndani ya bajeti, malipo yanaendelea kama kawaida.</li>
-                        <li>Ikiwa bei ya mwisho inazidi bajeti, mteja lazima aidhinishe na kulipa kiasi cha ziada kabla
-                            ya kukamilika.</li>
-                        <li>Ikiwa bei ya mwisho ni ndogo kuliko bajeti, kiasi kilichokubaliwa tu kitatolewa, na salio
-                            lolote linaweza kurudishwa au kushughulikiwa kulingana na sheria za mfumo.</li>
-                    </ul>
+                    <div class="subsection">
+                        <h3>4.1 Customers</h3>
+                        <p>Customers may:</p>
+                        <ul>
+                            <li>Post service requests with clear descriptions and budgets</li>
+                            <li>Pay the agreed service amount upfront via the Platform</li>
+                            <li>Confirm service completion using a completion code</li>
+                        </ul>
+                        <p>Customers must:</p>
+                        <ul>
+                            <li>Provide accurate and truthful job details</li>
+                            <li>Release payment only after satisfactory service completion</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>4.2 Service Providers</h3>
+                        <p>Service Providers may:</p>
+                        <ul>
+                            <li>Accept or reject job requests</li>
+                            <li>Set their own service prices</li>
+                            <li>Withdraw earnings subject to Platform rules</li>
+                        </ul>
+                        <p>Service Providers must:</p>
+                        <ul>
+                            <li>Deliver services professionally and as agreed</li>
+                            <li>Comply with all applicable laws and regulations</li>
+                            <li>Pay Tendapoa’s commission as required</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
-            <!-- 5. Completion Code -->
+            <!-- 5. Payments, Wallet & Commission -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">05</span>
-                    <h2 class="section-title">Uthibitisho wa Kukamilika (Completion Code)</h2>
+                    <h2 class="section-title">Payments, Wallet & Commission</h2>
                 </div>
                 <div class="policy-content">
-                    <ul>
-                        <li>Baada ya kukubali kazi, Tendapoa inazalisha namba maalum ya kukamilisha (completion code)
-                            kwa ajili ya huduma hiyo.</li>
-                        <li>Namba hiyo inatolewa kwa mteja kupitia programu (app).</li>
-                        <li>Mteja lazima ampe mtoa huduma namba hiyo tu baada ya kuridhika na huduma iliyotolewa.</li>
-                        <li>Mtoa huduma lazima aingize namba sahihi ya kukamilisha kwenye mfumo.</li>
-                    </ul>
+                    <div class="subsection">
+                        <h3>5.1 Upfront Payment & Escrow</h3>
+                        <ul>
+                            <li>Customers must pay the full agreed amount before a job is posted.</li>
+                            <li>Funds are held securely in escrow until job completion is confirmed.</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>5.2 Completion Code</h3>
+                        <ul>
+                            <li>After service completion, Customers provide a completion code.</li>
+                            <li>Only after code confirmation will funds be credited to the Service Provider’s wallet.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>5.3 Commission</h3>
+                        <ul>
+                            <li>Tendapoa charges a 10% commission on each completed job.</li>
+                            <li>The commission is automatically deducted before wallet credit.</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>5.4 Withdrawals</h3>
+                        <ul>
+                            <li>Minimum withdrawal amount: TZS 5,000</li>
+                            <li>Withdrawal fee: TZS 500 per transaction</li>
+                            <li>Withdrawals are subject to verification and processing timelines.</li>
+                        </ul>
+                    </div>
+
+                    <div class="subsection">
+                        <h3>5.5 Third-Party Payments</h3>
+                        <ul>
+                            <li>All payments are processed through third-party payment service providers.</li>
+                            <li>Tendapoa does not store users’ card details, mobile money credentials, or banking
+                                information.</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
-            <!-- 6. Release of Funds -->
+            <!-- 6. Cancellations & Refunds -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">06</span>
-                    <h2 class="section-title">Kuachilia Fedha kwa Mtoa Huduma</h2>
+                    <h2 class="section-title">Cancellations & Refunds</h2>
                 </div>
                 <div class="policy-content">
-                    <p>Mara baada ya namba sahihi ya kukamilisha kuwasilishwa:</p>
                     <ul>
-                        <li>Kazi inawekwa alama kuwa imekamilika.</li>
-                        <li>Kiasi kinacholipwa (chini ya kamisheni inayotumika) kinawekwa kwenye pochi ya TendaPoa ya
-                            mtoa huduma.</li>
-                        <li>Hakuna fedha zitakazotolewa bila namba sahihi ya kukamilisha isipokuwa zitatuliwe kupitia
-                            mchakato wa migogoro.</li>
+                        <li>Customers may cancel a job before service commencement.</li>
+                        <li>Refund eligibility depends on service status, timing, and Platform assessment.</li>
+                        <li>Tendapoa may deduct applicable administrative or transaction fees.</li>
+                        <li>Refund decisions are final, subject to applicable consumer protection laws.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 7. Provider Commission -->
+            <!-- 7. Ratings & Reviews -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">07</span>
-                    <h2 class="section-title">Kamisheni ya Mtoa Huduma</h2>
+                    <h2 class="section-title">Ratings & Reviews</h2>
                 </div>
                 <div class="policy-content">
                     <ul>
-                        <li>Tendapoa inatoza kamisheni ya 10% kwa jumla ya thamani ya kila huduma iliyokamilika kwa
-                            mafanikio.</li>
-                        <li>Kamisheni inakatwa moja kwa moja wakati wa kukamilisha kazi.</li>
-                        <li>Kiasi kinachobaki kinawekwa kwenye pochi ya mtoa huduma.</li>
-                        <li>Kamisheni inatumika tu kwa huduma zilizohifadhiwa na kukamilika kupitia Tendapoa.</li>
+                        <li>Users may rate and review each other after job completion.</li>
+                        <li>Reviews must be honest, respectful, and factual.</li>
+                        <li>Tendapoa reserves the right to remove abusive, false, or misleading content.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 8. Provider Wallet -->
+            <!-- 8. Prohibited Conduct -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">08</span>
-                    <h2 class="section-title">Pochi ya Mtoa Huduma (Wallet)</h2>
+                    <h2 class="section-title">Prohibited Conduct</h2>
                 </div>
                 <div class="policy-content">
+                    <p>Users must not:</p>
                     <ul>
-                        <li>Watoa huduma wanapokea mapato yao kwenye Pochi yao ya Tendapoa.</li>
-                        <li>Salio la pochi linaonyesha mapato halisi baada ya kamisheni.</li>
-                        <li>Fedha zinabaki kwenye pochi hadi uondoaji uanzishwe.</li>
+                        <li>Engage in fraud, harassment, abuse, or misrepresentation</li>
+                        <li>Bypass Tendapoa’s payment or escrow system</li>
+                        <li>Share or misuse completion codes</li>
+                        <li>Use the Platform for unlawful purposes</li>
                     </ul>
+                    <p>Violation may result in account suspension or permanent termination.</p>
                 </div>
             </div>
 
-            <!-- 9. Withdrawals -->
+            <!-- 9. Limitation of Liability -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">09</span>
-                    <h2 class="section-title">Uondoaji wa Fedha (Withdrawals)</h2>
+                    <h2 class="section-title">Limitation of Liability</h2>
                 </div>
                 <div class="policy-content">
-                    <p>Watoa huduma wanaweza kutoa fedha kulingana na sheria zifuatazo:</p>
+                    <p>To the maximum extent permitted by law:</p>
                     <ul>
-                        <li>Kiasi cha chini cha kutoa: TZS 5,000</li>
-                        <li>Ada ya kutoa: TZS 500 kwa kila muamala (ada ya kudumu)</li>
-                        <li>Ada za kutoa zinakatwa moja kwa moja wakati wa kutoa.</li>
-                        <li>Uondoaji chini ya kiasi cha chini hauruhusiwi.</li>
+                        <li>Tendapoa is not responsible for service quality, delays, or disputes between users.</li>
+                        <li>Tendapoa is not liable for personal injury, property damage, theft, or loss arising from
+                            services performed by Service Providers.</li>
+                        <li>Tendapoa does not guarantee uninterrupted or error-free access to the Platform.</li>
+                        <li>Tendapoa shall not be liable for indirect, incidental, or consequential damages.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 10. Payment Processing -->
+            <!-- 10. Dispute Resolution -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">10</span>
-                    <h2 class="section-title">Njia za Malipo na Uchakataji</h2>
+                    <h2 class="section-title">Dispute Resolution</h2>
                 </div>
                 <div class="policy-content">
                     <ul>
-                        <li>Malipo na uondoaji huchakatwa kupitia washirika wa pesa za simu au benki wanaotumika.</li>
-                        <li>Muda wa kuchakata unaweza kutofautiana kulingana na watoa huduma wengine.</li>
-                        <li>Tendapoa haiwajibiki kwa ucheleweshaji unaosababishwa na mifumo ya malipo ya nje.</li>
+                        <li>Users are encouraged to resolve disputes amicably.</li>
+                        <li>Tendapoa may assist but is not obligated to arbitrate or resolve disputes.</li>
+                        <li>Tendapoa does not guarantee dispute resolution outcomes.</li>
                     </ul>
+                    <p>These Terms are governed by the laws of the United Republic of Tanzania.</p>
                 </div>
             </div>
 
-            <!-- 11. Failed Withdrawals -->
+            <!-- 11. Intellectual Property -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">11</span>
-                    <h2 class="section-title">Uondoaji Uliofeli</h2>
+                    <h2 class="section-title">Intellectual Property</h2>
                 </div>
                 <div class="policy-content">
                     <ul>
-                        <li>Ikiwa uondoaji utafeli kutokana na maelezo yasiyo sahihi au makosa ya mfumo:</li>
-                        <li>Fedha zitarudishwa kwenye pochi ya mtoa huduma baada ya uthibitisho.</li>
-                        <li>Ada za kutoa zinaweza bado kutumika kulingana na sheria za mtoa huduma wa malipo.</li>
+                        <li>All content, trademarks, logos, software, and materials on Tendapoa are the exclusive
+                            property of Tendapoa.</li>
+                        <li>Unauthorized use, reproduction, or distribution is prohibited.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 12. Customer Responsibilities -->
+            <!-- 12. Account Suspension & Termination -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">12</span>
-                    <h2 class="section-title">Wajibu wa Mteja</h2>
+                    <h2 class="section-title">Account Suspension & Termination</h2>
                 </div>
                 <div class="policy-content">
-                    <p>Wateja wanawajibika kwa:</p>
+                    <p>Tendapoa reserves the right to:</p>
                     <ul>
-                        <li>Kutoa maelezo sahihi ya kazi na bajeti.</li>
-                        <li>Kutunza namba ya kukamilisha (completion code).</li>
-                        <li>Kutoa namba ya kukamilisha tu baada ya kuridhika na huduma.</li>
-                        <li>Kushiriki namba ya kukamilisha kabla ya huduma kukamilika ni kwa hatari ya mteja mwenyewe.
-                        </li>
+                        <li>Suspend or terminate accounts that violate these Terms</li>
+                        <li>Temporarily hold wallet balances during investigations of suspicious activity</li>
                     </ul>
+                    <p>Any remaining wallet balance may be refunded or released in accordance with applicable laws after
+                        investigation.</p>
                 </div>
             </div>
 
-            <!-- 13. Disputes -->
+            <!-- 13. Amendments -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">13</span>
-                    <h2 class="section-title">Migogoro na Vighairi</h2>
+                    <h2 class="section-title">Amendments</h2>
                 </div>
                 <div class="policy-content">
                     <ul>
-                        <li>Katika hali ya migogoro au kushindwa kutoa namba ya kukamilisha:</li>
-                        <li>Tendapoa inaweza kushikilia fedha kwa muda.</li>
-                        <li>Pande zote mbili zinaweza kuhitajika kuwasilisha ushahidi.</li>
-                        <li>Tendapoa inaweza kukamilisha kazi kikamilifu na kutoa fedha pale inapothibitishwa.</li>
+                        <li>Tendapoa may update these Terms at any time.</li>
+                        <li>Continued use of the Platform constitutes acceptance of the revised Terms.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 14. Transparency -->
+            <!-- 14. Contact Information -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">14</span>
-                    <h2 class="section-title">Uwazi na Mabadiliko ya Ada</h2>
+                    <h2 class="section-title">Contact Information</h2>
                 </div>
                 <div class="policy-content">
-                    <ul>
-                        <li>Tendapoa imejitolea kwa bei za uwazi.</li>
-                        <li>Ada zote zinazotumika zinaonyeshwa kabla ya uthibitisho.</li>
-                        <li>Tendapoa inahifadhi haki ya kurekebisha ada kwa kutoa taarifa mapema.</li>
-                        <li>Kuendelea kutumia mfumo kunamaanisha kukubali masharti yaliyosasishwa.</li>
-                    </ul>
+                    <p>For inquiries, complaints, or support:</p>
+                    <p><strong>Tendapoa Support</strong><br>
+                        📧 Email: support@tendapoa.com<br>
+                        📞 Phone: +255 626 957 138</p>
                 </div>
             </div>
 
@@ -567,9 +639,8 @@
                     <a href="/#home">Nyumbani</a>
                     <a href="/#services">Huduma</a>
                     <a href="/#about">Kuhusu</a>
-                    <a href="{{ route('policy.fees-payments') }}" style="color: white; font-weight: 600;">Sera ya Malipo
-                        & Ada</a>
-                    <a href="{{ route('policy.terms') }}">Terms & Conditions</a>
+                    <a href="{{ route('policy.fees-payments') }}">Sera ya Malipo & Ada</a>
+                    <a href="{{ route('policy.terms') }}" style="color: white; font-weight: 600;">Terms & Conditions</a>
                     <a href="{{ route('register') }}">Pata Huduma</a>
                 </div>
             </div>
