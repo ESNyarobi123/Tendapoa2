@@ -90,15 +90,35 @@ class WorkerActionsController extends Controller
             ], 403);
         }
 
-        $jobs = Job::with('muhitaji', 'category')
+        // Get jobs that need accept/decline response (status = 'assigned' only)
+        $pendingJobs = Job::with('muhitaji', 'category')
             ->where('accepted_worker_id', $u->id)
-            ->whereIn('status', ['assigned', 'in_progress', 'ready_for_confirmation'])
+            ->where('status', 'assigned')
             ->latest()
-            ->paginate(12);
+            ->get()
+            ->map(function ($job) {
+                $job->needs_response = true;
+                return $job;
+            });
+
+        // Get active jobs (already accepted - in_progress or ready_for_confirmation)
+        $activeJobs = Job::with('muhitaji', 'category')
+            ->where('accepted_worker_id', $u->id)
+            ->whereIn('status', ['in_progress', 'ready_for_confirmation'])
+            ->latest()
+            ->get()
+            ->map(function ($job) {
+                $job->needs_response = false;
+                return $job;
+            });
 
         return response()->json([
             'success' => true,
-            'data' => $jobs
+            'data' => $pendingJobs,
+            'pending_jobs' => $pendingJobs,
+            'active_jobs' => $activeJobs,
+            'pending_count' => $pendingJobs->count(),
+            'active_count' => $activeJobs->count()
         ]);
     }
 

@@ -30,6 +30,16 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 // Serve storage files via PHP to bypass symlink issues
 // Using /image/ prefix ensures request hits Laravel router instead of failing at web server level
 Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
+    // Handle CORS preflight request
+    if (request()->isMethod('OPTIONS')) {
+        return response('', 200, [
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers' => '*',
+            'Access-Control-Max-Age' => '86400',
+        ]);
+    }
+
     try {
         // Decode the path in case it's URL encoded
         $path = urldecode($path);
@@ -118,6 +128,8 @@ Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
             'Content-Type' => $mimeType,
             'Cache-Control' => 'public, max-age=31536000',
             'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers' => '*',
         ]);
     } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
         // Re-throw HTTP exceptions (404, 403, etc.)
@@ -133,6 +145,35 @@ Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
         abort(500, 'Error serving file: ' . $e->getMessage());
     }
 })->where('path', '.*')->name('storage.serve');
+
+// Storage route with CORS for Flutter web
+Route::match(['get', 'head', 'options'], '/storage/{path}', function ($path) {
+    // Handle CORS preflight request
+    if (request()->isMethod('OPTIONS')) {
+        return response('', 200, [
+            'Access-Control-Allow-Origin' => '*',
+            'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers' => '*',
+            'Access-Control-Max-Age' => '86400',
+        ]);
+    }
+
+    $filePath = storage_path('app/public/' . $path);
+    
+    if (!file_exists($filePath) || !is_file($filePath)) {
+        abort(404);
+    }
+
+    $mimeType = mime_content_type($filePath) ?: 'application/octet-stream';
+
+    return response()->file($filePath, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'public, max-age=31536000',
+        'Access-Control-Allow-Origin' => '*',
+        'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers' => '*',
+    ]);
+})->where('path', '.*')->name('storage.cors');
 
 // HOME / LANDING
 Route::get('/', [HomeController::class, 'index'])->name('home');
