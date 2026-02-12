@@ -19,11 +19,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'force.json' => \App\Http\Middleware\ForceJsonResponse::class,
+            'locale' => \App\Http\Middleware\SetLocaleFromHeader::class,
         ]);
-        
-        // Configure API middleware group
+
+        // API: set locale from Accept-Language so responses use title/description + labels in requested language
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \App\Http\Middleware\SetLocaleFromHeader::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

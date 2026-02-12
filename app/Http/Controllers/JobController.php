@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\{Job, Category, Wallet, WalletTransaction, Setting, User};
+use App\Services\TranslationService;
 use App\Services\ZenoPayService;
 use App\Notifications\JobAvailableNotification;
 use App\Notifications\JobStatusNotification;
@@ -405,17 +406,25 @@ class JobController extends Controller
             }
         }
 
+        $localized = TranslationService::ensureBothLanguages(
+            $r->input('title'),
+            $r->input('description')
+        );
+
         $job = Job::create([
             'user_id' => Auth::id(),
             'category_id' => (int) $r->input('category_id'),
-            'title' => $r->input('title'),
+            'title' => $r->input('title'), // legacy column
+            'title_sw' => $localized['title_sw'],
+            'title_en' => $localized['title_en'],
             'description' => $r->input('description'),
-            'image' => $imagePath, // Will be null if file doesn't exist
+            'description_sw' => $localized['description_sw'],
+            'description_en' => $localized['description_en'],
+            'image' => $imagePath,
             'price' => (int) $r->input('price'),
             'lat' => (float) $r->input('lat'),
             'lng' => (float) $r->input('lng'),
             'address_text' => $r->input('address_text'),
-
             'status' => Setting::get('payments_enabled', '1') == '1' ? 'pending_payment' : 'posted',
             'published_at' => Setting::get('payments_enabled', '1') == '1' ? null : now(),
         ]);
@@ -534,11 +543,19 @@ class JobController extends Controller
         // Handle image upload (keep existing if no new image)
         $imagePath = $this->handleImageUpload($r->file('image'), $job->image);
 
-        // Update job details
+        $localized = TranslationService::ensureBothLanguages(
+            $r->input('title'),
+            $r->input('description')
+        );
+
         $updateData = [
             'title' => $r->input('title'),
-            'category_id' => (int) $r->input('category_id'),
+            'title_sw' => $localized['title_sw'],
+            'title_en' => $localized['title_en'],
             'description' => $r->input('description'),
+            'description_sw' => $localized['description_sw'],
+            'description_en' => $localized['description_en'],
+            'category_id' => (int) $r->input('category_id'),
             'price' => $newPrice,
             'lat' => (float) $r->input('lat'),
             'lng' => (float) $r->input('lng'),
@@ -676,11 +693,19 @@ class JobController extends Controller
         // Handle image upload (keep existing if no new image)
         $imagePath = $this->handleImageUpload($r->file('image'), $job->image);
 
-        // Update job details
+        $localized = TranslationService::ensureBothLanguages(
+            $r->input('title'),
+            $r->input('description')
+        );
+
         $updateData = [
             'title' => $r->input('title'),
-            'category_id' => (int) $r->input('category_id'),
+            'title_sw' => $localized['title_sw'],
+            'title_en' => $localized['title_en'],
             'description' => $r->input('description'),
+            'description_sw' => $localized['description_sw'],
+            'description_en' => $localized['description_en'],
+            'category_id' => (int) $r->input('category_id'),
             'price' => $newPrice,
             'lat' => (float) $r->input('lat'),
             'lng' => (float) $r->input('lng'),

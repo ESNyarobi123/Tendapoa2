@@ -19,7 +19,11 @@ class Job extends Model
         'user_id',
         'category_id',
         'title',
+        'title_sw',
+        'title_en',
         'description',
+        'description_sw',
+        'description_en',
         'image',
         'price',
         'lat',
@@ -32,13 +36,20 @@ class Job extends Model
         'completed_at',
         'poster_type',
         'posting_fee',
-        // zifuatazo zipo kwa compatibility na schemas tofauti
         'mfanyakazi_response',
         'worker_response',
         'assignee_response',
         'budget',
         'payout',
         'location',
+    ];
+
+    /** Hide raw locale columns from API/JSON; API gets single "title"/"description" from accessors */
+    protected $hidden = [
+        'title_sw',
+        'title_en',
+        'description_sw',
+        'description_en',
     ];
 
     /** Casts/Types */
@@ -123,6 +134,43 @@ class Job extends Model
     /* ===========================
      |  Helpers / Accessors
      * =========================== */
+
+    /**
+     * Localized title: API returns single "title" based on Accept-Language.
+     * Fallback: if requested locale column is empty (Groq failed/delayed), return the other language
+     * so the user never sees blank — better Kiswahili than empty.
+     */
+    public function getTitleAttribute($value): string
+    {
+        $locale = app()->getLocale();
+        $sw = array_key_exists('title_sw', $this->attributes) ? $this->attributes['title_sw'] : null;
+        $en = array_key_exists('title_en', $this->attributes) ? $this->attributes['title_en'] : null;
+        $sw = $sw !== null && (string) $sw !== '' ? (string) $sw : null;
+        $en = $en !== null && (string) $en !== '' ? (string) $en : null;
+
+        if ($locale === 'sw') {
+            return $sw ?? $en ?? (string) ($value ?? '');
+        }
+        // Accept-Language: en — prefer title_en; if empty (AI failed), fallback to title_sw
+        return $en ?? $sw ?? (string) ($value ?? '');
+    }
+
+    /**
+     * Localized description. Same fallback: if requested locale empty, use the other language.
+     */
+    public function getDescriptionAttribute($value): ?string
+    {
+        $locale = app()->getLocale();
+        $sw = array_key_exists('description_sw', $this->attributes) ? $this->attributes['description_sw'] : null;
+        $en = array_key_exists('description_en', $this->attributes) ? $this->attributes['description_en'] : null;
+        $sw = $sw !== null && (string) $sw !== '' ? $sw : null;
+        $en = $en !== null && (string) $en !== '' ? $en : null;
+
+        if ($locale === 'sw') {
+            return $sw ?? $en ?? $value;
+        }
+        return $en ?? $sw ?? $value;
+    }
 
     // Amount inayopatikana (priority: payout -> price -> budget)
     public function getAmountAttribute(): int

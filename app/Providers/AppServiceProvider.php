@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Console\Commands\TranslateLegacyJobsCommand;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->commands([TranslateLegacyJobsCommand::class]);
         // Share system settings with all views
         try {
             if (\Schema::hasTable('settings')) {

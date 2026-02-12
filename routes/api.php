@@ -352,12 +352,21 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 }
             }
 
+            $localized = \App\Services\TranslationService::ensureBothLanguages(
+                $validated['title'],
+                $validated['description'] ?? null
+            );
+
             $paymentsEnabled = Setting::get('payments_enabled', '1') == '1';
             $job = \App\Models\Job::create([
                 'user_id' => $user->id,
                 'category_id' => $validated['category_id'],
                 'title' => $validated['title'],
+                'title_sw' => $localized['title_sw'],
+                'title_en' => $localized['title_en'],
                 'description' => $validated['description'] ?? null,
+                'description_sw' => $localized['description_sw'],
+                'description_en' => $localized['description_en'],
                 'image' => $imagePath,
                 'price' => $validated['price'],
                 'lat' => $validated['lat'],
@@ -621,6 +630,11 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'address_text' => ['nullable'],
             ]);
 
+            $localized = \App\Services\TranslationService::ensureBothLanguages(
+                $validated['title'],
+                $validated['description']
+            );
+
             $postingFee = (int) Setting::get('job_posting_fee', 0);
             $paymentsEnabled = Setting::get('payments_enabled', '1') == '1';
             $wallet = $user->ensureWallet();
@@ -630,7 +644,11 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'user_id' => $user->id,
                     'category_id' => $validated['category_id'],
                     'title' => $validated['title'],
+                    'title_sw' => $localized['title_sw'],
+                    'title_en' => $localized['title_en'],
                     'description' => $validated['description'],
+                    'description_sw' => $localized['description_sw'],
+                    'description_en' => $localized['description_en'],
                     'price' => $validated['price'],
                     'lat' => $validated['lat'],
                     'lng' => $validated['lng'],
@@ -644,13 +662,16 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             }
 
             if ($wallet->balance >= $postingFee) {
-                // Deduct from wallet
-                \Illuminate\Support\Facades\DB::transaction(function () use ($user, $validated, $postingFee, $wallet) {
+                \Illuminate\Support\Facades\DB::transaction(function () use ($user, $validated, $localized, $postingFee, $wallet) {
                     $job = \App\Models\Job::create([
                         'user_id' => $user->id,
                         'category_id' => $validated['category_id'],
                         'title' => $validated['title'],
+                        'title_sw' => $localized['title_sw'],
+                        'title_en' => $localized['title_en'],
                         'description' => $validated['description'],
+                        'description_sw' => $localized['description_sw'],
+                        'description_en' => $localized['description_en'],
                         'price' => $validated['price'],
                         'lat' => $validated['lat'],
                         'lng' => $validated['lng'],
@@ -678,12 +699,15 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'payment_method' => 'wallet'
                 ], 201);
             } else {
-                // Need ZenoPay payment
                 $job = \App\Models\Job::create([
                     'user_id' => $user->id,
                     'category_id' => $validated['category_id'],
                     'title' => $validated['title'],
+                    'title_sw' => $localized['title_sw'],
+                    'title_en' => $localized['title_en'],
                     'description' => $validated['description'],
+                    'description_sw' => $localized['description_sw'],
+                    'description_en' => $localized['description_en'],
                     'price' => $validated['price'],
                     'lat' => $validated['lat'],
                     'lng' => $validated['lng'],

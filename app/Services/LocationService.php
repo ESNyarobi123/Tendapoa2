@@ -60,10 +60,10 @@ class LocationService
             return [
                 'distance' => null,
                 'category' => 'no_user_location',
-                'color' => '#f59e0b', // orange
+                'color' => '#f59e0b',
                 'bg_color' => '#fef3c7',
                 'text_color' => '#92400e',
-                'label' => 'Weka eneo lako'
+                'label' => __('distance.no_user_location'),
             ];
         }
 
@@ -72,23 +72,23 @@ class LocationService
             return [
                 'distance' => null,
                 'category' => 'no_job_location',
-                'color' => '#ef4444', // red
+                'color' => '#ef4444',
                 'bg_color' => '#fecaca',
                 'text_color' => '#dc2626',
-                'label' => 'Eneo haujulikani'
+                'label' => __('distance.no_job_location'),
             ];
         }
 
         $distance = self::calculateDistance($userLat, $userLng, $jobLat, $jobLng);
-        
+
         if ($distance === null) {
             return [
                 'distance' => null,
                 'category' => 'unknown',
-                'color' => '#6b7280', // gray
+                'color' => '#6b7280',
                 'bg_color' => '#f3f4f6',
                 'text_color' => '#6b7280',
-                'label' => 'Umbali haujulikani'
+                'label' => __('distance.unknown'),
             ];
         }
 
@@ -96,30 +96,31 @@ class LocationService
             return [
                 'distance' => round($distance, 1),
                 'category' => 'near',
-                'color' => '#10b981', // green
+                'color' => '#10b981',
                 'bg_color' => '#d1fae5',
                 'text_color' => '#065f46',
-                'label' => 'Karibu sana'
+                'label' => __('distance.near'),
             ];
-        } elseif ($distance <= 10) {
+        }
+        if ($distance <= 10) {
             return [
                 'distance' => round($distance, 1),
                 'category' => 'moderate',
-                'color' => '#f59e0b', // orange
+                'color' => '#f59e0b',
                 'bg_color' => '#fef3c7',
                 'text_color' => '#92400e',
-                'label' => 'Umbali wa wastani'
-            ];
-        } else {
-            return [
-                'distance' => round($distance, 1),
-                'category' => 'far',
-                'color' => '#ef4444', // red
-                'bg_color' => '#fecaca',
-                'text_color' => '#dc2626',
-                'label' => 'Umbali mkubwa'
+                'label' => __('distance.moderate'),
             ];
         }
+
+        return [
+            'distance' => round($distance, 1),
+            'category' => 'far',
+            'color' => '#ef4444',
+            'bg_color' => '#fecaca',
+            'text_color' => '#dc2626',
+            'label' => __('distance.far'),
+        ];
     }
 
     /**
