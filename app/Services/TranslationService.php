@@ -85,6 +85,11 @@ class TranslationService
                 $result = self::translateViaOpenAi($text, $fromLang, $toLang);
             } elseif ($driver === 'google') {
                 $result = self::translateViaGoogle($text, $fromLang, $toLang);
+            } else {
+                Log::warning('TranslationService: no driver configured', [
+                    'driver' => $driver,
+                    'hint' => 'Set TRANSLATION_DRIVER=groq and GROQ_API_KEY in .env for Swahili/English translation.',
+                ]);
             }
             if ($result !== $text) {
                 Log::info('TranslationService: translated', [
@@ -128,18 +133,32 @@ class TranslationService
         if ($lang === self::LANG_SW) {
             $title_sw = $title;
             $title_en = self::translate($title, self::LANG_SW, self::LANG_EN);
+            if ($title_en === $title) {
+                $title_en = null;
+                Log::warning('TranslationService: title translation unchanged (failed or skipped), storing title_en=null');
+            }
             $description_sw = $description;
             $description_en = $description !== '' ? self::translate($description, self::LANG_SW, self::LANG_EN) : '';
+            if ($description_en === $description) {
+                $description_en = null;
+            }
         } else {
             $title_en = $title;
             $title_sw = self::translate($title, self::LANG_EN, self::LANG_SW);
+            if ($title_sw === $title) {
+                $title_sw = null;
+                Log::warning('TranslationService: title translation unchanged (failed or skipped), storing title_sw=null');
+            }
             $description_en = $description;
             $description_sw = $description !== '' ? self::translate($description, self::LANG_EN, self::LANG_SW) : '';
+            if ($description_sw === $description) {
+                $description_sw = null;
+            }
         }
 
         $result = [
-            'title_sw' => $title_sw,
-            'title_en' => $title_en,
+            'title_sw' => $title_sw ?: null,
+            'title_en' => $title_en ?: null,
             'description_sw' => $description_sw ?: null,
             'description_en' => $description_en ?: null,
         ];
@@ -162,6 +181,7 @@ class TranslationService
     {
         $key = config('services.groq.api_key');
         if (!$key) {
+            Log::warning('TranslationService: GROQ_API_KEY not set, translation skipped. Set it in .env for Swahili/English.');
             return $text;
         }
 
@@ -198,6 +218,7 @@ class TranslationService
     {
         $key = config('services.openai.api_key');
         if (!$key) {
+            Log::warning('TranslationService: OpenAI API key not set, translation skipped.');
             return $text;
         }
 
