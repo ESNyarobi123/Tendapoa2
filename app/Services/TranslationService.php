@@ -17,6 +17,46 @@ class TranslationService
     public const LANG_EN = 'en';
 
     /**
+     * Orodha ya maneno ya Kiswahili – inatumika kwa utambuzi wa lugha na mwongozo kwa Groq.
+     */
+    protected static function getSwahiliIndicators(): array
+    {
+        return [
+            'na', 'ya', 'wa', 'ka', 'ki', 'cha', 'ni', 'kwa', 'hii', 'hiyo', 'ile',
+            'kama', 'lakini', 'pia', 'sana', 'tu', 'bado', 'tayari', 'hapana', 'ndiyo',
+            'kufua', 'kusafisha', 'kazi', 'huduma', 'nyumbani', 'ofisi', 'usafi',
+            'tafadhali', 'asante', 'karibu', 'habari', 'sasa', 'baadaye', 'leo',
+            'fundi', 'bomba', 'anahitajika', 'unahitajika', 'hitajika', 'tafuta', 'nahitaji',
+            'seremala', 'umeme', 'maji', 'jikoni', 'nyumba', 'kuta', 'rangi', 'bustani',
+            'gari', 'simu', 'kompyuta', 'ufundi', 'mwenyeji',
+            'kupiga', 'pasi', 'nguo', 'naomba', 'uje', 'zipo', 'kushonewa', 'kacha',
+            'soksi', 'shati', 'viatu', 'sufuria', 'chumba', 'bafu', 'choo', 'mlango',
+            'tengeneza', 'hariri', 'safisha', 'fua', 'pika', 'osha', 'paka',
+        ];
+    }
+
+    /**
+     * Mwongozo wa tafsiri Swahili → English kwa kazi (Groq).
+     */
+    protected static function getTranslationHintsSwToEn(): string
+    {
+        $hints = [
+            'fundi bomba' => 'plumber',
+            'fundi umeme' => 'electrician',
+            'kupiga pasi nguo' => 'ironing clothes',
+            'kushonewa' => 'sewing / to be sewn',
+            'naomba uje' => 'please come',
+            'anahitajika' => 'is needed',
+            'tafuta fundi' => 'looking for a technician',
+        ];
+        $lines = [];
+        foreach ($hints as $sw => $en) {
+            $lines[] = "{$sw} = {$en}";
+        }
+        return implode('; ', $lines);
+    }
+
+    /**
      * Detect if text is primarily Swahili or English (simple heuristic).
      */
     public static function detectLanguage(string $text): string
@@ -31,17 +71,7 @@ class TranslationService
             return self::LANG_SW;
         }
 
-        // Common Swahili words / patterns (ngeli, viambishi, kazi, etc.)
-        $swahiliIndicators = [
-            'na', 'ya', 'wa', 'ka', 'ki', 'cha', 'ni', 'kwa', 'hii', 'hiyo', 'ile',
-            'kama', 'lakini', 'pia', 'sana', 'tu', 'bado', 'tayari', 'hapana', 'ndiyo',
-            'kufua', 'kusafisha', 'kazi', 'huduma', 'nyumbani', 'ofisi', 'usafi',
-            'tafadhali', 'asante', 'karibu', 'habari', 'sasa', 'baadaye', 'leo',
-            // Job/title vocabulary so "Fundi bomba anahitajika" etc. detected as Swahili
-            'fundi', 'bomba', 'anahitajika', 'unahitajika', 'hitajika', 'tafuta', 'nahitaji',
-            'seremala', 'umeme', 'maji', 'jikoni', 'nyumba', 'kuta', 'rangi', 'bustani',
-            'gari', 'simu', 'kompyuta', 'ufundi', 'mwenyeji',
-        ];
+        $swahiliIndicators = self::getSwahiliIndicators();
         $swCount = 0;
         foreach ($words as $w) {
             // PCRE2: use \x{...} with /u modifier (not \u)
@@ -191,8 +221,11 @@ class TranslationService
         $baseUrl = rtrim(config('services.groq.base_url', 'https://api.groq.com/openai/v1'), '/');
         $model = config('services.groq.model', 'llama-3.1-8b-instant');
 
-        $prompt = "Translate the following text from {$fromName} to {$toName}. "
-            . "Output ONLY the {$toName} translation, nothing else (no explanation, no quotes).\n\nText:\n{$text}";
+        $prompt = "Translate the following text from {$fromName} to {$toName}. ";
+        if ($from === self::LANG_SW && $to === self::LANG_EN) {
+            $prompt .= "Context: job postings. Use these where they fit: " . self::getTranslationHintsSwToEn() . ". ";
+        }
+        $prompt .= "Output ONLY the {$toName} translation, nothing else (no explanation, no quotes).\n\nText:\n{$text}";
 
         $response = Http::withToken($key)
             ->timeout(10)
