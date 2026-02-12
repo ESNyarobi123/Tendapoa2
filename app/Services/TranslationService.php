@@ -40,7 +40,8 @@ class TranslationService
         ];
         $swCount = 0;
         foreach ($words as $w) {
-            $w = preg_replace('/[^a-z\u0080-\uFFFF]/', '', $w);
+            // PCRE2: use \x{...} with /u modifier (not \u)
+            $w = preg_replace('/[^a-z\x{0080}-\x{FFFF}]/u', '', $w);
             if (in_array($w, $swahiliIndicators, true)) {
                 $swCount++;
             }
