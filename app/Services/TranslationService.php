@@ -31,12 +31,16 @@ class TranslationService
             return self::LANG_SW;
         }
 
-        // Common Swahili words / patterns (ngeli, viambishi, etc.)
+        // Common Swahili words / patterns (ngeli, viambishi, kazi, etc.)
         $swahiliIndicators = [
             'na', 'ya', 'wa', 'ka', 'ki', 'cha', 'ni', 'kwa', 'hii', 'hiyo', 'ile',
             'kama', 'lakini', 'pia', 'sana', 'tu', 'bado', 'tayari', 'hapana', 'ndiyo',
             'kufua', 'kusafisha', 'kazi', 'huduma', 'nyumbani', 'ofisi', 'usafi',
             'tafadhali', 'asante', 'karibu', 'habari', 'sasa', 'baadaye', 'leo',
+            // Job/title vocabulary so "Fundi bomba anahitajika" etc. detected as Swahili
+            'fundi', 'bomba', 'anahitajika', 'unahitajika', 'hitajika', 'tafuta', 'nahitaji',
+            'seremala', 'umeme', 'maji', 'jikoni', 'nyumba', 'kuta', 'rangi', 'bustani',
+            'gari', 'simu', 'kompyuta', 'ufundi', 'mwenyeji',
         ];
         $swCount = 0;
         foreach ($words as $w) {
@@ -72,16 +76,24 @@ class TranslationService
         }
 
         $driver = config('services.translation.driver', 'null');
+        $result = $text;
 
         try {
             if ($driver === 'groq') {
-                return self::translateViaGroq($text, $fromLang, $toLang);
+                $result = self::translateViaGroq($text, $fromLang, $toLang);
+            } elseif ($driver === 'openai') {
+                $result = self::translateViaOpenAi($text, $fromLang, $toLang);
+            } elseif ($driver === 'google') {
+                $result = self::translateViaGoogle($text, $fromLang, $toLang);
             }
-            if ($driver === 'openai') {
-                return self::translateViaOpenAi($text, $fromLang, $toLang);
-            }
-            if ($driver === 'google') {
-                return self::translateViaGoogle($text, $fromLang, $toLang);
+            if ($result !== $text) {
+                Log::info('TranslationService: translated', [
+                    'driver' => $driver,
+                    'from' => $fromLang,
+                    'to' => $toLang,
+                    'original_preview' => mb_substr($text, 0, 60) . (mb_strlen($text) > 60 ? '...' : ''),
+                    'translated_preview' => mb_substr($result, 0, 60) . (mb_strlen($result) > 60 ? '...' : ''),
+                ]);
             }
         } catch (\Throwable $e) {
             Log::warning('Translation failed, using original text', [
@@ -92,7 +104,7 @@ class TranslationService
             ]);
         }
 
-        return $text;
+        return $result;
     }
 
     /**
@@ -106,26 +118,40 @@ class TranslationService
 
         $detectFrom = $title !== '' ? $title : $description;
         $lang = self::detectLanguage($detectFrom);
-        $other = $lang === self::LANG_SW ? self::LANG_EN : self::LANG_SW;
+
+        Log::info('TranslationService: ensureBothLanguages', [
+            'input_title' => $title,
+            'input_description_length' => mb_strlen($description),
+            'detected_language' => $lang,
+        ]);
 
         if ($lang === self::LANG_SW) {
             $title_sw = $title;
             $title_en = self::translate($title, self::LANG_SW, self::LANG_EN);
             $description_sw = $description;
-            $description_en = self::translate($description, self::LANG_SW, self::LANG_EN);
+            $description_en = $description !== '' ? self::translate($description, self::LANG_SW, self::LANG_EN) : '';
         } else {
             $title_en = $title;
             $title_sw = self::translate($title, self::LANG_EN, self::LANG_SW);
             $description_en = $description;
-            $description_sw = self::translate($description, self::LANG_EN, self::LANG_SW);
+            $description_sw = $description !== '' ? self::translate($description, self::LANG_EN, self::LANG_SW) : '';
         }
 
-        return [
+        $result = [
             'title_sw' => $title_sw,
             'title_en' => $title_en,
             'description_sw' => $description_sw ?: null,
             'description_en' => $description_en ?: null,
         ];
+
+        Log::info('TranslationService: localized result', [
+            'title_sw' => $result['title_sw'],
+            'title_en' => $result['title_en'],
+            'description_sw_length' => $result['description_sw'] ? mb_strlen($result['description_sw']) : 0,
+            'description_en_length' => $result['description_en'] ? mb_strlen($result['description_en']) : 0,
+        ]);
+
+        return $result;
     }
 
     /**
@@ -145,9 +171,8 @@ class TranslationService
         $baseUrl = rtrim(config('services.groq.base_url', 'https://api.groq.com/openai/v1'), '/');
         $model = config('services.groq.model', 'llama-3.1-8b-instant');
 
-        $prompt = "Translate the following text to the other language (English if it's Swahili, and Swahili if it's English). "
-            . "If the text is already bilingual or unclear (e.g. mixed Swahili-English), just clean it up and give one clear translation. "
-            . "Return ONLY the translated text, no explanation.\n\n{$text}";
+        $prompt = "Translate the following text from {$fromName} to {$toName}. "
+            . "Output ONLY the {$toName} translation, nothing else (no explanation, no quotes).\n\nText:\n{$text}";
 
         $response = Http::withToken($key)
             ->timeout(10)
@@ -176,8 +201,9 @@ class TranslationService
             return $text;
         }
 
-        $prompt = "Translate the following text to the other language (English if it's Swahili, and Swahili if it's English). "
-            . "If the text is already bilingual or unclear, just clean it up and give one clear translation. Return ONLY the translated text.\n\n{$text}";
+        $fromName = $from === self::LANG_SW ? 'Swahili' : 'English';
+        $toName = $to === self::LANG_EN ? 'English' : 'Swahili';
+        $prompt = "Translate the following text from {$fromName} to {$toName}. Output ONLY the {$toName} translation, nothing else.\n\nText:\n{$text}";
 
         $response = Http::withToken($key)
             ->timeout(15)
