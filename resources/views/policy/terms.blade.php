@@ -641,6 +641,7 @@
                     <a href="/#about">Kuhusu</a>
                     <a href="{{ route('policy.fees-payments') }}">Sera ya Malipo & Ada</a>
                     <a href="{{ route('policy.terms') }}" style="color: white; font-weight: 600;">Terms & Conditions</a>
+                    <a href="{{ route('policy.privacy') }}">Privacy Policy</a>
                     <a href="{{ route('register') }}">Pata Huduma</a>
                 </div>
             </div>

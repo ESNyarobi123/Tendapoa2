@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="<?php echo e(str_replace('_', '-', app()->getLocale())); ?>">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
 
     <title>Tendapoa - Usafi wa Kuegemea, Kazi za Kuegemea</title>
     <meta name="description"
@@ -196,7 +196,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('{{ asset("hero.png") }}') center center/cover no-repeat;
+            background: url('<?php echo e(asset("hero.png")); ?>') center center/cover no-repeat;
             z-index: 0;
         }
 
@@ -915,14 +915,14 @@
                 <a href="#home">Home</a>
                 <a href="#about">About Us</a>
                 <a href="#services">Features</a>
-                @if (Route::has('login'))
-                    @auth
-                        <a href="{{ url('/dashboard') }}" class="btn btn-primary">Dashboard</a>
-                    @else
-                        <a href="{{ route('login') }}">Login</a>
-                        <a href="{{ route('register') }}">Register</a>
-                    @endauth
-                @endif
+                <?php if(Route::has('login')): ?>
+                    <?php if(auth()->guard()->check()): ?>
+                        <a href="<?php echo e(url('/dashboard')); ?>" class="btn btn-primary">Dashboard</a>
+                    <?php else: ?>
+                        <a href="<?php echo e(route('login')); ?>">Login</a>
+                        <a href="<?php echo e(route('register')); ?>">Register</a>
+                    <?php endif; ?>
+                <?php endif; ?>
             </nav>
             <button class="mobile-menu-btn" id="mobileMenuBtn">☰</button>
         </div>
@@ -936,19 +936,20 @@
             <p>Tendapoa inatoa suluhisho bora za usafi, kubadilisha nafasi kuwa maeneo safi kupitia uangalifu wa pekee
                 na kujitolea kwa ubora.</p>
             <div class="hero-buttons">
-                <a href="{{ route('register') }}" class="btn btn-primary">
+                <a href="<?php echo e(route('register')); ?>" class="btn btn-primary">
                     Pata Huduma
                 </a>
-                @php
+                <?php
                     $activeVersion = \App\Models\AppVersion::getActive();
-                @endphp
-                <a href="{{ $activeVersion ? route('app.download') : 'javascript:void(0)' }}" class="btn btn-primary"
-                    style="display: inline-flex; align-items: center; gap: 0.5rem; {{ $activeVersion ? '' : 'opacity:0.6; cursor:not-allowed;' }}"
-                    @if(!$activeVersion) aria-disabled="true"
-                    onclick="alert('App bado haijapakiwa. Tafadhali jaribu tena baadae.'); return false;" @endif
-                    title="{{ $activeVersion ? 'Download Tendapoa App' : 'App bado haijapakiwa' }}">
+                ?>
+                <a href="<?php echo e($activeVersion ? route('app.download') : 'javascript:void(0)'); ?>" class="btn btn-primary"
+                    style="display: inline-flex; align-items: center; gap: 0.5rem; <?php echo e($activeVersion ? '' : 'opacity:0.6; cursor:not-allowed;'); ?>"
+                    <?php if(!$activeVersion): ?> aria-disabled="true"
+                    onclick="alert('App bado haijapakiwa. Tafadhali jaribu tena baadae.'); return false;" <?php endif; ?>
+                    title="<?php echo e($activeVersion ? 'Download Tendapoa App' : 'App bado haijapakiwa'); ?>">
                     <span>📱</span>
-                    Download App{{ $activeVersion ? ' (v' . $activeVersion->version . ')' : '' }}
+                    Download App<?php echo e($activeVersion ? ' (v' . $activeVersion->version . ')' : ''); ?>
+
                 </a>
             </div>
         </div>
@@ -1063,7 +1064,7 @@
                         <div class="area-item">Tabora</div>
                         <div class="area-item">Mtwara</div>
                     </div>
-                    <a href="{{ route('register') }}" class="btn btn-primary">
+                    <a href="<?php echo e(route('register')); ?>" class="btn btn-primary">
                         Pata Huduma
                     </a>
                 </div>
@@ -1113,7 +1114,7 @@
             <div class="cta-content">
                 <h2 class="cta-title">Kufikia Kuridhika kwa Wateja bila Kukosa: Ahadi Yangu kama Huduma ya Usafi ya
                     Kitaalamu</h2>
-                <a href="{{ route('register') }}" class="btn btn-primary"
+                <a href="<?php echo e(route('register')); ?>" class="btn btn-primary"
                     style="background: white; color: #2563eb; font-size: 1rem; padding: 1rem 2rem;">
                     Pata Huduma
                 </a>
@@ -1128,7 +1129,7 @@
                 <div class="footer-logo">🧹 Tendapoa</div>
                 <p class="footer-description">Tendapoa inatoa suluhisho bora za usafi, kubadilisha nafasi kuwa maeneo
                     safi kupitia uangalifu wa pekee na kujitolea kwa ubora.</p>
-                <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.875rem;">Hakimiliki © {{ date('Y') }} Tendapoa.
+                <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.875rem;">Hakimiliki © <?php echo e(date('Y')); ?> Tendapoa.
                     Haki zote zimehifadhiwa.</p>
             </div>
             <div>
@@ -1137,10 +1138,10 @@
                     <a href="#home">Nyumbani</a>
                     <a href="#services">Huduma</a>
                     <a href="#about">Kuhusu</a>
-                    <a href="{{ route('policy.fees-payments') }}">Sera ya Malipo & Ada</a>
-                    <a href="{{ route('policy.terms') }}">Terms & Conditions</a>
-                    <a href="{{ route('policy.privacy') }}">Privacy Policy</a>
-                    <a href="{{ route('register') }}">Pata Huduma</a>
+                    <a href="<?php echo e(route('policy.fees-payments')); ?>">Sera ya Malipo & Ada</a>
+                    <a href="<?php echo e(route('policy.terms')); ?>">Terms & Conditions</a>
+                    <a href="<?php echo e(route('policy.privacy')); ?>">Privacy Policy</a>
+                    <a href="<?php echo e(route('register')); ?>">Pata Huduma</a>
                 </div>
             </div>
         </div>
@@ -1277,4 +1278,4 @@
     </a>
 </body>
 
-</html>
+</html><?php /**PATH /Users/eunice/GITHUB COOP/Tendapoa2/resources/views/home.blade.php ENDPATH**/ ?>

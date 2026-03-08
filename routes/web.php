@@ -188,6 +188,11 @@ Route::get('/terms-and-conditions', function () {
     return view('policy.terms');
 })->name('policy.terms');
 
+// Privacy Policy
+Route::get('/privacy-policy', function () {
+    return view('policy.privacy');
+})->name('policy.privacy');
+
 // APK Download (Public)
 Route::get('/download/app', [HomeController::class, 'downloadApp'])->name('app.download');
 

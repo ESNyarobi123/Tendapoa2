@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>Sera ya Malipo na Ada - Tendapoa</title>
+    <title>Privacy Policy - Tendapoa</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -26,7 +26,7 @@
             background: #f8fafc;
         }
 
-        /* Header & Nav (Copied from home.blade.php) */
+        /* Header & Nav */
         .header {
             position: fixed;
             top: 0;
@@ -201,7 +201,19 @@
             left: 0;
         }
 
-        /* Footer (Copied from home.blade.php) */
+        .subsection {
+            margin-top: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .subsection h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 0.75rem;
+        }
+
+        /* Footer */
         .footer {
             background: #1e293b;
             color: white;
@@ -281,7 +293,6 @@
 
             .nav-links {
                 display: none;
-                /* Simplify for mobile for now or copy script */
             }
         }
     </style>
@@ -308,8 +319,8 @@
     <!-- Page Header -->
     <div class="page-header">
         <div class="container">
-            <h1 class="page-title">Sera ya Malipo, Ada na<br>Kukamilisha Huduma</h1>
-            <p class="page-subtitle">Mwongozo kamili wa jinsi Tendapoa inavyofanya kazi kulinda maslahi yako</p>
+            <h1 class="page-title">TENDAPOA – PRIVACY POLICY</h1>
+            <p class="page-subtitle">Last Update 8 March 2026</p>
         </div>
     </div>
 
@@ -317,234 +328,135 @@
     <div class="content-container">
         <div class="policy-card">
 
-            <!-- 1. Platform Role -->
+            <p style="margin-bottom: 2rem; color: #475569; font-size: 1.05rem;">
+                Welcome to Tendapoa. This Privacy Policy outlines how we collect, use, disclose, and safeguard your personal information when you use the Tendapoa mobile application, website, and related services (collectively, the “Platform”).<br><br>
+                By accessing, registering, or using Tendapoa, you consent to the data practices described in this Privacy Policy.
+            </p>
+
+            <!-- 1. Information We Collect -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">01</span>
-                    <h2 class="section-title">Nafasi ya Mfumo (Platform Role)</h2>
+                    <h2 class="section-title">Information We Collect</h2>
                 </div>
                 <div class="policy-content">
-                    <ul>
-                        <li>Tendapoa inafanya kazi kama soko la kidijitali linalounganisha wateja na watoa huduma
-                            binafsi.</li>
-                        <li>Tendapoa haitoi huduma za usafi au dobi moja kwa moja.</li>
-                        <li>Tendapoa inawezesha uchapishaji wa kazi, kuhifadhi malipo, kuunganisha watoa huduma, na
-                            malipo.</li>
-                    </ul>
+                    <p>We collect various types of information in connection with the services we provide, including:</p>
+                    <div class="subsection">
+                        <h3>1.1 Personal Information</h3>
+                        <ul>
+                            <li><strong>Account details:</strong> Name, phone number, email address, password, and profile picture.</li>
+                            <li><strong>Financial information:</strong> Payment history, withdrawal requests, and transaction records. (Note: We use third-party providers for actual payment processing and do not store sensitive card or banking credentials).</li>
+                            <li><strong>Identity Verification:</strong> Identification details required to verify Service Providers.</li>
+                        </ul>
+                    </div>
+                    <div class="subsection">
+                        <h3>1.2 Usage and Technical Data</h3>
+                        <ul>
+                            <li>Device information (e.g., hardware model, operating system).</li>
+                            <li>Log information (e.g., IP address, access times, browser type).</li>
+                            <li>Information about how you interact with our Platform, including jobs posted, accepted, or completed.</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
 
-            <!-- 2. Customer Upfront Payment -->
+            <!-- 2. How We Use Your Information -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">02</span>
-                    <h2 class="section-title">Malipo ya Awali ya Mteja (Budget-Based)</h2>
+                    <h2 class="section-title">How We Use Your Information</h2>
                 </div>
                 <div class="policy-content">
+                    <p>We use the collected information for various purposes, including to:</p>
                     <ul>
-                        <li>Kabla ya kuchapisha kazi, wateja wanatakiwa kulipa kiasi cha bajeti yao iliyotajwa mapema.
-                        </li>
-                        <li>Mteja huweka bajeti ya huduma wakati wa kuchapisha kazi.</li>
-                        <li>Kazi itachapishwa na kuonekana kwa watoa huduma tu baada ya malipo hayo kufanikiwa.</li>
-                        <li>Malipo ya awali yanaonyesha kujitolea na kuhakikisha ombi la huduma.</li>
+                        <li>Facilitate the matching of Service Providers and Customers.</li>
+                        <li>Process payments, issue completion codes, and manage the escrow system securely.</li>
+                        <li>Maintain and improve the safety, security, and performance of our Platform.</li>
+                        <li>Provide user support, resolve disputes, and respond to your requests.</li>
+                        <li>Send service updates, promotional offers, and system notifications.</li>
+                        <li>Enforce our Terms and Conditions and prevent fraudulent activities.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 3. Escrow Holding -->
+            <!-- 3. Sharing Your Information -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">03</span>
-                    <h2 class="section-title">Kuhifadhi Malipo ya Mteja (Escrow)</h2>
+                    <h2 class="section-title">Sharing Your Information</h2>
                 </div>
                 <div class="policy-content">
+                    <p>We do not sell your personal information. We may share your information under the following circumstances:</p>
                     <ul>
-                        <li>Malipo yote ya mteja yanahifadhiwa kwa usalama na Tendapoa hadi huduma itakapokamilika.</li>
-                        <li>Fedha hazitolewi kwa mtoa huduma hadi kukamilika kwa kazi kudhibitishwe.</li>
-                        <li>Hii inalinda wateja na watoa huduma dhidi ya udanganyifu au kutokutekelezwa kwa kazi.</li>
+                        <li><strong>Between Users:</strong> Customers and Service Providers may see each other's basic profile details (e.g., name, ratings, and contact info) to facilitate the requested service.</li>
+                        <li><strong>Service Providers:</strong> With third-party vendors, consultants, and payment processors who need access to such information to carry out work on our behalf.</li>
+                        <li><strong>Legal Obligations:</strong> If required to do so by law or in response to valid requests by public authorities (e.g., a court or government agency).</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 4. Budget vs Final Price -->
+            <!-- 4. Data Security -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">04</span>
-                    <h2 class="section-title">Bajeti dhidi ya Bei ya Mwisho ya Huduma</h2>
+                    <h2 class="section-title">Data Security</h2>
                 </div>
                 <div class="policy-content">
-                    <ul>
-                        <li>Malipo ya awali yanawakilisha kiasi cha bajeti, siyo lazima iwe bei ya mwisho.</li>
-                        <li>Ikiwa bei ya mwisho iliyokubaliwa iko ndani ya bajeti, malipo yanaendelea kama kawaida.</li>
-                        <li>Ikiwa bei ya mwisho inazidi bajeti, mteja lazima aidhinishe na kulipa kiasi cha ziada kabla
-                            ya kukamilika.</li>
-                        <li>Ikiwa bei ya mwisho ni ndogo kuliko bajeti, kiasi kilichokubaliwa tu kitatolewa, na salio
-                            lolote linaweza kurudishwa au kushughulikiwa kulingana na sheria za mfumo.</li>
-                    </ul>
+                    <p>Tendapoa takes reasonable measures to help protect information about you from loss, theft, misuse, and unauthorized access, disclosure, alteration, and destruction.</p>
+                    <p>However, no internet or electronic storage system is 100% secure. Therefore, we cannot guarantee the absolute security of your personal data.</p>
                 </div>
             </div>
 
-            <!-- 5. Completion Code -->
+            <!-- 5. Your Rights and Choices -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">05</span>
-                    <h2 class="section-title">Uthibitisho wa Kukamilika (Completion Code)</h2>
+                    <h2 class="section-title">Your Rights and Choices</h2>
                 </div>
                 <div class="policy-content">
                     <ul>
-                        <li>Baada ya kukubali kazi, Tendapoa inazalisha namba maalum ya kukamilisha (completion code)
-                            kwa ajili ya huduma hiyo.</li>
-                        <li>Namba hiyo inatolewa kwa mteja kupitia programu (app).</li>
-                        <li>Mteja lazima ampe mtoa huduma namba hiyo tu baada ya kuridhika na huduma iliyotolewa.</li>
-                        <li>Mtoa huduma lazima aingize namba sahihi ya kukamilisha kwenye mfumo.</li>
+                        <li><strong>Account Information:</strong> You may update or correct your account information at any time by logging into your account settings.</li>
+                        <li><strong>Account Deletion:</strong> You have the right to request the deletion of your account and personal data, subject to any outstanding payments or legal obligations.</li>
+                        <li><strong>Notifications:</strong> You may opt-out of receiving promotional communications from us by following the instructions in those communications. You will still receive non-promotional messages, such as those about your account or ongoing services.</li>
                     </ul>
                 </div>
             </div>
 
-            <!-- 6. Release of Funds -->
+            <!-- 6. Children's Privacy -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">06</span>
-                    <h2 class="section-title">Kuachilia Fedha kwa Mtoa Huduma</h2>
+                    <h2 class="section-title">Children's Privacy</h2>
                 </div>
                 <div class="policy-content">
-                    <p>Mara baada ya namba sahihi ya kukamilisha kuwasilishwa:</p>
-                    <ul>
-                        <li>Kazi inawekwa alama kuwa imekamilika.</li>
-                        <li>Kiasi kinacholipwa (chini ya kamisheni inayotumika) kinawekwa kwenye pochi ya TendaPoa ya
-                            mtoa huduma.</li>
-                        <li>Hakuna fedha zitakazotolewa bila namba sahihi ya kukamilisha isipokuwa zitatuliwe kupitia
-                            mchakato wa migogoro.</li>
-                    </ul>
+                    <p>Our Platform is intended for use by individuals who are at least 18 years old. We do not knowingly collect personal information from children under 18. If we become aware that we have collected personal data from a child under 18, we will take steps to delete that information.</p>
                 </div>
             </div>
 
-            <!-- 7. Provider Commission -->
+            <!-- 7. Changes to this Privacy Policy -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">07</span>
-                    <h2 class="section-title">Kamisheni ya Mtoa Huduma</h2>
+                    <h2 class="section-title">Changes to this Privacy Policy</h2>
                 </div>
                 <div class="policy-content">
-                    <ul>
-                        <li>Tendapoa inatoza kamisheni ya 10% kwa jumla ya thamani ya kila huduma iliyokamilika kwa
-                            mafanikio.</li>
-                        <li>Kamisheni inakatwa moja kwa moja wakati wa kukamilisha kazi.</li>
-                        <li>Kiasi kinachobaki kinawekwa kwenye pochi ya mtoa huduma.</li>
-                        <li>Kamisheni inatumika tu kwa huduma zilizohifadhiwa na kukamilika kupitia Tendapoa.</li>
-                    </ul>
+                    <p>Tendapoa may update this Privacy Policy from time to time.</p>
+                    <p>If we make significant changes, we will notify you by revising the date at the top of the policy and, depending on the specific changes, we may provide you with additional notice (such as adding a statement to our website's homepage or sending you a notification).</p>
+                    <p>We encourage you to review the Privacy Policy whenever you access the Platform to stay informed about our information practices.</p>
                 </div>
             </div>
 
-            <!-- 8. Provider Wallet -->
+            <!-- 8. Contact Information -->
             <div class="policy-section">
                 <div class="section-header">
                     <span class="section-number">08</span>
-                    <h2 class="section-title">Pochi ya Mtoa Huduma (Wallet)</h2>
+                    <h2 class="section-title">Contact Information</h2>
                 </div>
                 <div class="policy-content">
-                    <ul>
-                        <li>Watoa huduma wanapokea mapato yao kwenye Pochi yao ya Tendapoa.</li>
-                        <li>Salio la pochi linaonyesha mapato halisi baada ya kamisheni.</li>
-                        <li>Fedha zinabaki kwenye pochi hadi uondoaji uanzishwe.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- 9. Withdrawals -->
-            <div class="policy-section">
-                <div class="section-header">
-                    <span class="section-number">09</span>
-                    <h2 class="section-title">Uondoaji wa Fedha (Withdrawals)</h2>
-                </div>
-                <div class="policy-content">
-                    <p>Watoa huduma wanaweza kutoa fedha kulingana na sheria zifuatazo:</p>
-                    <ul>
-                        <li>Kiasi cha chini cha kutoa: TZS 5,000</li>
-                        <li>Ada ya kutoa: TZS 500 kwa kila muamala (ada ya kudumu)</li>
-                        <li>Ada za kutoa zinakatwa moja kwa moja wakati wa kutoa.</li>
-                        <li>Uondoaji chini ya kiasi cha chini hauruhusiwi.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- 10. Payment Processing -->
-            <div class="policy-section">
-                <div class="section-header">
-                    <span class="section-number">10</span>
-                    <h2 class="section-title">Njia za Malipo na Uchakataji</h2>
-                </div>
-                <div class="policy-content">
-                    <ul>
-                        <li>Malipo na uondoaji huchakatwa kupitia washirika wa pesa za simu au benki wanaotumika.</li>
-                        <li>Muda wa kuchakata unaweza kutofautiana kulingana na watoa huduma wengine.</li>
-                        <li>Tendapoa haiwajibiki kwa ucheleweshaji unaosababishwa na mifumo ya malipo ya nje.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- 11. Failed Withdrawals -->
-            <div class="policy-section">
-                <div class="section-header">
-                    <span class="section-number">11</span>
-                    <h2 class="section-title">Uondoaji Uliofeli</h2>
-                </div>
-                <div class="policy-content">
-                    <ul>
-                        <li>Ikiwa uondoaji utafeli kutokana na maelezo yasiyo sahihi au makosa ya mfumo:</li>
-                        <li>Fedha zitarudishwa kwenye pochi ya mtoa huduma baada ya uthibitisho.</li>
-                        <li>Ada za kutoa zinaweza bado kutumika kulingana na sheria za mtoa huduma wa malipo.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- 12. Customer Responsibilities -->
-            <div class="policy-section">
-                <div class="section-header">
-                    <span class="section-number">12</span>
-                    <h2 class="section-title">Wajibu wa Mteja</h2>
-                </div>
-                <div class="policy-content">
-                    <p>Wateja wanawajibika kwa:</p>
-                    <ul>
-                        <li>Kutoa maelezo sahihi ya kazi na bajeti.</li>
-                        <li>Kutunza namba ya kukamilisha (completion code).</li>
-                        <li>Kutoa namba ya kukamilisha tu baada ya kuridhika na huduma.</li>
-                        <li>Kushiriki namba ya kukamilisha kabla ya huduma kukamilika ni kwa hatari ya mteja mwenyewe.
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- 13. Disputes -->
-            <div class="policy-section">
-                <div class="section-header">
-                    <span class="section-number">13</span>
-                    <h2 class="section-title">Migogoro na Vighairi</h2>
-                </div>
-                <div class="policy-content">
-                    <ul>
-                        <li>Katika hali ya migogoro au kushindwa kutoa namba ya kukamilisha:</li>
-                        <li>Tendapoa inaweza kushikilia fedha kwa muda.</li>
-                        <li>Pande zote mbili zinaweza kuhitajika kuwasilisha ushahidi.</li>
-                        <li>Tendapoa inaweza kukamilisha kazi kikamilifu na kutoa fedha pale inapothibitishwa.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <!-- 14. Transparency -->
-            <div class="policy-section">
-                <div class="section-header">
-                    <span class="section-number">14</span>
-                    <h2 class="section-title">Uwazi na Mabadiliko ya Ada</h2>
-                </div>
-                <div class="policy-content">
-                    <ul>
-                        <li>Tendapoa imejitolea kwa bei za uwazi.</li>
-                        <li>Ada zote zinazotumika zinaonyeshwa kabla ya uthibitisho.</li>
-                        <li>Tendapoa inahifadhi haki ya kurekebisha ada kwa kutoa taarifa mapema.</li>
-                        <li>Kuendelea kutumia mfumo kunamaanisha kukubali masharti yaliyosasishwa.</li>
-                    </ul>
+                    <p>If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at:</p>
+                    <p><strong>Tendapoa Support</strong><br>
+                        📧 Email: support@tendapoa.com<br>
+                        📞 Phone: +255 626 957 138</p>
                 </div>
             </div>
 
@@ -567,10 +479,9 @@
                     <a href="/#home">Nyumbani</a>
                     <a href="/#services">Huduma</a>
                     <a href="/#about">Kuhusu</a>
-                    <a href="{{ route('policy.fees-payments') }}" style="color: white; font-weight: 600;">Sera ya Malipo
-                        & Ada</a>
+                    <a href="{{ route('policy.fees-payments') }}">Sera ya Malipo & Ada</a>
                     <a href="{{ route('policy.terms') }}">Terms & Conditions</a>
-                    <a href="{{ route('policy.privacy') }}">Privacy Policy</a>
+                    <a href="{{ route('policy.privacy') }}" style="color: white; font-weight: 600;">Privacy Policy</a>
                     <a href="{{ route('register') }}">Pata Huduma</a>
                 </div>
             </div>
