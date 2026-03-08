@@ -320,7 +320,7 @@
     <div class="page-header">
         <div class="container">
             <h1 class="page-title">TENDAPOA – PRIVACY POLICY</h1>
-            <p class="page-subtitle">Last Update 8 March 2026</p>
+            <p class="page-subtitle">Last Update 9 March 2026</p>
         </div>
     </div>
 
@@ -350,7 +350,13 @@
                         </ul>
                     </div>
                     <div class="subsection">
-                        <h3>1.2 Usage and Technical Data</h3>
+                        <h3>1.2 Location Data</h3>
+                        <ul>
+                            <li><strong>Location Data:</strong> We collect and process your precise or approximate location information from your mobile device or browser. This is essential for our app to function, allowing customers to find nearby service providers and enabling providers to navigate to job locations. You can enable or disable location tracking at any time through your device settings.</li>
+                        </ul>
+                    </div>
+                    <div class="subsection">
+                        <h3>1.3 Usage and Technical Data</h3>
                         <ul>
                             <li>Device information (e.g., hardware model, operating system).</li>
                             <li>Log information (e.g., IP address, access times, browser type).</li>
@@ -369,7 +375,8 @@
                 <div class="policy-content">
                     <p>We use the collected information for various purposes, including to:</p>
                     <ul>
-                        <li>Facilitate the matching of Service Providers and Customers.</li>
+                        <li>Facilitate the matching of Service Providers and Customers based on proximity using your location data.</li>
+                        <li>Provide accurate navigation, estimation of arrival times, and location-based coordination for services.</li>
                         <li>Process payments, issue completion codes, and manage the escrow system securely.</li>
                         <li>Maintain and improve the safety, security, and performance of our Platform.</li>
                         <li>Provide user support, resolve disputes, and respond to your requests.</li>
