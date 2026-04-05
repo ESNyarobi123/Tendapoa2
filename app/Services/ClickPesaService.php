@@ -18,10 +18,11 @@ class ClickPesaService
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(config('services.clickpesa.base_url', 'https://api.clickpesa.com/third-parties'), '/');
-        $this->clientId = config('services.clickpesa.client_id', '');
-        $this->apiKey = config('services.clickpesa.api_key', '');
-        $this->checksumKey = config('services.clickpesa.checksum_key') ?: null;
+        $this->baseUrl = rtrim((string) config('services.clickpesa.base_url', 'https://api.clickpesa.com/third-parties'), '/');
+        $this->clientId = trim((string) config('services.clickpesa.client_id', ''));
+        $this->apiKey = trim((string) config('services.clickpesa.api_key', ''));
+        $ck = config('services.clickpesa.checksum_key');
+        $this->checksumKey = $ck !== null && $ck !== '' ? trim((string) $ck) : null;
     }
 
     // ─── TOKEN ───────────────────────────────────────────────────────────
@@ -32,27 +33,52 @@ class ClickPesaService
     public function getToken(): string
     {
         return Cache::remember('clickpesa_token', 3500, function () {
+            if ($this->clientId === '' || $this->apiKey === '') {
+                Log::error('ClickPesa: CLICKPESA_CLIENT_ID / CLICKPESA_API_KEY are empty');
+
+                throw new \RuntimeException(
+                    'Malipo ya ClickPesa hayajapangwa kwenye seva: weka CLICKPESA_CLIENT_ID na CLICKPESA_API_KEY kwenye .env, kisha endesha `php artisan config:clear` (na uwe usiache nafasi za ziada mbele/yuma ya thamani).'
+                );
+            }
+
             $resp = Http::withHeaders([
                 'client-id' => $this->clientId,
                 'api-key' => $this->apiKey,
-            ])->post($this->baseUrl.'/generate-token');
+                'Accept' => 'application/json',
+            ])->acceptJson()->post($this->baseUrl.'/generate-token');
 
-            if ($resp->successful() && $resp->json('token')) {
-                // ClickPesa returns "Bearer eyJ..." — strip the prefix so
-                // Http::withToken() can add it cleanly.
-                $raw = $resp->json('token');
+            $token = $resp->json('token');
+            if ($resp->successful() && is_string($token) && $token !== '') {
+                $raw = $token;
 
                 return str_starts_with($raw, 'Bearer ')
                     ? substr($raw, 7)
                     : $raw;
             }
 
+            $apiMessage = $resp->json('message');
+            $apiMessage = is_string($apiMessage) ? $apiMessage : null;
+
             Log::error('ClickPesa token generation failed', [
                 'status' => $resp->status(),
                 'body' => $resp->body(),
             ]);
 
-            throw new \RuntimeException('ClickPesa: imeshindikana kupata token — '.$resp->body());
+            if ($resp->status() === 401 || ($apiMessage !== null && strcasecmp($apiMessage, 'Unauthorized') === 0)) {
+                throw new \RuntimeException(
+                    'ClickPesa: haikuweza kuingia (Unauthorized). Hakikisha CLICKPESA_CLIENT_ID na CLICKPESA_API_KEY ni sahihi (Dashboard → Developers), URL ni `https://api.clickpesa.com/third-parties` isipokuwa ClickPesa wamekupa nyingine, kisha `php artisan config:clear` na jaribu tena.'
+                );
+            }
+
+            if ($resp->status() === 403) {
+                throw new \RuntimeException(
+                    'ClickPesa: '.($apiMessage ?? 'API key si sahihi au imekwisha muda. Tengeneza API key mpya kwenye dashboard ya ClickPesa na usasishe .env.')
+                );
+            }
+
+            throw new \RuntimeException(
+                'ClickPesa: imeshindikana kupata token — '.($apiMessage ?: $resp->body())
+            );
         });
     }
 
