@@ -1,822 +1,639 @@
 @extends('layouts.app')
 @section('title', 'Chapisha Kazi')
 
+@php
+  $categories = $categories ?? \App\Models\Category::all();
+  $errStep = 1;
+  if ($errors->any()) {
+    if ($errors->has('lat') || $errors->has('lng')) {
+      $errStep = 3;
+    } elseif ($errors->has('price') || $errors->has('image')) {
+      $errStep = 2;
+    } elseif ($errors->has('title') || $errors->has('category_id')) {
+      $errStep = 1;
+    }
+  }
+@endphp
+
 @section('content')
-<style>
-  /* ====== Modern Job Creation Form ====== */
-  :root {
-    --primary: #3b82f6;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --dark: #1f2937;
-    --light: #f8fafc;
-    --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .create-job-page {
-    background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
-    min-height: 100vh;
-    display: flex;
-    position: relative;
-  }
-
-  .main-content {
-    flex: 1;
-    margin-left: 280px;
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 24px;
-    min-height: 100vh;
-  }
-
-  .sidebar.collapsed ~ .main-content {
-    margin-left: 80px;
-  }
-
-  @media (max-width: 1024px) {
-    .main-content {
-      margin-left: 0;
-    }
-  }
-
-  .page-container {
-    max-width: 800px;
-    margin: 0 auto;
-  }
-
-  /* Header */
-  .page-header {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    margin-bottom: 24px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
-    text-align: center;
-  }
-
-  .page-title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--dark);
-    margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .page-subtitle {
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    margin: 0;
-  }
-
-  /* Form */
-  .form-container {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  .form-group {
-    margin-bottom: 24px;
-  }
-
-  .form-label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .form-input {
-    width: 100%;
-    padding: 16px 20px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background: white;
-  }
-
-  .form-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .form-select {
-    width: 100%;
-    padding: 16px 20px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 1rem;
-    background: white;
-    cursor: pointer;
-    transition: all 0.3s ease;
-  }
-
-  .form-select:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .form-textarea {
-    width: 100%;
-    padding: 16px 20px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 1rem;
-    min-height: 120px;
-    resize: vertical;
-    transition: all 0.3s ease;
-  }
-
-  .form-textarea:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  /* Map Section */
-  .map-section {
-    background: white;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    margin: 24px 0;
-  }
-
-  .map-container {
-    height: 320px;
-    position: relative;
-  }
-
-  .map-controls {
-    padding: 20px;
-    background: #f8fafc;
-    border-top: 1px solid var(--border);
-  }
-
-  .map-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .map-info-icon {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1.2rem;
-  }
-
-  .map-info-text {
-    flex: 1;
-  }
-
-  .map-info-text h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin: 0 0 4px 0;
-  }
-
-  .map-info-text p {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    margin: 0;
-  }
-
-  .map-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
-  }
-
-  .btn-success {
-    background: linear-gradient(135deg, var(--success), #059669);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);
-  }
-
-  .btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.6);
-  }
-
-  .btn-outline {
-    background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-  }
-
-  .btn-outline:hover {
-    background: var(--primary);
-    color: white;
-  }
-
-  /* Error Messages */
-  .alert-error {
-    background: #fef2f2;
-    border: 2px solid #fecaca;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 24px;
-    color: #dc2626;
-  }
-
-  .alert-error b {
-    font-weight: 700;
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .alert-error ul {
-    margin: 0;
-    padding-left: 20px;
-  }
-
-  .alert-error li {
-    margin-bottom: 4px;
-  }
-
-  /* Form Actions */
-  .form-actions {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border);
-  }
-
-  /* Responsive */
-  @media (max-width: 768px) {
-    .create-job-page {
-      padding: 16px;
-    }
-    
-    .page-header {
-      padding: 24px;
-    }
-    
-    .page-title {
-      font-size: 2rem;
-    }
-    
-    .form-container {
-      padding: 24px;
-    }
-    
-    .map-actions {
-      flex-direction: column;
-    }
-    
-    .form-actions {
-      flex-direction: column;
-    }
-  }
-</style>
-
-<div class="create-job-page">
+<div class="flex min-h-screen bg-slate-100/90">
   @include('components.user-sidebar')
-  
-  <main class="main-content">
-    <div class="page-container">
-    
-    <!-- Page Header -->
-    <div class="page-header">
-      <h1 class="page-title">📝 Chapisha Kazi</h1>
-      <p class="page-subtitle">Pata mfanyakazi wa kuegemea kwa kazi yako ya usafi</p>
-    </div>
 
-    <!-- Form -->
-    <div class="form-container">
-      @if($errors->any())
-        <div class="alert-error">
-          <b>⚠️ Angalia makosa:</b>
-          <ul>
-            @foreach($errors->all() as $e)
-              <li>{{ $e }}</li>
-            @endforeach
-          </ul>
+  <main class="tp-main w-full min-w-0 p-4 pt-16 sm:p-6 lg:pt-6">
+    <div class="mx-auto w-full max-w-[min(100%,1400px)] space-y-5 pb-10">
+
+      <header class="text-center sm:text-left">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-700/80">Chapisha kazi</p>
+        <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">Unda tangazo lako</h1>
+        <p class="mt-2 max-w-2xl text-[12px] leading-relaxed text-slate-600">Hatua 4 za fomu hapa. <strong class="text-slate-800">Kuchapisha ni bure.</strong> Baada ya kuchagua mfanyakazi utaombwa <strong class="text-slate-800">kulipa escrow</strong> kwa wallet au simu — ongeza salio mapema ikiwa unahitaji.</p>
+      </header>
+
+      <div class="grid gap-6 lg:grid-cols-12 lg:items-start">
+        <div class="min-w-0 space-y-6 lg:col-span-7 xl:col-span-8">
+
+      {{-- Stepper --}}
+      <nav class="mb-0" aria-label="Hatua">
+        <ol class="grid grid-cols-4 gap-1.5 sm:gap-3" id="stepper">
+          @foreach ([
+            ['n' => 1, 'label' => 'Maelezo', 'emoji' => '📋'],
+            ['n' => 2, 'label' => 'Bei', 'emoji' => '💰'],
+            ['n' => 3, 'label' => 'Eneo', 'emoji' => '📍'],
+            ['n' => 4, 'label' => 'Thibitisha', 'emoji' => '✓'],
+          ] as $s)
+            <li>
+              <button type="button" data-goto-step="{{ $s['n'] }}" class="step-pill group flex w-full flex-col items-center gap-1 rounded-xl border border-slate-200 bg-white px-1 py-2.5 text-center shadow-sm transition hover:border-brand-200 sm:flex-row sm:justify-center sm:gap-2 sm:px-2" data-step="{{ $s['n'] }}">
+                <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-[15px] leading-none transition group-[.is-active]:bg-brand-600 group-[.is-active]:text-white group-[.is-done]:bg-emerald-500 group-[.is-done]:text-white">{{ $s['emoji'] }}</span>
+                <span class="text-[9px] font-bold uppercase leading-tight tracking-wide text-slate-500 group-[.is-active]:text-brand-800 sm:text-[10px]">{{ $s['label'] }}</span>
+              </button>
+            </li>
+          @endforeach
+        </ol>
+        <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <div id="stepProgress" class="h-full rounded-full bg-gradient-to-r from-brand-600 to-teal-500 transition-all duration-500 ease-out" style="width: 25%"></div>
         </div>
-      @endif
+      </nav>
 
-      <!-- Worker Check Notification -->
-      <div id="workerCheckNotification" style="display: none; padding: 16px; border-radius: 12px; margin-bottom: 24px; border: 1px solid transparent;">
-        <div style="display: flex; gap: 12px; align-items: flex-start;">
-          <div id="workerCheckNotifIcon" style="font-size: 24px;"></div>
-          <div>
-            <h4 id="workerCheckNotifTitle" style="margin: 0 0 4px 0; font-weight: 700; font-size: 1rem;"></h4>
-            <p id="workerCheckNotifMessage" style="margin: 0; font-size: 0.875rem;"></p>
+      <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg ring-1 ring-slate-100/80">
+        @if($errors->any())
+          <div class="border-b border-red-100 bg-red-50/90 px-5 py-4">
+            <p class="text-[12px] font-bold text-red-800">Tafadhali angalia makosa</p>
+            <ul class="mt-2 list-inside list-disc text-[12px] text-red-700">
+              @foreach($errors->all() as $e)
+                <li>{{ $e }}</li>
+              @endforeach
+            </ul>
+          </div>
+        @endif
+
+        <div id="workerCheckNotification" class="hidden border-b border-slate-100 px-5 py-4">
+          <div class="flex gap-3">
+            <div id="workerCheckNotifIcon" class="text-2xl"></div>
+            <div>
+              <h4 id="workerCheckNotifTitle" class="text-[13px] font-bold text-slate-900"></h4>
+              <p id="workerCheckNotifMessage" class="mt-0.5 text-[12px] text-slate-600"></p>
+            </div>
           </div>
         </div>
+
+        <form method="post" action="{{ route('jobs.store') }}" enctype="multipart/form-data" id="jobCreateForm" class="p-5 sm:p-8">
+          @csrf
+
+          {{-- Step 1 --}}
+          <div class="job-step space-y-5" data-step-panel="1">
+            <div class="rounded-xl bg-gradient-to-br from-brand-50 to-teal-50/40 px-4 py-3 ring-1 ring-brand-100/80">
+              <p class="text-[12px] font-semibold text-brand-900">Hatua 1 — Eleza kazi</p>
+              <p class="mt-0.5 text-[11px] text-brand-800/80">Kichwa kinafaa kiwe wazi ili wafanyakazi waelewe haraka.</p>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="title">Kichwa cha kazi</label>
+              <input type="text" id="title" name="title" maxlength="120" required
+                class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-[15px] font-medium text-slate-900 shadow-inner transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                placeholder="Mf: Usafi wa sebuleni na vyoo"
+                value="{{ old('title') }}">
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="category_id">Aina ya huduma</label>
+              <select name="category_id" id="category_id" required
+                class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
+                <option value="">Chagua kategoria</option>
+                @foreach($categories as $c)
+                  <option value="{{ $c->id }}" @selected(old('category_id') == $c->id)>{{ $c->name }}</option>
+                @endforeach
+              </select>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="description">Maelezo ya ziada <span class="font-normal normal-case text-slate-400">(hiari)</span></label>
+              <textarea name="description" id="description" rows="4"
+                class="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-[14px] text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                placeholder="Muda, ukubwa wa nyumba, vifaa mteja atatoa, n.k.">{{ old('description') }}</textarea>
+            </div>
+          </div>
+
+          {{-- Step 2 --}}
+          <div class="job-step hidden space-y-5" data-step-panel="2">
+            <div class="rounded-xl bg-gradient-to-br from-violet-50 to-indigo-50/30 px-4 py-3 ring-1 ring-violet-100">
+              <p class="text-[12px] font-semibold text-violet-900">Hatua 2 — Bei na picha</p>
+              <p class="mt-0.5 text-[11px] text-violet-800/80">Bei ya chini TZS 1,000. Picha inasaidia kupata maombi bora.</p>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="price">Bei (TZS)</label>
+              <input type="number" id="price" name="price" min="1000" step="100" required
+                class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-[15px] font-semibold tabular-nums text-slate-900 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                placeholder="Mf. 25000"
+                value="{{ old('price') }}">
+            </div>
+            <div class="rounded-xl border-2 border-emerald-200/80 bg-gradient-to-r from-emerald-50 to-teal-50/50 p-4">
+              <div class="flex gap-3">
+                <span class="text-2xl">🆓</span>
+                <div>
+                  <p class="text-[13px] font-bold text-emerald-900">Kuchapisha ni bure</p>
+                  <p class="mt-1 text-[12px] leading-relaxed text-emerald-800/90">Kazi itaonekana mara moja. Malipo ya escrow ni baada ya kuchagua mfanyakazi.</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600">Picha ya kazi <span class="font-normal normal-case text-slate-400">(hiari)</span></label>
+              <div class="cursor-pointer rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/80 px-4 py-8 text-center transition hover:border-brand-300 hover:bg-brand-50/30" id="image-upload-area" onclick="document.getElementById('image').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                <input type="file" id="image" name="image" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                <div id="image-upload-placeholder">
+                  <div class="text-4xl">📷</div>
+                  <p class="mt-2 text-[13px] font-semibold text-slate-700">Bofya au vuta picha hapa</p>
+                  <p class="mt-1 text-[11px] text-slate-500">PNG, JPG, WEBP · max 5MB</p>
+                  <button type="button" onclick="event.stopPropagation(); document.getElementById('image').click();" class="mt-4 inline-flex rounded-lg border border-brand-200 bg-white px-4 py-2 text-[12px] font-bold text-brand-800 shadow-sm hover:bg-brand-50">Chagua picha</button>
+                </div>
+                <div id="image-preview" class="hidden">
+                  <img id="image-preview-img" src="" alt="" class="mx-auto max-h-56 rounded-xl object-contain shadow-md">
+                  <div class="mt-4 flex flex-wrap justify-center gap-2">
+                    <button type="button" onclick="event.stopPropagation(); document.getElementById('image').click();" class="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">Badilisha</button>
+                    <button type="button" onclick="event.stopPropagation(); removeImage();" class="rounded-lg border border-red-200 px-3 py-1.5 text-[11px] font-semibold text-red-700 hover:bg-red-50">Ondoa</button>
+                  </div>
+                </div>
+              </div>
+              @error('image')
+                <p class="mt-2 text-[12px] font-medium text-red-600">{{ $message }}</p>
+              @enderror
+            </div>
+          </div>
+
+          {{-- Step 3 --}}
+          <div class="job-step hidden space-y-5" data-step-panel="3">
+            <div class="rounded-xl bg-gradient-to-br from-sky-50 to-blue-50/40 px-4 py-3 ring-1 ring-sky-100">
+              <p class="text-[12px] font-semibold text-sky-900">Hatua 3 — Eneo la kazi</p>
+              <p class="mt-0.5 text-[11px] text-sky-800/80">Weka pini kwenye ramani au tumia GPS. Hii ni lazima.</p>
+            </div>
+            <div class="overflow-hidden rounded-xl border border-slate-200 shadow-inner">
+              <div class="relative h-64 w-full sm:h-72" id="mapWrap">
+                <div id="map" class="absolute inset-0 z-[1] h-full w-full bg-slate-100"></div>
+              </div>
+              <div class="space-y-3 border-t border-slate-100 bg-slate-50/80 p-4">
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" id="geo" class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-[12px] font-bold text-white shadow-md shadow-emerald-600/25 hover:bg-emerald-700">
+                    <span>🎯</span> Tumia GPS
+                  </button>
+                </div>
+                <div>
+                  <label class="mb-1 block text-[11px] font-bold uppercase text-slate-500" for="address_text">Maelezo ya anwani (hiari)</label>
+                  <input type="text" name="address_text" id="address_text"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[14px] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    placeholder="Mf. Mtaa, jengo, dirisha"
+                    value="{{ old('address_text') }}">
+                </div>
+                <div id="location-status" class="hidden rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] font-medium text-red-800">
+                  Lazima uweke eneo la kazi kwenye ramani au kwa GPS.
+                </div>
+              </div>
+            </div>
+            <input type="hidden" name="lat" id="lat" value="{{ old('lat') }}">
+            <input type="hidden" name="lng" id="lng" value="{{ old('lng') }}">
+          </div>
+
+          {{-- Step 4 --}}
+          <div class="job-step hidden space-y-5" data-step-panel="4">
+            <div class="rounded-xl bg-gradient-to-br from-amber-50 to-orange-50/30 px-4 py-3 ring-1 ring-amber-100">
+              <p class="text-[12px] font-semibold text-amber-900">Hatua 4 — Hakiki na chapisha</p>
+              <p class="mt-0.5 text-[11px] text-amber-800/80">Hakikisha maelezo ni sahihi. Malipo ya escrow hayatahitajika moja kwa moja hapa.</p>
+            </div>
+            <dl class="divide-y divide-slate-100 rounded-xl border border-slate-200 bg-slate-50/50">
+              <div class="flex justify-between gap-4 px-4 py-3">
+                <dt class="text-[12px] font-medium text-slate-500">Kichwa</dt>
+                <dd class="max-w-[60%] text-right text-[13px] font-semibold text-slate-900" id="sumTitle">—</dd>
+              </div>
+              <div class="flex justify-between gap-4 px-4 py-3">
+                <dt class="text-[12px] font-medium text-slate-500">Huduma</dt>
+                <dd class="text-right text-[13px] font-semibold text-slate-900" id="sumCategory">—</dd>
+              </div>
+              <div class="flex justify-between gap-4 px-4 py-3">
+                <dt class="text-[12px] font-medium text-slate-500">Bei</dt>
+                <dd class="text-right text-[13px] font-bold text-brand-700 tabular-nums" id="sumPrice">—</dd>
+              </div>
+              <div class="flex justify-between gap-4 px-4 py-3">
+                <dt class="text-[12px] font-medium text-slate-500">Picha</dt>
+                <dd class="text-right text-[13px] font-semibold text-slate-900" id="sumImage">—</dd>
+              </div>
+              <div class="flex justify-between gap-4 px-4 py-3">
+                <dt class="text-[12px] font-medium text-slate-500">Eneo</dt>
+                <dd class="text-right text-[12px] font-medium text-slate-800" id="sumLocation">—</dd>
+              </div>
+            </dl>
+            <p class="text-center text-[11px] text-slate-500">Ukibofya “Chapisha kazi”, kazi itachapishwa <strong class="text-slate-700">bure</strong> na kuonekana kwa wafanyakazi. Malipo ya escrow yatahitajika tu baada ya kumchagua mfanyakazi.</p>
+          </div>
+
+          <div class="mt-8 flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+            <a href="{{ route('dashboard') }}" class="inline-flex justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-center text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50">Rudi dashboard</a>
+            <div class="flex flex-1 flex-wrap justify-end gap-2 sm:flex-none">
+              <button type="button" id="btnPrev" class="hidden rounded-xl border border-slate-200 bg-white px-5 py-3 text-[13px] font-bold text-slate-700 shadow-sm hover:bg-slate-50">← Nyuma</button>
+              <button type="button" id="btnNext" class="rounded-xl bg-gradient-to-r from-brand-600 to-teal-600 px-6 py-3 text-[13px] font-bold text-white shadow-lg shadow-brand-600/25 hover:from-brand-700 hover:to-teal-700">Endelea →</button>
+              <button type="submit" id="btnSubmit" class="hidden rounded-xl bg-gradient-to-r from-emerald-600 to-brand-600 px-6 py-3 text-[13px] font-bold text-white shadow-lg shadow-emerald-600/20 hover:from-emerald-700 hover:to-brand-700">🚀 Chapisha kazi</button>
+            </div>
+          </div>
+        </form>
       </div>
-
-      <form method="post" action="{{ route('jobs.store') }}" enctype="multipart/form-data">
-        @csrf
-
-        <!-- Job Title -->
-        <div class="form-group">
-          <label class="form-label" for="title">📋 Kichwa cha Kazi</label>
-          <input 
-            type="text" 
-            id="title"
-            name="title" 
-            class="form-input"
-            maxlength="120" 
-            placeholder="Mf: Usafi wa sebuleni & vyoo"
-            value="{{ old('title') }}"
-            required
-          >
         </div>
 
-        <!-- Category -->
-        <div class="form-group">
-          <label class="form-label" for="category_id">🏷️ Aina ya Huduma</label>
-          <select name="category_id" id="category_id" class="form-select" required>
-            <option value="">Chagua aina ya huduma</option>
-            @foreach(\App\Models\Category::all() as $c)
-              <option value="{{ $c->id }}" {{ old('category_id') == $c->id ? 'selected' : '' }}>
-                {{ $c->name }}
-              </option>
-            @endforeach
-          </select>
-        </div>
-
-        <!-- Price -->
-        <div class="form-group">
-          <label class="form-label" for="price">💰 Bei (TZS)</label>
-          <input 
-            type="number" 
-            id="price"
-            name="price" 
-            class="form-input"
-            min="500" 
-            step="100" 
-            placeholder="mf. 15000"
-            value="{{ old('price') }}"
-            required
-          >
-          <small style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px; display: block;">
-            Bei ya chini ni TZS 500. Bei bora hupata mfanyakazi wa kuegemea.
-          </small>
-        </div>
-
-        <!-- Phone -->
-        <div class="form-group">
-          <label class="form-label" for="phone">📱 Namba ya Malipo</label>
-          <input 
-            type="tel" 
-            id="phone"
-            name="phone" 
-            class="form-input"
-            placeholder="07xxxxxxxx au 2557xxxxxxxx"
-            value="{{ old('phone') }}"
-            required
-          >
-          <small style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px; display: block;">
-            Namba hii itatumika kwa malipo ya escrow.
-          </small>
-        </div>
-
-        <!-- Image Upload -->
-        <div class="form-group">
-          <label class="form-label" for="image">📷 Picha ya Kazi (Hiari)</label>
-          <div style="border: 2px dashed var(--border); border-radius: 12px; padding: 24px; text-align: center; background: #f9fafb; transition: all 0.3s ease; cursor: pointer;" id="image-upload-area" onclick="document.getElementById('image').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
-            <input 
-              type="file" 
-              id="image"
-              name="image" 
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              style="display: none;"
-              onchange="handleImageSelect(event)"
-            >
-            <div id="image-upload-placeholder">
-              <div style="font-size: 48px; margin-bottom: 12px;">📷</div>
-              <p style="color: var(--text-muted); margin: 0 0 8px 0; font-weight: 600;">Bofya au vuta picha hapa</p>
-              <p style="color: var(--text-muted); margin: 0; font-size: 0.875rem;">PNG, JPG, WEBP (max 5MB)</p>
-              <button type="button" onclick="document.getElementById('image').click()" class="btn btn-outline" style="margin-top: 16px;">
-                <span>📁</span>
-                Chagua Picha
-              </button>
-            </div>
-            <div id="image-preview" style="display: none;">
-              <img id="image-preview-img" src="" alt="Preview" style="max-width: 100%; max-height: 300px; border-radius: 12px; margin-bottom: 12px; box-shadow: var(--shadow);">
-              <div style="display: flex; gap: 8px; justify-content: center;">
-                <button type="button" onclick="document.getElementById('image').click()" class="btn btn-outline" style="font-size: 0.875rem; padding: 8px 16px;">
-                  <span>🔄</span>
-                  Badilisha
-                </button>
-                <button type="button" onclick="removeImage()" class="btn btn-outline" style="font-size: 0.875rem; padding: 8px 16px; color: var(--danger); border-color: var(--danger);">
-                  <span>🗑️</span>
-                  Ondoa
-                </button>
+        @php
+          $wCreate = $wallet ?? auth()->user()->ensureWallet();
+        @endphp
+        <aside class="min-w-0 lg:col-span-5 xl:col-span-4">
+          <div class="sticky top-20 space-y-4">
+            <section class="rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-teal-50/30 p-4 shadow-sm sm:p-5">
+              <h2 class="text-[13px] font-bold text-brand-900">Mtiririko kamili (mteja)</h2>
+              <ol class="mt-3 space-y-3 text-[11px] leading-relaxed text-slate-700">
+                <li class="flex gap-2.5">
+                  <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-600 text-[10px] font-bold text-white">1</span>
+                  <span><strong class="text-slate-900">Chapisha kazi</strong> — bure; kazi inakuwa <em>wazi</em> mara moja.</span>
+                </li>
+                <li class="flex gap-2.5">
+                  <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">2</span>
+                  <span><strong class="text-slate-900">Maombi</strong> — pitia na uchague mfanyakazi kwenye <a href="{{ route('my.applications') }}" class="font-semibold text-brand-700 underline decoration-brand-300 underline-offset-2">Maombi yangu</a>.</span>
+                </li>
+                <li class="flex gap-2.5">
+                  <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">3</span>
+                  <span><strong class="text-slate-900">Lipa escrow</strong> — ukurasa wa malipo: <strong>wallet</strong> (salio linalopatikana) au <strong>simu</strong> (USSD).</span>
+                </li>
+                <li class="flex gap-2.5">
+                  <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-bold text-slate-700">4</span>
+                  <span><strong class="text-slate-900">Kazi &amp; uhakiki</strong> — fedha zinabaki escrow hadi uthibitishe kukamilika.</span>
+                </li>
+              </ol>
+            </section>
+            <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <h2 class="text-[13px] font-bold text-slate-900">Wallet</h2>
+              <p class="mt-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500">Linalopatikana kulipa escrow</p>
+              <p class="mt-0.5 text-2xl font-extrabold tabular-nums text-emerald-700">{{ number_format($wCreate->available_balance) }} <span class="text-sm font-bold text-emerald-600/90">TZS</span></p>
+              @if((int) $wCreate->held_balance > 0)
+                <p class="mt-2 text-[11px] text-slate-500">Imeshikiliwa (escrow nyingine): <span class="font-semibold tabular-nums text-slate-700">{{ number_format($wCreate->held_balance) }} TZS</span></p>
+              @endif
+              <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+                <a href="{{ route('wallet.deposit') }}" class="inline-flex flex-1 items-center justify-center rounded-xl bg-brand-600 px-3 py-2.5 text-[12px] font-bold text-white shadow-sm hover:bg-brand-700">Weka pesa</a>
+                <a href="{{ route('withdraw.form') }}" class="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[12px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50">Toa pesa</a>
               </div>
-            </div>
+            </section>
+            <p class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[11px] leading-relaxed text-slate-600">Kiungo <strong class="text-slate-800">Lipia Escrow</strong> kipo kwenye menyu ikiwa kuna kazi zinazosubiri malipo.</p>
           </div>
-          <small style="color: var(--text-muted); font-size: 0.875rem; margin-top: 4px; display: block;">
-            Picha itapunguzwa kwa ukubwa unaofaa (max 1200px). Format: JPEG, PNG, au WEBP.
-          </small>
-          @error('image')
-            <div style="color: var(--danger); font-size: 0.875rem; margin-top: 4px; font-weight: 500;">{{ $message }}</div>
-          @enderror
-        </div>
-
-        <!-- Map Section -->
-        <div class="map-section">
-          <div class="map-container">
-            <div id="map" style="height: 100%; width: 100%;"></div>
-          </div>
-          <div class="map-controls">
-            <div class="map-info">
-              <div class="map-info-icon">📍</div>
-              <div class="map-info-text">
-                <h4>Eneo la Kazi (Lazima)</h4>
-                <p>Weka pini eneo la kazi au tumia GPS. Hii ni lazima ili wafanyakazi waweze kuona umbali wa kazi.</p>
-              </div>
-            </div>
-            <div class="map-actions">
-              <button type="button" id="geo" class="btn btn-success">
-                <span>🎯</span>
-                Tumia GPS
-              </button>
-              <input 
-                type="text" 
-                name="address_text" 
-                class="form-input"
-                placeholder="Maelezo ya eneo (hiari)"
-                value="{{ old('address_text') }}"
-                style="flex: 1; margin: 0;"
-              >
-            </div>
-            <div id="location-status" style="margin-top: 12px; padding: 12px; border-radius: 8px; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; display: none;">
-              <strong>⚠️ Lazima uweke eneo la kazi!</strong> Wafanyakazi wataweza kuona umbali wa kazi kutoka kwenye eneo lako.
-            </div>
-          </div>
-        </div>
-
-        <!-- Hidden inputs for coordinates -->
-        <input type="hidden" name="lat" id="lat" value="{{ old('lat') }}">
-        <input type="hidden" name="lng" id="lng" value="{{ old('lng') }}">
-
-        <!-- Form Actions -->
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary">
-            <span>🚀</span>
-            Endelea → Checkout
-          </button>
-          <a href="{{ route('dashboard') }}" class="btn btn-outline">
-            <span>↩️</span>
-            Rudi Dashboard
-          </a>
-        </div>
-      </form>
+        </aside>
+      </div>
     </div>
+  </main>
+</div>
 
+{{-- Worker modal --}}
+<div class="fixed inset-0 z-[1050] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm" id="workerCheckModal" aria-hidden="true">
+  <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-200">
+    <div class="text-center">
+      <div id="workerCheckIcon" class="text-5xl">🔍</div>
+      <h3 id="workerCheckTitle" class="mt-3 text-lg font-bold text-slate-900">Inatafuta wafanyakazi...</h3>
+      <p id="workerCheckMessage" class="mt-2 text-[13px] text-slate-600">Tafadhali subiri.</p>
+    </div>
+    <div class="mt-6 flex flex-wrap justify-center gap-2">
+      <button type="button" id="btnCancelLocation" class="hidden rounded-xl border border-slate-200 px-4 py-2.5 text-[12px] font-bold text-slate-700 hover:bg-slate-50">Badilisha eneo</button>
+      <button type="button" id="btnConfirmLocation" class="hidden rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-bold text-white hover:bg-brand-700">Sawa, endelea</button>
+    </div>
   </div>
 </div>
 
-  <!-- Worker Check Modal -->
-  <div class="modal-overlay" id="workerCheckModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); z-index: 2000; align-items: center; justify-content: center;">
-    <div class="modal-content" style="background: white; border-radius: 20px; padding: 32px; width: 90%; max-width: 450px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);">
-      <div style="text-align: center; margin-bottom: 24px;">
-        <div id="workerCheckIcon" style="font-size: 48px; margin-bottom: 16px;">🔍</div>
-        <h3 id="workerCheckTitle" style="font-size: 1.5rem; font-weight: 700; color: #1f2937; margin: 0 0 8px 0;">Inatafuta Wafanyakazi...</h3>
-        <p id="workerCheckMessage" style="color: #6b7280; font-size: 1rem; margin: 0;">Tafadhali subiri wakati tunaangalia wafanyakazi walio karibu.</p>
-      </div>
-      
-      <div class="modal-footer" style="display: flex; gap: 12px; justify-content: center;">
-        <button type="button" id="btnCancelLocation" class="btn btn-outline" style="display: none;">Badilisha Eneo</button>
-        <button type="button" id="btnConfirmLocation" class="btn btn-primary" style="display: none;">Endelea Hivyo Hivyo</button>
-      </div>
-    </div>
-  </div>
-
 @push('scripts')
 <script>
-  // Initialize map
-  const map = L.map('map').setView([-6.7924, 39.2083], 12); // DSM default
-  
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
-
-  let marker;
+(function () {
+  const TOTAL = 4;
+  let currentStep = {{ (int) $errStep }};
+  let map = null;
+  let marker = null;
   let isLocationSet = false;
 
-  // Set marker on map click
-  function setMarker(lat, lng) {
-    if (marker) {
-      map.removeLayer(marker);
+  const form = document.getElementById('jobCreateForm');
+  const latInput = document.getElementById('lat');
+  const lngInput = document.getElementById('lng');
+
+  function syncLocationFlag() {
+    isLocationSet = !!(latInput.value && lngInput.value && !isNaN(parseFloat(latInput.value)) && !isNaN(parseFloat(lngInput.value)));
+  }
+  syncLocationFlag();
+
+  function updateStepperUI() {
+    document.querySelectorAll('.step-pill').forEach((btn) => {
+      const n = parseInt(btn.dataset.step, 10);
+      btn.classList.remove('is-active', 'is-done', 'ring-2', 'ring-brand-500', 'border-brand-200');
+      btn.classList.add('border-slate-200', 'bg-white');
+      if (n === currentStep) {
+        btn.classList.add('is-active', 'ring-2', 'ring-brand-500', 'border-brand-200');
+      } else if (n < currentStep) {
+        btn.classList.add('is-done');
+      }
+    });
+    const pct = (currentStep / TOTAL) * 100;
+    document.getElementById('stepProgress').style.width = pct + '%';
+
+    document.querySelectorAll('[data-step-panel]').forEach((panel) => {
+      const n = parseInt(panel.dataset.stepPanel, 10);
+      panel.classList.toggle('hidden', n !== currentStep);
+    });
+
+    document.getElementById('btnPrev').classList.toggle('hidden', currentStep <= 1);
+    document.getElementById('btnNext').classList.toggle('hidden', currentStep >= TOTAL);
+    document.getElementById('btnSubmit').classList.toggle('hidden', currentStep !== TOTAL);
+
+    if (currentStep === 3) {
+      setTimeout(initMap, 80);
     }
-    
+    if (currentStep === 4) {
+      fillSummary();
+    }
+  }
+
+  function initMap() {
+    const mapEl = document.getElementById('map');
+    if (!mapEl) return;
+    if (!map) {
+      map = L.map('map').setView([-6.7924, 39.2083], 12);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+      map.on('click', function (e) {
+        setMarker(e.latlng.lat, e.latlng.lng);
+      });
+      const olat = parseFloat(latInput.value);
+      const olng = parseFloat(lngInput.value);
+      if (!isNaN(olat) && !isNaN(olng)) {
+        setMarker(olat, olng);
+        map.setView([olat, olng], 14);
+      }
+      const geoBtn = document.getElementById('geo');
+      if (geoBtn) {
+        geoBtn.addEventListener('click', function () {
+          if (!navigator.geolocation) {
+            alert('GPS haijasaidiwa na kivinjari.');
+            return;
+          }
+          geoBtn.disabled = true;
+          geoBtn.innerHTML = '<span>⏳</span> Inasubiri...';
+          navigator.geolocation.getCurrentPosition(
+            function (position) {
+              const lat = position.coords.latitude;
+              const lng = position.coords.longitude;
+              setMarker(lat, lng);
+              map.setView([lat, lng], 15);
+              geoBtn.disabled = false;
+              geoBtn.innerHTML = '<span>🎯</span> Tumia GPS';
+            },
+            function () {
+              alert('GPS haijapatikana. Weka eneo kwa mkono kwenye ramani.');
+              geoBtn.disabled = false;
+              geoBtn.innerHTML = '<span>🎯</span> Tumia GPS';
+            }
+          );
+        });
+      }
+    } else {
+      setTimeout(function () {
+        map.invalidateSize();
+        const olat = parseFloat(latInput.value);
+        const olng = parseFloat(lngInput.value);
+        if (!isNaN(olat) && !isNaN(olng)) {
+          map.setView([olat, olng], map.getZoom());
+        }
+      }, 200);
+    }
+  }
+
+  function setMarker(lat, lng) {
+    if (!map) return;
+    if (marker) map.removeLayer(marker);
     marker = L.marker([lat, lng]).addTo(map);
-    document.getElementById('lat').value = lat;
-    document.getElementById('lng').value = lng;
-    isLocationSet = true;
-    
-    // Check for nearby workers
+    latInput.value = lat;
+    lngInput.value = lng;
+    syncLocationFlag();
+    document.getElementById('location-status').classList.add('hidden');
     checkNearbyWorkers(lat, lng);
   }
 
-  // Check nearby workers API
+  function fillSummary() {
+    const title = document.getElementById('title').value.trim() || '—';
+    const sel = document.getElementById('category_id');
+    const cat = sel.options[sel.selectedIndex]?.text?.trim() || '—';
+    const price = document.getElementById('price').value;
+    const priceFmt = price ? Number(price).toLocaleString('sw-TZ') + ' TZS' : '—';
+    const img = document.getElementById('image').files.length ? document.getElementById('image').files[0].name : 'Hakuna';
+    const addr = document.getElementById('address_text').value.trim();
+    const loc = isLocationSet
+      ? (addr ? addr + ' (ramani)' : 'Imewekwa kwenye ramani')
+      : 'Haijawekwa';
+    document.getElementById('sumTitle').textContent = title;
+    document.getElementById('sumCategory').textContent = cat;
+    document.getElementById('sumPrice').textContent = priceFmt;
+    document.getElementById('sumImage').textContent = img;
+    document.getElementById('sumLocation').textContent = loc;
+  }
+
+  function validateStep(step) {
+    if (step === 1) {
+      const t = document.getElementById('title').value.trim();
+      const c = document.getElementById('category_id').value;
+      if (!t) { alert('Andika kichwa cha kazi.'); document.getElementById('title').focus(); return false; }
+      if (!c) { alert('Chagua aina ya huduma.'); return false; }
+      return true;
+    }
+    if (step === 2) {
+      const p = parseInt(document.getElementById('price').value, 10);
+      if (!p || p < 1000) { alert('Bei lazima iwe angalau TZS 1,000.'); document.getElementById('price').focus(); return false; }
+      return true;
+    }
+    if (step === 3) {
+      syncLocationFlag();
+      if (!isLocationSet) {
+        document.getElementById('location-status').classList.remove('hidden');
+        document.getElementById('mapWrap')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return false;
+      }
+      return true;
+    }
+    return true;
+  }
+
+  document.getElementById('btnNext').addEventListener('click', function () {
+    if (!validateStep(currentStep)) return;
+    if (currentStep < TOTAL) {
+      currentStep++;
+      updateStepperUI();
+    }
+  });
+
+  document.getElementById('btnPrev').addEventListener('click', function () {
+    if (currentStep > 1) {
+      currentStep--;
+      updateStepperUI();
+    }
+  });
+
+  document.querySelectorAll('.step-pill').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const target = parseInt(btn.dataset.gotoStep, 10);
+      if (target === currentStep) return;
+      if (target < currentStep) {
+        currentStep = target;
+        updateStepperUI();
+        return;
+      }
+      for (let s = currentStep; s < target; s++) {
+        if (!validateStep(s)) return;
+      }
+      currentStep = target;
+      updateStepperUI();
+    });
+  });
+
+  form.addEventListener('submit', function (e) {
+    syncLocationFlag();
+    if (!isLocationSet) {
+      e.preventDefault();
+      currentStep = 3;
+      updateStepperUI();
+      document.getElementById('location-status').classList.remove('hidden');
+      return false;
+    }
+  });
+
   function checkNearbyWorkers(lat, lng) {
-    // Show loading modal
     const modal = document.getElementById('workerCheckModal');
     const icon = document.getElementById('workerCheckIcon');
     const title = document.getElementById('workerCheckTitle');
     const message = document.getElementById('workerCheckMessage');
     const btnCancel = document.getElementById('btnCancelLocation');
     const btnConfirm = document.getElementById('btnConfirmLocation');
-    
-    // Reset modal state
-    modal.style.display = 'flex';
-    icon.innerHTML = '🔍';
-    title.textContent = 'Inatafuta Wafanyakazi...';
-    message.textContent = 'Tafadhali subiri wakati tunaangalia wafanyakazi walio karibu.';
-    btnCancel.style.display = 'none';
-    btnConfirm.style.display = 'none';
-    
-    // Call API
-    fetch(`/api/workers/nearby?lat=${lat}&lng=${lng}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          const result = data.data;
-          
-          if (result.status === 'no_workers') {
-            // No workers found
-            icon.innerHTML = '⚠️';
-            title.textContent = 'Hakuna Wafanyakazi Eneo Hili';
-            message.textContent = result.message;
-            title.style.color = '#ef4444'; // Red
-            
-            // Update notification on form
-            showNotification('error', 'Hakuna Wafanyakazi', result.message);
-          } else {
-            // Workers found
-            icon.innerHTML = '✅';
-            title.textContent = 'Wafanyakazi Wamepatikana!';
-            message.textContent = result.message;
-            title.style.color = '#10b981'; // Green
-            
-            // Update notification on form
-            showNotification('success', 'Wafanyakazi Wapo!', result.message);
-          }
-          
-          // Show buttons
-          btnCancel.style.display = 'block';
-          btnConfirm.style.display = 'block';
-          
-          // Handle button clicks
-          btnCancel.onclick = function() {
-            modal.style.display = 'none';
-          };
-          
-          btnConfirm.onclick = function() {
-            modal.style.display = 'none';
-            document.getElementById('location-status').style.display = 'none';
-          };
-          
-        } else {
-          // API Error
-          modal.style.display = 'none';
-          console.error('API Error:', data);
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    icon.textContent = '🔍';
+    title.textContent = 'Inatafuta wafanyakazi...';
+    message.textContent = 'Tafadhali subiri.';
+    title.classList.remove('text-red-600', 'text-emerald-600');
+    btnCancel.classList.add('hidden');
+    btnConfirm.classList.add('hidden');
+
+    fetch('/api/workers/nearby?lat=' + lat + '&lng=' + lng)
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+          return;
         }
+        const result = data.data;
+        if (result.status === 'no_workers') {
+          icon.textContent = '⚠️';
+          title.textContent = 'Hakuna wafanyakazi eneo hili';
+          message.textContent = result.message;
+          title.classList.add('text-red-600');
+          showNotification('error', 'Hakuna wafanyakazi', result.message);
+        } else {
+          icon.textContent = '✅';
+          title.textContent = 'Wafanyakazi wamepatikana';
+          message.textContent = result.message;
+          title.classList.add('text-emerald-600');
+          showNotification('success', 'Wafanyakazi wapo', result.message);
+        }
+        btnCancel.classList.remove('hidden');
+        btnConfirm.classList.remove('hidden');
+        btnCancel.onclick = function () {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+        };
+        btnConfirm.onclick = function () {
+          modal.classList.add('hidden');
+          modal.classList.remove('flex');
+          document.getElementById('location-status').classList.add('hidden');
+        };
       })
-      .catch(error => {
-        console.error('Fetch Error:', error);
-        modal.style.display = 'none';
+      .catch(function () {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
       });
   }
 
-  function showNotification(type, title, message) {
+  function showNotification(type, t, msg) {
     const notif = document.getElementById('workerCheckNotification');
     const icon = document.getElementById('workerCheckNotifIcon');
     const titleEl = document.getElementById('workerCheckNotifTitle');
     const msgEl = document.getElementById('workerCheckNotifMessage');
-    
-    notif.style.display = 'block';
-    titleEl.textContent = title;
-    msgEl.textContent = message;
-    
+    notif.classList.remove('hidden');
+    titleEl.textContent = t;
+    msgEl.textContent = msg;
     if (type === 'success') {
-      notif.style.background = 'rgba(16, 185, 129, 0.1)';
-      notif.style.border = '1px solid rgba(16, 185, 129, 0.3)';
-      icon.innerHTML = '✅';
-      titleEl.style.color = '#059669';
+      notif.className = 'border-b border-emerald-100 bg-emerald-50/90 px-5 py-4';
+      icon.textContent = '✅';
+      titleEl.className = 'text-[13px] font-bold text-emerald-800';
     } else {
-      notif.style.background = 'rgba(239, 68, 68, 0.1)';
-      notif.style.border = '1px solid rgba(239, 68, 68, 0.3)';
-      icon.innerHTML = '⚠️';
-      titleEl.style.color = '#dc2626';
-    }
-    
-    // Scroll to notification
-    notif.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-
-  // Map click handler
-  map.on('click', function(e) {
-    setMarker(e.latlng.lat, e.latlng.lng);
-  });
-
-  // GPS button handler
-  document.getElementById('geo').addEventListener('click', function() {
-    if (navigator.geolocation) {
-      this.innerHTML = '<span>⏳</span> Inasubiri GPS...';
-      this.disabled = true;
-      
-      navigator.geolocation.getCurrentPosition(
-        function(position) {
-          const lat = position.coords.latitude;
-          const lng = position.coords.longitude;
-          
-          setMarker(lat, lng);
-          map.setView([lat, lng], 15);
-          
-          document.getElementById('geo').innerHTML = '<span>✅</span> GPS Imepatikana';
-          setTimeout(() => {
-            document.getElementById('geo').innerHTML = '<span>🎯</span> Tumia GPS';
-            document.getElementById('geo').disabled = false;
-          }, 2000);
-        },
-        function(error) {
-          alert('GPS haijapatikana. Tafadhali weka eneo kwa mkono.');
-          document.getElementById('geo').innerHTML = '<span>🎯</span> Tumia GPS';
-          document.getElementById('geo').disabled = false;
-        }
-      );
-    } else {
-      alert('GPS haijasaidiwa na browser yako.');
-    }
-  });
-
-  // Form validation
-  document.querySelector('form').addEventListener('submit', function(e) {
-    if (!isLocationSet) {
-      e.preventDefault();
-      document.getElementById('location-status').style.display = 'block';
-      document.getElementById('map').scrollIntoView({ behavior: 'smooth' });
-      return false;
-    }
-  });
-
-  // Show/hide location status
-  function updateLocationStatus() {
-    const statusDiv = document.getElementById('location-status');
-    if (isLocationSet) {
-      statusDiv.style.display = 'none';
-    } else {
-      statusDiv.style.display = 'block';
+      notif.className = 'border-b border-red-100 bg-red-50/90 px-5 py-4';
+      icon.textContent = '⚠️';
+      titleEl.className = 'text-[13px] font-bold text-red-800';
     }
   }
 
-  // Update status on page load
-  updateLocationStatus();
-
-  // Image upload handling
-  function handleImageSelect(event) {
+  window.handleImageSelect = function (event) {
     const file = event.target.files[0];
     if (!file) return;
-    
-    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
-      alert('Picha ni kubwa sana! Tafadhali chagua picha isiyozidi 5MB.');
+      alert('Picha ni kubwa sana (max 5MB).');
       event.target.value = '';
       return;
     }
-    
-    // Validate file type
     const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!validTypes.includes(file.type)) {
-      alert('Aina ya faili si sahihi! Tafadhali chagua picha (JPEG, PNG, au WEBP).');
+      alert('Chagua picha JPEG, PNG, au WEBP.');
       event.target.value = '';
       return;
     }
-    
-    // Show preview
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
       document.getElementById('image-preview-img').src = e.target.result;
-      document.getElementById('image-upload-placeholder').style.display = 'none';
-      document.getElementById('image-preview').style.display = 'block';
-      document.getElementById('image-upload-area').style.borderColor = 'var(--success)';
-      document.getElementById('image-upload-area').style.background = '#f0fdf4';
+      document.getElementById('image-upload-placeholder').classList.add('hidden');
+      document.getElementById('image-preview').classList.remove('hidden');
+      const area = document.getElementById('image-upload-area');
+      area.classList.add('border-emerald-300', 'bg-emerald-50/50');
+      area.classList.remove('border-slate-200', 'bg-slate-50/80');
     };
     reader.readAsDataURL(file);
-  }
-  
-  function removeImage() {
+  };
+
+  window.removeImage = function () {
     document.getElementById('image').value = '';
-    document.getElementById('image-upload-placeholder').style.display = 'block';
-    document.getElementById('image-preview').style.display = 'none';
-    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
-    document.getElementById('image-upload-area').style.background = '#f9fafb';
-  }
+    document.getElementById('image-upload-placeholder').classList.remove('hidden');
+    document.getElementById('image-preview').classList.add('hidden');
+    const area = document.getElementById('image-upload-area');
+    area.classList.remove('border-emerald-300', 'bg-emerald-50/50');
+    area.classList.add('border-slate-200', 'bg-slate-50/80');
+  };
 
-  // Drag and drop handlers
-  function handleDragOver(event) {
+  window.handleDragOver = function (event) {
     event.preventDefault();
     event.stopPropagation();
-    document.getElementById('image-upload-area').style.borderColor = 'var(--primary)';
-    document.getElementById('image-upload-area').style.background = '#eff6ff';
-  }
+    const area = document.getElementById('image-upload-area');
+    area.classList.add('border-brand-400', 'bg-brand-50/40');
+  };
 
-  function handleDragLeave(event) {
+  window.handleDragLeave = function (event) {
     event.preventDefault();
     event.stopPropagation();
-    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
-    document.getElementById('image-upload-area').style.background = '#f9fafb';
-  }
-
-  function handleDrop(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    document.getElementById('image-upload-area').style.borderColor = 'var(--border)';
-    document.getElementById('image-upload-area').style.background = '#f9fafb';
-    
-    const files = event.dataTransfer.files;
-    if (files.length > 0) {
-      document.getElementById('image').files = files;
-      handleImageSelect({ target: { files: files } });
+    const area = document.getElementById('image-upload-area');
+    if (!document.getElementById('image').files.length) {
+      area.classList.remove('border-brand-400', 'bg-brand-50/40');
     }
-  }
+  };
 
-  // Add some interactive animations
-  document.addEventListener('DOMContentLoaded', function() {
-    // Animate form elements on scroll
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    };
+  window.handleDrop = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const area = document.getElementById('image-upload-area');
+    area.classList.remove('border-brand-400', 'bg-brand-50/40');
+    const files = event.dataTransfer.files;
+    if (files.length) {
+      document.getElementById('image').files = files;
+      window.handleImageSelect({ target: { files: files } });
+    }
+  };
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }
-      });
-    }, observerOptions);
-
-    // Observe form groups
-    document.querySelectorAll('.form-group').forEach(group => {
-      group.style.opacity = '0';
-      group.style.transform = 'translateY(20px)';
-      group.style.transition = 'all 0.6s ease';
-      observer.observe(group);
-    });
-  });
+  updateStepperUI();
+})();
 </script>
 @endpush
 @endsection

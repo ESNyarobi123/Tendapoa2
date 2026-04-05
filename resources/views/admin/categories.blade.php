@@ -449,10 +449,10 @@
                 <button type="button" class="btn btn-outline btn-sm" onclick="openEditModal({{ $category->id }}, '{{ addslashes($category->name) }}')">
                   ✏️ Edit
                 </button>
-                <form action="{{ route('admin.categories.delete', $category) }}" method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete \'{{ addslashes($category->name) }}\'?')">
+                <form action="{{ route('admin.categories.delete', $category) }}" method="POST" style="display: inline;">
                   @csrf
                   @method('DELETE')
-                  <button type="submit" class="btn btn-danger btn-sm">
+                  <button type="button" class="btn btn-danger btn-sm" onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm(@json('Futa jamii: '.$category->name.'?')):Promise.resolve(confirm(@json('Delete '.$category->name.'?')))).then(function(ok){ if(ok) f.submit(); });">
                     🗑️ Delete
                   </button>
                 </form>

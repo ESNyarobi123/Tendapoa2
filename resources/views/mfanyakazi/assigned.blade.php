@@ -1,654 +1,190 @@
 @extends('layouts.app')
-@section('title','Mfanyakazi — Kazi Ulizopewa')
+@section('title', 'Mfanyakazi — Kazi ulizopewa')
 
 @section('content')
-<style>
-  /* ====== Modern Mfanyakazi Assigned Jobs Page ====== */
-  .assigned-page {
-    --primary: #3b82f6;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --dark: #1f2937;
-    --light: #f8fafc;
-    --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .assigned-page {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    min-height: 100vh;
-    display: flex;
-    position: relative;
-  }
-
-  .main-content {
-    flex: 1;
-    margin-left: 280px;
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 24px;
-    min-height: 100vh;
-  }
-
-  .sidebar.collapsed ~ .main-content {
-    margin-left: 80px;
-  }
-
-  @media (max-width: 1024px) {
-    .main-content {
-      margin-left: 0;
-    }
-  }
-
-  .page-container {
-    max-width: 1200px;
-    margin: 0 auto;
-    display: grid;
-    gap: 24px;
-  }
-
-  /* Header */
-  .page-header {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  .header-content {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 24px;
-    align-items: center;
-  }
-
-  .header-text h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--dark);
-    margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .header-text p {
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    margin: 0;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  /* Jobs Grid */
-  .jobs-grid {
-    display: grid;
-    gap: 24px;
-  }
-
-  .job-card {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
-    transition: all 0.3s ease;
-  }
-
-  .job-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .job-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  .job-info h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin: 0 0 8px 0;
-  }
-
-  .job-meta {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    color: var(--text-muted);
-    font-size: 0.875rem;
-    margin-bottom: 12px;
-  }
-
-  .job-category {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .job-status {
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .job-status.assigned {
-    background: #fef3c7;
-    color: #92400e;
-  }
-
-  .job-status.in-progress {
-    background: #fce7f3;
-    color: #be185d;
-  }
-
-  .job-status.ready-for-confirmation {
-    background: #fef3c7;
-    color: #92400e;
-  }
-
-  .job-status.completed {
-    background: #d1fae5;
-    color: #065f46;
-  }
-
-  .job-price {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--success);
-    text-align: right;
-  }
-
-  /* Code Input Modal */
-  .code-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-  }
-
-  .code-modal.show {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  .code-modal-content {
-    background: white;
-    border-radius: 20px;
-    padding: 32px;
-    max-width: 500px;
-    width: 90%;
-    box-shadow: var(--shadow-lg);
-    transform: scale(0.9);
-    transition: transform 0.3s ease;
-  }
-
-  .code-modal.show .code-modal-content {
-    transform: scale(1);
-  }
-
-  .code-modal-header {
-    text-align: center;
-    margin-bottom: 24px;
-  }
-
-  .code-modal-header h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin: 0 0 8px 0;
-  }
-
-  .code-modal-header p {
-    color: var(--text-muted);
-    font-size: 0.875rem;
-    margin: 0;
-  }
-
-  .code-input-group {
-    margin-bottom: 24px;
-  }
-
-  .code-input-label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 8px;
-  }
-
-  .code-input {
-    width: 100%;
-    padding: 16px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 1.25rem;
-    font-weight: 700;
-    text-align: center;
-    letter-spacing: 2px;
-    font-family: 'Courier New', monospace;
-    transition: all 0.3s ease;
-  }
-
-  .code-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .code-instructions {
-    background: #f0f9ff;
-    border: 2px solid #0ea5e9;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 24px;
-  }
-
-  .code-instructions h4 {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #0c4a6e;
-    margin: 0 0 8px 0;
-  }
-
-  .code-instructions p {
-    color: #0c4a6e;
-    font-size: 0.875rem;
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  .code-modal-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-  }
-
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
-  }
-
-  .btn-success {
-    background: linear-gradient(135deg, var(--success), #059669);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);
-  }
-
-  .btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.6);
-  }
-
-  .btn-danger {
-    background: linear-gradient(135deg, var(--danger), #dc2626);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.4);
-  }
-
-  .btn-danger:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(239, 68, 68, 0.6);
-  }
-
-  .btn-outline {
-    background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-  }
-
-  .btn-outline:hover {
-    background: var(--primary);
-    color: white;
-  }
-
-  .btn-warning {
-    background: linear-gradient(135deg, var(--warning), #d97706);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.4);
-  }
-
-  .btn-warning:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(245, 158, 11, 0.6);
-  }
-
-  /* Status Badges */
-  .status-badge {
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .status-badge.waiting {
-    background: #fef3c7;
-    color: #92400e;
-  }
-
-  .status-badge.completed {
-    background: #d1fae5;
-    color: #065f46;
-  }
-
-  /* Empty State */
-  .empty-state {
-    text-align: center;
-    padding: 80px 20px;
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  .empty-state-icon {
-    font-size: 4rem;
-    margin-bottom: 16px;
-    opacity: 0.6;
-  }
-
-  .empty-state h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--dark);
-    margin: 0 0 8px 0;
-  }
-
-  .empty-state p {
-    color: var(--text-muted);
-    font-size: 1rem;
-    margin: 0 0 24px 0;
-  }
-
-  /* Responsive */
-  @media (max-width: 768px) {
-    .assigned-page {
-      padding: 16px;
-    }
-    
-    .page-header {
-      padding: 24px;
-    }
-    
-    .header-content {
-      grid-template-columns: 1fr;
-      text-align: center;
-    }
-    
-    .header-text h1 {
-      font-size: 2rem;
-    }
-    
-    .job-header {
-      flex-direction: column;
-      gap: 16px;
-    }
-    
-    .job-meta {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-  }
-</style>
-
-@php
-  use Illuminate\Support\Facades\Route;
-
-  // Safe links & actions
-  $feedUrl     = Route::has('feed') ? route('feed') : url('/feed');
-  $assignedUrl = Route::has('mfanyakazi.assigned') ? route('mfanyakazi.assigned') : url('/mfanyakazi/assigned');
-  $dashboardUrl = Route::has('dashboard') ? route('dashboard') : url('/dashboard');
-
-  $acceptUrl   = fn($id) => Route::has('mfanyakazi.jobs.accept')   ? route('mfanyakazi.jobs.accept',  $id) : url('/mfanyakazi/jobs/'.$id.'/accept');
-  $declineUrl  = fn($id) => Route::has('mfanyakazi.jobs.decline')  ? route('mfanyakazi.jobs.decline', $id) : url('/mfanyakazi/jobs/'.$id.'/decline');
-  $completeUrl = fn($id) => Route::has('mfanyakazi.jobs.complete') ? route('mfanyakazi.jobs.complete',$id) : url('/mfanyakazi/jobs/'.$id.'/complete');
-@endphp
-
-<div class="assigned-page">
+<div class="flex min-h-screen bg-slate-50">
   @include('components.user-sidebar')
-  
-  <main class="main-content">
-    <div class="page-container">
-    
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-text">
-          <h1>🧾 Kazi Ulizopewa</h1>
-          <p>Simamia ofa, kazi zinazoendelea, na kamilisha kwa kutumia code ya muhitaji.</p>
+
+  <main class="tp-main w-full min-w-0 p-4 pt-16 sm:p-6 lg:pt-6">
+    <div class="mx-auto max-w-4xl space-y-4">
+
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Kazi ulizopewa</h1>
+          <p class="mt-0.5 max-w-xl text-[12px] leading-relaxed text-slate-500">
+            Simamia ofa, kazi zinazoendelea, na kamilisha kwa code ya mteja. Kila kazi ina kiungo cha maelezo kamili na mazungumzo.
+          </p>
         </div>
-        <div class="header-actions">
-          <a class="btn btn-outline" href="{{ $feedUrl }}">
-            <span>🔍</span>
-            Tafuta Kazi
-          </a>
-          <a class="btn btn-primary" href="{{ $assignedUrl }}">
-            <span>🔄</span>
-            Refresh
-          </a>
+        <div class="flex flex-wrap gap-2">
+          <a href="{{ route('feed') }}" class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-700 shadow-sm hover:bg-slate-50">Tafuta kazi</a>
+          <a href="{{ route('mfanyakazi.applications') }}" class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-[12px] font-medium text-slate-700 shadow-sm hover:bg-slate-50">Maombi yangu</a>
+          <a href="{{ route('dashboard') }}" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-brand-700">Dashibodi</a>
         </div>
       </div>
-    </div>
 
-    <!-- Jobs List -->
-    @if(isset($jobs) && (method_exists($jobs, 'count') ? $jobs->count() : (is_countable($jobs ?? []) ? count($jobs) : 0)))
-      <div class="jobs-grid">
-        @foreach($jobs as $job)
-          @php
-            $cat        = $job->category->name ?? ($job->category_name ?? '—');
-            $title      = $job->title ?? 'Kazi';
-            $status     = strtolower((string)($job->status ?? 'pending'));
-            $mfResp     = strtolower((string)($job->mfanyakazi_response ?? $job->assignee_response ?? $job->worker_response ?? ''));
-            $amount     = (int)($job->payout ?? $job->price ?? $job->budget ?? 0);
-          @endphp
+      @if(session('status'))
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[12px] font-medium text-emerald-900">{{ session('status') }}</div>
+      @endif
 
-          <div class="job-card">
-            <div class="job-header">
-              <div class="job-info">
-                <div class="job-category">{{ $cat }}</div>
-                <h3>{{ $title }}</h3>
-                <div class="job-meta">
-                  <span class="job-status {{ str_replace('_', '-', $status) }}">
-                    {{ strtoupper($status) }}
-                  </span>
-                  @if(!empty($job->location))
-                    <span>📍 {{ $job->location }}</span>
-                  @endif
-                  @if(!empty($job->created_at))
-                    <span>⏱️ {{ \Illuminate\Support\Carbon::parse($job->created_at)->diffForHumans() }}</span>
-                  @endif
-                </div>
-              </div>
-              <div class="job-price">TZS {{ number_format($amount) }}</div>
-            </div>
+      @php
+        $jobCount = isset($jobs) && (method_exists($jobs, 'count') ? $jobs->count() : (is_countable($jobs ?? []) ? count($jobs) : 0));
+      @endphp
 
-            <!-- Job Actions -->
-            <div style="display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
-              @if(($status === 'assigned' && ($mfResp === '' || $mfResp === 'pending')) || $status === 'offered')
-                <form method="POST" action="{{ $acceptUrl($job->id) }}" style="display: inline;">
-                  @csrf
-                  <button class="btn btn-success" type="submit">
-                    <span>✅</span>
-                    Kubali Kazi
-                  </button>
-                </form>
-                <form method="POST" action="{{ $declineUrl($job->id) }}" style="display: inline;">
-                  @csrf
-                  <button class="btn btn-danger" type="submit">
-                    <span>❌</span>
-                    Kataa
-                  </button>
-                </form>
+      @if($jobCount > 0)
+        <p class="text-[11px] text-slate-600">
+          <span class="inline-flex items-center gap-1 rounded-md bg-white px-2 py-1 font-semibold text-slate-800 ring-1 ring-slate-200">{{ $jobs->total() }}</span>
+          jumla ya kazi kwenye ukurasa huu
+        </p>
 
-              @elseif($status === 'assigned' || $status === 'in_progress')
-                <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 16px; border-radius: 12px; margin-bottom: 12px; border: 2px solid #f59e0b;">
-                  <div style="display: flex; align-items: start; gap: 12px;">
-                    <span style="font-size: 1.5rem;">📋</span>
-                    <div>
-                      <strong style="color: #92400e; display: block; margin-bottom: 8px;">Maagizo:</strong>
-                      <p style="margin: 0; color: #78350f; font-size: 0.9rem; line-height: 1.6;">
-                        <strong>1.</strong> Maliza kazi yako kwa mteja<br>
-                        <strong>2.</strong> Omba code ya ukamilishaji kutoka kwa mteja<br>
-                        <strong>3.</strong> Ingiza code hapa chini ili kukamilisha kazi na kupokea malipo
-                      </p>
-                    </div>
+        <div class="space-y-3">
+          @foreach($jobs as $job)
+            @php
+              $cat = $job->category->name ?? ($job->category_name ?? '—');
+              $title = $job->title ?? 'Kazi';
+              $status = strtolower((string) ($job->status ?? 'pending'));
+              $mfResp = strtolower((string) ($job->mfanyakazi_response ?? $job->assignee_response ?? $job->worker_response ?? ''));
+              $amount = (int) ($job->payout ?? $job->price ?? $job->budget ?? 0);
+              $statusRing = match (true) {
+                $status === 'funded' => 'bg-emerald-50 text-emerald-900 ring-emerald-200',
+                $status === 'in_progress' => 'bg-rose-50 text-rose-900 ring-rose-200',
+                in_array($status, ['submitted', 'ready_for_confirmation'], true) => 'bg-violet-50 text-violet-900 ring-violet-200',
+                $status === 'completed' => 'bg-emerald-50 text-emerald-900 ring-emerald-200',
+                $status === 'disputed' => 'bg-red-50 text-red-900 ring-red-200',
+                $status === 'assigned' => 'bg-sky-50 text-sky-900 ring-sky-200',
+                default => 'bg-slate-50 text-slate-700 ring-slate-200',
+              };
+            @endphp
+
+            <article class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div class="min-w-0 flex-1 space-y-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex max-w-full truncate rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200/80">{{ $cat }}</span>
+                    <span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ring-1 {{ $statusRing }}">
+                      @switch($status)
+                        @case('funded') Imefadhiliwa @break
+                        @case('in_progress') Inaendelea @break
+                        @case('submitted') Imewasilishwa @break
+                        @case('completed') Imekamilika @break
+                        @case('disputed') Mgogoro @break
+                        @case('assigned') Imepewa @break
+                        @case('ready_for_confirmation') Subiri uthibitisho @break
+                        @default {{ strtoupper($status) }}
+                      @endswitch
+                    </span>
+                  </div>
+                  <h2 class="text-[14px] font-bold leading-snug text-slate-900">{{ $title }}</h2>
+                  <div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                    @if(! empty($job->location))
+                      <span class="inline-flex items-center gap-0.5"><span class="text-slate-400">Mahali</span> {{ $job->location }}</span>
+                    @endif
+                    @if(! empty($job->created_at))
+                      <span>{{ \Illuminate\Support\Carbon::parse($job->created_at)->diffForHumans() }}</span>
+                    @endif
                   </div>
                 </div>
-                <button class="btn btn-primary" onclick="showCodeInputModal({{ $job->id }}, '{{ addslashes($title) }}')">
-                  <span>🏁</span>
-                  Maliza Kazi (Ingiza Code)
-                </button>
-
-              @elseif($status === 'ready_for_confirmation')
-                <div class="status-badge waiting">
-                  ⏳ Inasubiri Uthibitisho wa Mteja
+                <div class="shrink-0 text-left sm:text-right">
+                  <p class="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Kiasi</p>
+                  <p class="text-[14px] font-extrabold tabular-nums text-emerald-700">{{ number_format($amount) }} <span class="text-[11px] font-bold text-emerald-600/90">TZS</span></p>
                 </div>
+              </div>
 
-              @elseif($status === 'completed')
-                <div class="status-badge completed">
-                  ✅ Imekamilika
-                </div>
+              <div class="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+                <a href="{{ route('jobs.show', $job) }}" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-brand-700">Fungua kazi</a>
 
-              @else
-                <div class="status-badge">
-                  Status: {{ strtoupper($status) }}
-                </div>
-              @endif
-            </div>
+                @if($status === 'funded')
+                  <div class="w-full rounded-xl border border-emerald-200 bg-emerald-50/90 px-3 py-2.5 text-[11px] font-medium leading-snug text-emerald-900">
+                    Mteja amelipa escrow. Kubali kazi ili uanze.
+                  </div>
+                  <form method="POST" action="{{ route('mfanyakazi.jobs.accept', $job) }}" class="inline">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-emerald-700">Kubali kazi</button>
+                  </form>
+                  <form method="POST" action="{{ route('mfanyakazi.jobs.decline', $job) }}" class="inline">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-2 text-[12px] font-semibold text-red-700 shadow-sm hover:bg-red-50">Kataa</button>
+                  </form>
+                @elseif(($status === 'assigned' && ($mfResp === '' || $mfResp === 'pending')) || $status === 'offered')
+                  <form method="POST" action="{{ route('mfanyakazi.jobs.accept', $job) }}" class="inline">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-emerald-700">Kubali kazi</button>
+                  </form>
+                  <form method="POST" action="{{ route('mfanyakazi.jobs.decline', $job) }}" class="inline">
+                    @csrf
+                    <button type="submit" class="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-3 py-2 text-[12px] font-semibold text-red-700 shadow-sm hover:bg-red-50">Kataa</button>
+                  </form>
+                @elseif($status === 'in_progress' || ($status === 'assigned' && ! in_array($mfResp, ['', 'pending'], true)))
+                  <div class="w-full rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-2.5 text-[11px] leading-relaxed text-amber-950">
+                    <span class="font-semibold text-amber-900">Hatua:</span> maliza kazi → omba code kwa mteja → ingiza code hapa chini ili kupokea malipo.
+                  </div>
+                  <button type="button" class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-3 py-2 text-[12px] font-semibold text-white shadow-sm hover:bg-brand-700" onclick="showCodeInputModal({{ $job->id }})">
+                    Maliza kazi (code)
+                  </button>
+                @elseif($status === 'submitted' || $status === 'ready_for_confirmation')
+                  <span class="inline-flex items-center rounded-lg bg-violet-50 px-3 py-2 text-[11px] font-semibold text-violet-900 ring-1 ring-violet-200">Inasubiri uthibitisho wa mteja</span>
+                @elseif($status === 'disputed')
+                  <div class="w-full rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-[11px] font-medium text-red-900">
+                    Mgogoro unaendelea. Timu ya usimamizi inaweza kuingilia kati.
+                  </div>
+                @elseif($status === 'completed')
+                  <span class="inline-flex items-center rounded-lg bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-900 ring-1 ring-emerald-200">Imekamilika — malipo yamefanyika</span>
+                @else
+                  <span class="inline-flex items-center rounded-lg bg-slate-100 px-3 py-2 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200">Hali: {{ strtoupper($status) }}</span>
+                @endif
+              </div>
+            </article>
+          @endforeach
+        </div>
+
+        <div class="flex justify-center pt-2">{{ method_exists($jobs, 'links') ? $jobs->links() : '' }}</div>
+      @else
+        <div class="rounded-2xl border border-dashed border-slate-200 bg-white px-6 py-12 text-center">
+          <p class="text-[14px] font-semibold text-slate-800">Hakuna kazi ulizopewa</p>
+          <p class="mt-1 text-[12px] text-slate-500">Tafuta kazi au angalia maombi yako — mteja akikuchagua, kazi itaonekana hapa.</p>
+          <div class="mt-5 flex flex-wrap justify-center gap-2">
+            <a href="{{ route('feed') }}" class="inline-flex rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-bold text-white shadow-sm hover:bg-brand-700">Tafuta kazi</a>
+            <a href="{{ route('mfanyakazi.applications') }}" class="inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50">Maombi yangu</a>
           </div>
-        @endforeach
-      </div>
-
-      <!-- Pagination -->
-      <div style="display: flex; justify-content: center; margin-top: 32px;">
-        {{ method_exists($jobs,'links') ? $jobs->links() : '' }}
-      </div>
-    @else
-      <!-- Empty State -->
-      <div class="empty-state">
-        <div class="empty-state-icon">📋</div>
-        <h3>Hakuna Kazi Ulizopewa</h3>
-        <p>Hakuna kazi ulizopewa kwa sasa. Tafuta kazi mpya na uanze kufanya kazi.</p>
-        <a class="btn btn-primary" href="{{ $feedUrl }}">
-          <span>🔍</span>
-          Tafuta Kazi
-        </a>
-      </div>
-    @endif
-
-  </div>
+        </div>
+      @endif
+    </div>
+  </main>
 </div>
 
-<!-- Code Input Modal -->
-<div id="codeInputModal" class="code-modal">
-  <div class="code-modal-content" style="background: white; border-radius: 24px; padding: 32px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
-    <div class="code-modal-header" style="text-align: center; margin-bottom: 24px;">
-      <div style="font-size: 4rem; margin-bottom: 16px;">🏁</div>
-      <h3 style="font-size: 1.75rem; font-weight: 800; color: #1e293b; margin: 0 0 8px 0;">Maliza Kazi</h3>
-      <p style="color: #64748b; margin: 0;">Ingiza code uliyopewa na mteja ili kukamilisha kazi na kupokea malipo</p>
-    </div>
-    
-    <div class="code-instructions" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 20px; border-radius: 16px; margin-bottom: 24px; border: 2px solid #f59e0b;">
-      <div style="display: flex; align-items: start; gap: 12px;">
-        <span style="font-size: 1.5rem;">📋</span>
-        <div>
-          <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">Maagizo:</h4>
-          <ol style="margin: 0; padding-left: 20px; color: #78350f; line-height: 1.8;">
-            <li><strong>Maliza kazi yako</strong> kwa mteja kikamilifu</li>
-            <li><strong>Omba code ya ukamilishaji</strong> kutoka kwa mteja</li>
-            <li><strong>Ingiza code hapa chini</strong> (tarakimu 6 ulizopewa na mteja)</li>
-            <li><strong>Bofya "Thibitisha"</strong> ili kukamilisha kazi</li>
-            <li><strong>Malipo yatafanyika kiotomatiki</strong> baada ya uthibitisho</li>
-          </ol>
-        </div>
-      </div>
+{{-- Modal: thibitisha code --}}
+<div id="codeInputModal" class="fixed inset-0 z-[1000] hidden items-center justify-center bg-slate-900/50 p-4 backdrop-blur-[2px]" role="dialog" aria-modal="true" aria-labelledby="codeModalTitle">
+  <div class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-xl sm:p-6" onclick="event.stopPropagation()">
+    <div class="text-center">
+      <p id="codeModalTitle" class="text-[15px] font-bold text-slate-900">Maliza kazi</p>
+      <p class="mt-1 text-[12px] leading-relaxed text-slate-500">Ingiza code ya tarakimu 6 uliyopewa na mteja baada ya kumaliza kazi.</p>
     </div>
 
-    <form id="codeInputForm">
-      <div class="code-input-group" style="margin-bottom: 24px;">
-        <label class="code-input-label" for="muhitajiCode" style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px; font-size: 0.95rem;">
-          🔐 Code ya Mteja:
-        </label>
-        <input 
-          type="text" 
-          id="muhitajiCode"
-          name="muhitajiCode" 
-          class="code-input"
-          placeholder="123456"
-          maxlength="6"
-          pattern="[0-9]{6}"
-          required
-          style="width: 100%; padding: 16px; border: 3px solid #e5e7eb; border-radius: 12px; font-size: 1.5rem; font-weight: 700; text-align: center; letter-spacing: 8px; transition: all 0.3s ease;"
-          onfocus="this.style.borderColor='#3b82f6'; this.style.boxShadow='0 0 0 4px rgba(59, 130, 246, 0.1)';"
-          onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';"
-        >
-      </div>
-      
-      <div class="code-modal-actions" style="display: flex; gap: 12px;">
-        <button type="button" class="btn btn-outline" onclick="closeCodeInputModal()" style="flex: 1; padding: 14px; background: #f3f4f6; color: #374151; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
-          <span>❌</span>
-          Fungua
-        </button>
-        <button type="submit" class="btn btn-primary" style="flex: 2; padding: 14px; background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
-          <span>✅</span>
-          Thibitisha & Kamilisha
-        </button>
+    <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 px-3 py-3 text-[11px] leading-relaxed text-amber-950">
+      <p class="font-semibold text-amber-900">Kumbuka</p>
+      <ol class="mt-1 list-decimal space-y-0.5 pl-4 marker:font-semibold">
+        <li>Maliza kazi kwa mteja kikamilifu.</li>
+        <li>Omba code ya ukamilishaji.</li>
+        <li>Ingiza code hapa na thibitisha — malipo yatafanyika baada ya uthibitisho.</li>
+      </ol>
+    </div>
+
+    <form id="codeInputForm" class="mt-4">
+      <label for="muhitajiCode" class="mb-1.5 block text-[11px] font-semibold text-slate-700">Code ya mteja</label>
+      <input
+        type="text"
+        id="muhitajiCode"
+        name="muhitajiCode"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        maxlength="6"
+        pattern="[0-9]{6}"
+        required
+        placeholder="••••••"
+        class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-center text-[18px] font-bold tracking-[0.35em] text-slate-900 shadow-inner outline-none transition focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20"
+      >
+      <div class="mt-4 flex gap-2">
+        <button type="button" class="flex-1 rounded-xl border border-slate-200 bg-white py-2.5 text-[12px] font-semibold text-slate-700 hover:bg-slate-50" onclick="closeCodeInputModal()">Funga</button>
+        <button type="submit" class="flex-[1.4] rounded-xl bg-brand-600 py-2.5 text-[12px] font-bold text-white shadow-sm hover:bg-brand-700">Thibitisha</button>
       </div>
     </form>
   </div>
@@ -656,37 +192,36 @@
 
 <script>
   let currentJobId = null;
+  const modalEl = document.getElementById('codeInputModal');
 
-  function showCodeInputModal(jobId, jobTitle) {
+  function showCodeInputModal(jobId) {
     currentJobId = jobId;
-    document.getElementById('codeInputModal').classList.add('show');
-    document.getElementById('muhitajiCode').focus();
-    document.getElementById('muhitajiCode').value = '';
+    modalEl.classList.remove('hidden');
+    modalEl.classList.add('flex');
+    const input = document.getElementById('muhitajiCode');
+    input.value = '';
+    input.focus();
   }
 
   function closeCodeInputModal() {
-    document.getElementById('codeInputModal').classList.remove('show');
+    modalEl.classList.add('hidden');
+    modalEl.classList.remove('flex');
     document.getElementById('muhitajiCode').value = '';
     currentJobId = null;
   }
 
-  // Handle form submission
-  document.getElementById('codeInputForm').addEventListener('submit', function(e) {
+  document.getElementById('codeInputForm').addEventListener('submit', function (e) {
     e.preventDefault();
-    
-    const code = document.getElementById('muhitajiCode').value;
-    if (!code || code.length !== 6) {
+    const code = document.getElementById('muhitajiCode').value.trim();
+    if (!/^\d{6}$/.test(code)) {
       alert('Tafadhali ingiza code ya tarakimu 6');
       return;
     }
-
-    // Show loading state
     const submitBtn = this.querySelector('button[type="submit"]');
     const originalText = submitBtn.innerHTML;
-    submitBtn.innerHTML = '<span>⏳</span> Inasubiri...';
+    submitBtn.innerHTML = 'Inasubiri…';
     submitBtn.disabled = true;
 
-    // Submit the form
     const formData = new FormData();
     formData.append('_token', document.querySelector('meta[name="csrf-token"]').getAttribute('content'));
     formData.append('code', code);
@@ -694,115 +229,56 @@
     fetch(`/mfanyakazi/jobs/${currentJobId}/complete`, {
       method: 'POST',
       body: formData,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
     })
-    .then(response => {
-      // Handle both JSON and HTML responses
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        return response.json();
-      } else {
-        // If HTML response, assume success and reload
+      .then((response) => {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          return response.json();
+        }
         return { success: true, message: 'Kazi imekamilika! Malipo yamefanyika.' };
-      }
-    })
-    .then(data => {
-      if (data.success !== false) {
-        showNotification(data.message || 'Kazi imekamilika! Malipo yamefanyika kiotomatiki.', 'success');
-        closeCodeInputModal();
-        // Reload page after a short delay
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      } else {
-        showNotification(data.message || 'Kuna tatizo. Jaribu tena.', 'error');
+      })
+      .then((data) => {
+        if (data.success !== false) {
+          showNotification(data.message || 'Kazi imekamilika! Malipo yamefanyika kiotomatiki.', 'success');
+          closeCodeInputModal();
+          setTimeout(() => window.location.reload(), 1800);
+        } else {
+          showNotification(data.message || 'Kuna tatizo. Jaribu tena.', 'error');
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+        }
+      })
+      .catch(() => {
+        showNotification('Kuna tatizo la mtandao. Jaribu tena.', 'error');
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      showNotification('Kuna tatizo la mtandao. Jaribu tena.', 'error');
-      submitBtn.innerHTML = originalText;
-      submitBtn.disabled = false;
-    });
+      });
   });
 
-  // Show notification
   function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${type === 'success' ? '#10b981' : '#ef4444'};
-      color: white;
-      padding: 16px 24px;
-      border-radius: 12px;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      z-index: 1001;
-      font-weight: 600;
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-    `;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    // Animate in
+    const n = document.createElement('div');
+    n.className =
+      'fixed right-4 top-4 z-[1001] max-w-sm rounded-xl px-4 py-3 text-[12px] font-semibold shadow-lg transition-transform duration-300 ' +
+      (type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white');
+    n.style.transform = 'translateX(120%)';
+    n.textContent = message;
+    document.body.appendChild(n);
+    requestAnimationFrame(() => {
+      n.style.transform = 'translateX(0)';
+    });
     setTimeout(() => {
-      notification.style.transform = 'translateX(0)';
-    }, 100);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-      notification.style.transform = 'translateX(100%)';
-      setTimeout(() => {
-        document.body.removeChild(notification);
-      }, 300);
-    }, 3000);
+      n.style.transform = 'translateX(120%)';
+      setTimeout(() => n.remove(), 280);
+    }, 2800);
   }
 
-  // Close modal on escape key
-  document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-      closeCodeInputModal();
-    }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeCodeInputModal();
   });
 
-  // Close modal on backdrop click
-  document.getElementById('codeInputModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-      closeCodeInputModal();
-    }
-  });
-
-  // Add some interactive animations
-  document.addEventListener('DOMContentLoaded', function() {
-    // Animate job cards on scroll
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }
-      });
-    }, observerOptions);
-
-    // Observe all job cards
-    document.querySelectorAll('.job-card').forEach(card => {
-      card.style.opacity = '0';
-      card.style.transform = 'translateY(20px)';
-      card.style.transition = 'all 0.6s ease';
-      observer.observe(card);
-    });
+  modalEl.addEventListener('click', function (e) {
+    if (e.target === modalEl) closeCodeInputModal();
   });
 </script>
 @endsection

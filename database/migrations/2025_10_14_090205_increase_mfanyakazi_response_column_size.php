@@ -11,9 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('work_orders', function (Blueprint $table) {
-            $table->string('mfanyakazi_response', 50)->nullable()->change();
-        });
+        try {
+            Schema::table('work_orders', function (Blueprint $table) {
+                $table->string('mfanyakazi_response', 50)->nullable()->change();
+            });
+        } catch (Throwable $e) {
+            // SQLite does not support column modification; skip gracefully
+        }
     }
 
     /**
@@ -21,8 +25,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('work_orders', function (Blueprint $table) {
-            $table->string('mfanyakazi_response', 20)->nullable()->change();
-        });
+        try {
+            Schema::table('work_orders', function (Blueprint $table) {
+                $table->string('mfanyakazi_response', 20)->nullable()->change();
+            });
+        } catch (Throwable $e) {
+        }
     }
 };

@@ -479,6 +479,13 @@
       </div>
     </div>
 
+    @if(!empty($filterUser))
+      <div class="adm-filter-banner">
+        <span>Kazi za mtumiaji: <strong>{{ $filterUser->name }}</strong> (ID {{ $filterUser->id }})</span>
+        <a href="{{ route('admin.jobs') }}">Ondoa kichujio</a>
+      </div>
+    @endif
+
     <!-- Stats Overview -->
     <div class="stats-grid">
       <div class="stat-card">
@@ -717,24 +724,18 @@
   }
 
   function assignJob(jobId) {
-    if (confirm('Are you sure you want to assign a worker to this job?')) {
-      // This would need a backend endpoint
-      console.log('Assign job:', jobId);
-    }
+    if (typeof tpToast === 'function') tpToast('Tumia ukurasa wa kazi ili kuongeza mfanyakazi (hakuna kitufe cha haraka bado).', 'info');
+    else alert('Fungua kazi maalum kutoka jedwali.');
   }
 
   function cancelJob(jobId) {
-    if (confirm('Are you sure you want to cancel this job? This action cannot be undone.')) {
-      // This would need a backend endpoint
-      console.log('Cancel job:', jobId);
-    }
+    if (typeof tpToast === 'function') tpToast('Fungua maelezo ya kazi kwa admin ili kughairi (force cancel).', 'info');
+    else alert('Fungua job details.');
   }
 
   function markAsPaid(jobId) {
-    if (confirm('Are you sure you want to mark this job as paid?')) {
-      // This would need a backend endpoint
-      console.log('Mark as paid:', jobId);
-    }
+    if (typeof tpToast === 'function') tpToast('Malipo yanafuatiliwa kupitia escrow / payments — tumia ukurasa wa kazi.', 'info');
+    else alert('Tumia job details.');
   }
 
   // Add some interactive animations

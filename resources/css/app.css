@@ -1,3 +1,138 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    html {
+        @apply scroll-smooth;
+    }
+}
+
+/* TendaPoa: sidebar shell (paired with components/user-sidebar.blade.php) */
+@layer components {
+    .tp-sidebar {
+        @apply fixed left-0 top-0 z-[1000] flex h-screen w-[240px] flex-col overflow-y-auto overflow-x-hidden border-r border-white/10 bg-slate-900 transition-[width] duration-200 ease-out;
+    }
+    .tp-sidebar.collapsed {
+        @apply w-16;
+    }
+    .tp-sidebar-brand {
+        @apply flex min-h-14 items-center gap-2.5 border-b border-white/10 px-4 py-3.5;
+    }
+    .tp-brand-icon {
+        @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-600 to-brand-500 text-sm font-extrabold text-white;
+    }
+    .tp-brand-text {
+        @apply truncate text-[15px] font-bold text-white transition-opacity duration-200;
+    }
+    .tp-sidebar.collapsed .tp-brand-text {
+        @apply w-0 opacity-0;
+    }
+    .tp-collapse-btn {
+        @apply ml-auto flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-white/10 text-slate-400 transition hover:bg-white/[0.12] hover:text-white;
+    }
+    .tp-sidebar.collapsed .tp-collapse-btn {
+        @apply ml-0;
+    }
+    .tp-profile {
+        @apply flex items-center gap-2.5 border-b border-white/10 px-4 py-3.5 no-underline transition hover:bg-white/[0.04];
+    }
+    .tp-avatar {
+        @apply h-9 w-9 shrink-0 rounded-full border-2 border-brand-500 object-cover;
+    }
+    .tp-profile-info {
+        @apply min-w-0 overflow-hidden transition-opacity duration-200;
+    }
+    .tp-sidebar.collapsed .tp-profile-info {
+        @apply w-0 opacity-0;
+    }
+    .tp-profile-name {
+        @apply truncate text-[13px] font-semibold text-slate-200;
+    }
+    .tp-profile-role {
+        @apply text-[11px] uppercase tracking-wide text-slate-500;
+    }
+    .tp-menu {
+        @apply flex flex-1 flex-col p-2;
+    }
+    .tp-menu-item {
+        @apply flex w-full cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent px-3 py-2.5 text-left text-[13px] font-medium text-slate-400 no-underline transition;
+    }
+    .tp-menu-item:hover {
+        @apply bg-white/[0.06] text-slate-200;
+    }
+    .tp-menu-item.active {
+        @apply bg-brand-600 font-semibold text-white;
+    }
+    .tp-menu-item svg {
+        @apply shrink-0;
+    }
+    .tp-menu-text {
+        @apply truncate transition-opacity duration-200;
+    }
+    .tp-sidebar.collapsed .tp-menu-text {
+        @apply w-0 opacity-0;
+    }
+    .tp-sidebar.collapsed .tp-badge-count {
+        @apply hidden;
+    }
+    .tp-icon-wrap {
+        @apply relative flex items-center justify-center;
+    }
+    .tp-notif-dot {
+        @apply absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-slate-900 bg-red-500;
+    }
+    .tp-badge-count {
+        @apply ml-auto rounded-full bg-red-500 px-1.5 text-[10px] font-bold leading-4 text-white;
+    }
+    .tp-menu-divider {
+        @apply mx-3 my-1.5 h-px bg-white/10;
+    }
+    .tp-menu-spacer {
+        @apply flex-1;
+    }
+    .tp-logout {
+        @apply !text-red-400;
+    }
+    .tp-logout:hover {
+        @apply !bg-red-500/10 !text-red-300;
+    }
+    .tp-mobile-btn {
+        @apply fixed left-3 top-3 z-[1001] hidden h-10 w-10 items-center justify-center rounded-lg border-0 bg-slate-900 text-white shadow-md;
+    }
+    .tp-overlay {
+        @apply fixed inset-0 z-[999] hidden bg-black/40 opacity-0 transition-opacity duration-200;
+    }
+    .tp-overlay.active {
+        @apply opacity-100;
+    }
+    .tp-main {
+        @apply ml-0 min-h-screen bg-slate-50 transition-[margin] duration-200 ease-out;
+    }
+    @media (min-width: 1025px) {
+        .tp-main {
+            margin-left: 240px;
+        }
+        .tp-sidebar.collapsed ~ .tp-main {
+            margin-left: 64px;
+        }
+    }
+    @media (max-width: 1024px) {
+        .tp-sidebar {
+            @apply -translate-x-full;
+        }
+        .tp-sidebar.mobile-open {
+            @apply translate-x-0;
+        }
+        .tp-mobile-btn {
+            @apply flex;
+        }
+        .tp-overlay {
+            @apply block;
+        }
+    }
+
+    .feed-tab-active {
+        @apply bg-white text-brand-700 shadow-sm;
+    }
+}

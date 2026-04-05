@@ -655,12 +655,22 @@
 
 <script>
   // Add save confirmation for main form
-  document.querySelector('form[action="{{ route('admin.system-settings.update') }}"]').addEventListener('submit', function(e) {
-    const confirmed = confirm('Are you sure you want to save these settings? This will update the platform configuration.');
-    if (!confirmed) {
+  (function () {
+    var f = document.querySelector('form[action="{{ route('admin.system-settings.update') }}"]');
+    if (!f) return;
+    f.addEventListener('submit', function (e) {
+      if (f.dataset.tpOk === '1') return;
       e.preventDefault();
-    }
-  });
+      var form = f;
+      (typeof tpConfirm === 'function' ? tpConfirm('Hifadhi mipangilio? Itabadilisha usanidi wa jukwaa.') : Promise.resolve(confirm('Save settings?')))
+        .then(function (ok) {
+          if (ok) {
+            form.dataset.tpOk = '1';
+            form.submit();
+          }
+        });
+    });
+  })();
 
   // APK Upload with Progress Bar
   // Wait for DOM to be ready

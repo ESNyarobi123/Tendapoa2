@@ -3,74 +3,71 @@
 namespace App\Services;
 
 use App\Models\{Job, User};
+use App\Notifications\JobAvailableNotification;
 use Illuminate\Support\Facades\DB;
 
 class NotificationService
 {
     /**
-     * Send geo-based notifications to nearby workers
-     * Uses Haversine formula to calculate distance
-     * 
-     * @param Job $job
-     * @param float $radiusKm Default 10km radius
-     * @return array Workers notified
+     * Notify active workers within radius via Laravel database notifications (same labels as JobController).
+     * Push/SMS: extend sendPushNotification / sendSMS when FCM/SMS is configured.
+     *
+     * @return array{notified:int, radius_km:float, candidate_count:int, skipped?:string}
      */
-    public function notifyNearbyWorkers(Job $job, float $radiusKm = 10): array
+    public function notifyNearbyWorkers(Job $job, float $radiusKm = 50): array
     {
+        if (! $job->lat || ! $job->lng) {
+            return ['notified' => 0, 'radius_km' => $radiusKm, 'candidate_count' => 0, 'skipped' => 'no_coordinates'];
+        }
+
         $lat = $job->lat;
         $lng = $job->lng;
-        $categoryId = $job->category_id;
-        
-        // Haversine formula to find workers within radius
-        // Formula: distance = acos(sin(lat1)*sin(lat2) + cos(lat1)*cos(lat2)*cos(lng2-lng1)) * 6371
+
         $workers = User::select([
             'users.*',
-            DB::raw("
+            DB::raw('
                 (6371 * acos(
-                    cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) 
+                    cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?))
                     + sin(radians(?)) * sin(radians(lat))
                 )) AS distance_km
-            ")
+            '),
         ])
-        ->setBindings([$lat, $lng, $lat])
-        ->where('role', 'mfanyakazi')
-        ->where('is_active', true)
-        ->whereNotNull('lat')
-        ->whereNotNull('lng')
-        ->having('distance_km', '<=', $radiusKm)
-        ->orderBy('distance_km', 'asc')
-        ->limit(50) // Max 50 nearby workers
-        ->get();
-        
-        // Store notifications in database for workers to check
-        $notificationData = [];
+            ->setBindings([$lat, $lng, $lat])
+            ->where('role', 'mfanyakazi')
+            ->where('is_active', true)
+            ->whereNotNull('lat')
+            ->whereNotNull('lng')
+            ->where('id', '!=', $job->user_id)
+            ->having('distance_km', '<=', $radiusKm)
+            ->orderBy('distance_km', 'asc')
+            ->limit(50)
+            ->get();
+
+        $notified = 0;
         foreach ($workers as $worker) {
-            // Create notification record (can be checked via API)
-            $notificationData[] = [
-                'worker_id' => $worker->id,
-                'job_id' => $job->id,
-                'type' => 'new_job_nearby',
-                'distance_km' => round($worker->distance_km, 2),
-                'message' => "Kazi mpya karibu na wewe ({$worker->distance_km}km): {$job->title}",
-                'read' => false,
-                'created_at' => now(),
-            ];
-            
-            // TODO: Send actual push notification (Firebase, OneSignal, etc)
-            // $this->sendPushNotification($worker, $job);
-            
-            // TODO: Send SMS notification (optional)
-            // $this->sendSMS($worker->phone, "Kazi mpya: {$job->title}");
+            $distance = (float) $worker->distance_km;
+            if ($distance <= 5) {
+                $label = 'Karibu Sana';
+            } elseif ($distance <= 15) {
+                $label = 'Karibu';
+            } elseif ($distance <= 30) {
+                $label = 'Wastani';
+            } else {
+                $label = 'Mbali';
+            }
+
+            try {
+                $worker->notify(new JobAvailableNotification($job, $distance, $label));
+                $notified++;
+            } catch (\Throwable $e) {
+                \Log::error("JobAvailable notify worker {$worker->id}: ".$e->getMessage());
+            }
         }
-        
-        // Store in session/cache or database table for API to retrieve
-        // For now, workers will see jobs in feed API
-        
+
         return [
-            'workers_count' => $workers->count(),
+            'notified' => $notified,
             'radius_km' => $radiusKm,
-            'workers' => $workers->pluck('id')->toArray(),
-            'notifications_queued' => count($notificationData),
+            'candidate_count' => $workers->count(),
         ];
     }
     

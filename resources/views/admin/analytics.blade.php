@@ -690,12 +690,14 @@
     const endDate = document.getElementById('endDate').value;
     
     if (!startDate || !endDate) {
-      alert('Please select both start and end dates');
+      if (typeof tpToast === 'function') tpToast('Chagua tarehe ya kuanzia na ya mwisho.', 'error');
+      else alert('Chagua tarehe zote mbili.');
       return;
     }
     
     if (new Date(startDate) > new Date(endDate)) {
-      alert('Start date cannot be after end date');
+      if (typeof tpToast === 'function') tpToast('Tarehe ya kuanzia haiwezi kuwa baada ya ya mwisho.', 'error');
+      else alert('Tarehe si sahihi.');
       return;
     }
     
@@ -707,10 +709,7 @@
     window.location.href = `{{ route('admin.analytics') }}?period=30`;
   }
 
-  function updateMetrics() {
-    // This would update the metrics with real data
-    console.log('Updating metrics with new data...');
-  }
+  function updateMetrics() {}
 
   function showNotification(message, type) {
     const notification = document.createElement('div');

@@ -2,8 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Job;
+use App\Models\JobApplication;
+use App\Models\Payment;
+use App\Models\User;
+use App\Models\WalletTransaction;
+use App\Models\Withdrawal;
 use Illuminate\Support\Facades\Auth;
-use App\Models\{Job, Payment, Withdrawal, User};
 
 class DashboardController extends Controller
 {
@@ -12,23 +17,19 @@ class DashboardController extends Controller
         $u = Auth::user();
 
         if ($u && $u->role === 'admin') {
-            $jobsCount    = Job::count();
-            $paidTotal    = Payment::where('status', 'COMPLETED')->sum('amount');
-            $usersWorkers = User::where('role', 'mfanyakazi')->count();
-            $usersClients = User::where('role', 'muhitaji')->count();
-
-            return view('admin.dashboard', compact('jobsCount', 'paidTotal', 'usersWorkers', 'usersClients'));
+            // Usitumie view hapa — AdminController::dashboard ndiyo ina $stats, $recentUsers, n.k.
+            return redirect()->route('admin.dashboard');
         }
 
         if ($u && $u->role === 'muhitaji') {
-            $posted    = Job::where('user_id', $u->id)->count();
+            $posted = Job::where('user_id', $u->id)->count();
             $completed = Job::where('user_id', $u->id)->where('status', 'completed')->count();
-            $totalPaid = Payment::whereHas('job', fn($q) => $q->where('user_id', $u->id))
-                                ->where('status', 'COMPLETED')
-                                ->sum('amount');
+            $totalPaid = Payment::whereHas('job', fn ($q) => $q->where('user_id', $u->id))
+                ->where('status', 'COMPLETED')
+                ->sum('amount');
 
             // Get payment history for muhitaji
-            $paymentHistory = Payment::whereHas('job', fn($q) => $q->where('user_id', $u->id))
+            $paymentHistory = Payment::whereHas('job', fn ($q) => $q->where('user_id', $u->id))
                 ->with('job')
                 ->latest()
                 ->limit(10)
@@ -41,32 +42,74 @@ class DashboardController extends Controller
                 ->limit(10)
                 ->get();
 
-            // Get wallet balance for muhitaji
+            // Get wallet balance for muhitaji (salio linaloweza kutumia = balance − held)
             $wallet = $u->ensureWallet();
-            $available = $wallet->balance;
+            $available = $wallet->available_balance;
 
-            return view('muhitaji.dashboard', compact('posted', 'completed', 'totalPaid', 'paymentHistory', 'allJobs', 'available'));
+            $attentionJobs = Job::where('user_id', $u->id)
+                ->whereIn('status', [Job::S_AWAITING_PAYMENT, Job::S_SUBMITTED])
+                ->with('acceptedWorker', 'category')
+                ->latest()
+                ->limit(5)
+                ->get();
+
+            $notifications = $u->unreadNotifications()->latest()->limit(10)->get();
+
+            $pendingAppsCount = JobApplication::query()
+                ->whereHas('job', fn ($q) => $q->where('user_id', $u->id))
+                ->whereIn('status', [
+                    JobApplication::STATUS_APPLIED,
+                    JobApplication::STATUS_SHORTLISTED,
+                    JobApplication::STATUS_ACCEPTED_COUNTER,
+                ])
+                ->count();
+
+            return view('muhitaji.dashboard', compact(
+                'posted',
+                'completed',
+                'totalPaid',
+                'paymentHistory',
+                'allJobs',
+                'available',
+                'notifications',
+                'pendingAppsCount',
+                'attentionJobs',
+            ));
         }
 
         // default: mfanyakazi
-        $done      = Job::where('accepted_worker_id', $u->id)->where('status', 'completed')->count();
-        
+        $done = Job::where('accepted_worker_id', $u->id)->where('status', 'completed')->count();
+
         // Get earnings from wallet transactions instead of just completed jobs
-        $earnTotal = \App\Models\WalletTransaction::where('user_id', $u->id)
+        $earnTotal = WalletTransaction::where('user_id', $u->id)
             ->where('type', 'EARN')
             ->where('amount', '>', 0)
             ->sum('amount');
-            
-        $withdrawn = Withdrawal::where('user_id', $u->id)->whereIn('status', ['PAID', 'PROCESSING'])->sum('amount');
-        
-        // Get current wallet balance
-        $wallet = $u->ensureWallet();
-        $available = $wallet->balance;
 
-        // Get current jobs for dashboard
+        $withdrawn = Withdrawal::where('user_id', $u->id)->whereIn('status', ['PAID', 'PROCESSING'])->sum('amount');
+
+        // Get current wallet balance (inapatikana = balance − held)
+        $wallet = $u->ensureWallet();
+        $available = $wallet->available_balance;
+
+        $attentionJobs = Job::where('accepted_worker_id', $u->id)
+            ->whereIn('status', [Job::S_FUNDED, Job::S_IN_PROGRESS])
+            ->with('muhitaji', 'category')
+            ->latest()
+            ->limit(5)
+            ->get();
+
+        // Get current jobs for dashboard (mfumo mpya + legacy)
         $currentJobs = Job::with('muhitaji', 'category')
             ->where('accepted_worker_id', $u->id)
-            ->whereIn('status', ['assigned', 'in_progress', 'ready_for_confirmation'])
+            ->whereIn('status', [
+                Job::S_FUNDED,
+                Job::S_IN_PROGRESS,
+                Job::S_SUBMITTED,
+                'assigned',
+                'in_progress',
+                'ready_for_confirmation',
+            ])
             ->latest()
             ->limit(5)
             ->get();
@@ -86,7 +129,7 @@ class DashboardController extends Controller
             ->value('avg_days') ?? 0;
 
         // Get earnings history (wallet transactions)
-        $earningsHistory = \App\Models\WalletTransaction::where('user_id', $u->id)
+        $earningsHistory = WalletTransaction::where('user_id', $u->id)
             ->where('type', 'EARN')
             ->where('amount', '>', 0)
             ->latest()
@@ -107,17 +150,21 @@ class DashboardController extends Controller
             ->limit(10)
             ->get();
 
+        $notifications = $u->unreadNotifications()->latest()->limit(10)->get();
+
         return view('mfanyakazi.dashboard', compact(
-            'done', 
-            'earnTotal', 
-            'withdrawn', 
+            'done',
+            'earnTotal',
+            'withdrawn',
             'available',
-            'currentJobs', 
-            'thisMonthEarnings', 
+            'currentJobs',
+            'thisMonthEarnings',
             'avgCompletionTime',
             'earningsHistory',
             'withdrawalsHistory',
-            'completedJobs'
+            'completedJobs',
+            'notifications',
+            'attentionJobs',
         ));
     }
 }

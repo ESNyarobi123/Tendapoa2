@@ -1,507 +1,324 @@
 @extends('layouts.app')
-@section('title', 'Omba Withdrawal')
+@section('title', 'Toa pesa')
+
+@php
+  $s = $settings ?? [];
+  $minW = (int) ($s['min_withdrawal'] ?? 5000);
+  $feeW = (int) ($s['withdrawal_fee'] ?? 0);
+  $bal = (int) $wallet->balance;
+  $avail = (int) $wallet->available_balance;
+  $maxAmount = max(0, $avail - $feeW);
+  $canWithdraw = $avail >= ($minW + $feeW);
+  $useTpShell = auth()->check() && in_array(auth()->user()->role, ['muhitaji', 'mfanyakazi'], true);
+  $netOld = old('network_type', 'vodacom');
+@endphp
 
 @section('content')
-<style>
-  /* ====== Modern Withdrawal Page ====== */
-  .withdraw-page {
-    --primary: #3b82f6;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --dark: #1f2937;
-    --light: #f8fafc;
-    --border: #e5e7eb;
-    --text: #374151;
-    --text-muted: #6b7280;
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  }
-
-  .withdraw-page {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    min-height: 100vh;
-    display: flex;
-    position: relative;
-  }
-
-  .main-content {
-    flex: 1;
-    margin-left: 280px;
-    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 24px;
-    min-height: 100vh;
-  }
-
-  .sidebar.collapsed ~ .main-content {
-    margin-left: 80px;
-  }
-
-  @media (max-width: 1024px) {
-    .main-content {
-      margin-left: 0;
-    }
-  }
-
-  .page-container {
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  /* Header */
-  .page-header {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    margin-bottom: 24px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid rgba(255,255,255,0.2);
-    text-align: center;
-  }
-
-  .page-title {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--dark);
-    margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .page-subtitle {
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    margin: 0;
-  }
-
-  /* Wallet Balance */
-  .wallet-balance {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    margin-bottom: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
-    text-align: center;
-  }
-
-  .balance-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-  }
-
-  .balance-amount {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--success);
-    margin-bottom: 16px;
-  }
-
-  .balance-info {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-  }
-
-  /* Withdrawal Form */
-  .withdrawal-form {
-    background: rgba(255,255,255,0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 32px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
-  }
-
-  .form-group {
-    margin-bottom: 24px;
-  }
-
-  .form-label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--dark);
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .form-input {
-    width: 100%;
-    padding: 16px 20px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 1rem;
-    transition: all 0.3s ease;
-    background: white;
-  }
-
-  .form-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  .form-help {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    margin-top: 4px;
-  }
-
-  /* Error Messages */
-  .alert-error {
-    background: #fef2f2;
-    border: 2px solid #fecaca;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 24px;
-    color: #dc2626;
-  }
-
-  .alert-error ul {
-    margin: 0;
-    padding-left: 20px;
-  }
-
-  .alert-error li {
-    margin-bottom: 4px;
-  }
-
-  /* Payment Methods */
-  .payment-methods {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
-    margin-bottom: 24px;
-  }
-
-  .payment-method {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 16px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: white;
-  }
-
-  .payment-method:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
-  }
-
-  .payment-method.selected {
-    border-color: var(--primary);
-    background: #f0f9ff;
-  }
-
-  .payment-method-icon {
-    font-size: 2rem;
-    margin-bottom: 8px;
-  }
-
-  .payment-method-name {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--dark);
-  }
-
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
-  }
-
-  .btn-outline {
-    background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-  }
-
-  .btn-outline:hover {
-    background: var(--primary);
-    color: white;
-  }
-
-  .form-actions {
-    display: flex;
-    gap: 16px;
-    justify-content: center;
-    margin-top: 32px;
-    padding-top: 24px;
-    border-top: 1px solid var(--border);
-  }
-
-  /* Responsive */
-  @media (max-width: 768px) {
-    .withdraw-page {
-      padding: 16px;
-    }
-    
-    .page-header {
-      padding: 24px;
-    }
-    
-    .page-title {
-      font-size: 2rem;
-    }
-    
-    .withdrawal-form {
-      padding: 24px;
-    }
-    
-    .form-actions {
-      flex-direction: column;
-    }
-  }
-</style>
-
-<div class="withdraw-page">
-  @include('components.user-sidebar')
-  
-  <main class="main-content">
-    <div class="page-container">
-    
-    <!-- Page Header -->
-    <div class="page-header">
-      <h1 class="page-title">💰 Omba Withdrawal</h1>
-      <p class="page-subtitle">Toa pesa kutoka kwenye wallet yako kwa urahisi na salama</p>
-    </div>
-
-    <!-- Wallet Balance -->
-    <div class="wallet-balance">
-      <div class="balance-label">Salio Lako</div>
-      <div class="balance-amount">{{ number_format($wallet->balance) }} TZS</div>
-      <div class="balance-info">
-        @if($wallet->balance >= ($settings['min_withdrawal'] ?? 5000))
-          <span style="color: var(--success);">✅ Unaweza kutoa pesa</span>
-        @else
-          <span style="color: var(--danger);">❌ Salio ni chini ya TZS {{ number_format($settings['min_withdrawal'] ?? 5000) }}</span>
-        @endif
-      </div>
-      @if(auth()->user()->role === 'mfanyakazi')
-        <div style="margin-top: 16px; padding: 12px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; font-size: 0.8rem; color: #92400e; text-align: left;">
-          <b>ℹ️ Taarifa ya Makato:</b><br>
-          Kila kazi unayofanya inakatwa {{ $settings['commission_rate'] ?? '10' }}% kama gharama za huduma (Service Fee). Salio unaloona hapa ni kiasi ambacho tayari kimeshakatwa na kiko tayari kutolewa.
-        </div>
-      @endif
-    </div>
-
-    <!-- Withdrawal Form -->
-    <div class="withdrawal-form">
-  @if($errors->any())
-    <div class="alert-error">
-          <b>⚠️ Angalia makosa:</b>
-          <ul>
-            @foreach($errors->all() as $e)
-              <li>{{ $e }}</li>
-            @endforeach
-          </ul>
-    </div>
+<div class="flex min-h-screen bg-slate-100/90">
+  @if($useTpShell)
+    @include('components.user-sidebar')
   @endif
 
-  <form method="post" action="{{ url('/withdraw/submit') }}">
-    @csrf
+  <main class="{{ $useTpShell ? 'tp-main w-full min-w-0 p-4 pt-16 sm:p-6 lg:pt-6' : 'w-full max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8' }}">
+    <div class="mx-auto w-full max-w-6xl space-y-6 lg:space-y-8">
 
-        <!-- Amount -->
-        <div class="form-group">
-          <label class="form-label" for="amount">Kiasi cha Kutolea</label>
-          <input 
-            type="number" 
-            id="amount"
-            name="amount" 
-            class="form-input"
-            placeholder="mf. 10000"
-            min="5000" 
-            max="{{ $wallet->balance }}"
-            value="{{ old('amount') }}"
-            required
-          >
-          <div class="form-help">
-            Kiasi cha chini ni TZS {{ number_format($settings['min_withdrawal'] ?? 5000) }}. Kiasi cha juu ni {{ number_format($wallet->balance) }} TZS
-          </div>
+      @if(session('status'))
+        <div class="rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-[13px] font-semibold text-brand-900">
+          {{ session('status') }}
         </div>
+      @endif
 
-        <!-- Payment Method -->
-        <div class="form-group">
-          <label class="form-label">Chagua Mfumo wa Malipo</label>
-          <div class="payment-methods">
-            <div class="payment-method" data-method="mpesa">
-              <div class="payment-method-icon">📱</div>
-              <div class="payment-method-name">M-Pesa</div>
+      <div class="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8 lg:items-start">
+
+      <div class="space-y-6 lg:col-span-5">
+      {{-- Hero + balance --}}
+      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-600 to-brand-700 p-6 text-white shadow-xl sm:p-8">
+        <div class="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
+        <div class="pointer-events-none absolute bottom-0 left-0 h-24 w-48 rounded-full bg-teal-300/15 blur-2xl"></div>
+        <div class="relative">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-white/75">Wallet</p>
+          <h1 class="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Toa pesa</h1>
+          <p class="mt-2 max-w-xl text-[13px] leading-relaxed text-white/90">
+            @if(auth()->user()->role === 'muhitaji')
+              Toa salio linalopatikana (siyo kiasi kilichoshikiliwa escrow). Malipo kwenda M-Pesa / mitandao mingine; ada ya kutoa inaweza kutozwa.
+            @else
+              Omba malipo kwenda M-Pesa, TigoPesa, au Airtel Money. Kiasi kitakatwa pamoja na ada ya kutoa.
+            @endif
+          </p>
+          <div class="mt-6 rounded-2xl border border-white/20 bg-white/10 px-5 py-4 backdrop-blur-md">
+            <p class="text-[11px] font-semibold uppercase tracking-wide text-white/80">Salio linalopatikana</p>
+            <p class="mt-1 text-3xl font-bold tabular-nums tracking-tight">{{ number_format($avail) }} <span class="text-lg font-semibold text-white/85">TZS</span></p>
+            @if($bal !== $avail)
+              <p class="mt-1 text-[11px] text-white/75">Jumla ya wallet: {{ number_format($bal) }} TZS (ikiwemo escrow)</p>
+            @endif
+            @if($feeW > 0)
+              <p class="mt-2 text-[12px] text-white/85">Ada ya kutoa: <span class="font-bold tabular-nums">{{ number_format($feeW) }} TZS</span> kwa kila ombi</p>
+            @endif
+            <div class="mt-3 flex flex-wrap items-center gap-2">
+              @if($canWithdraw)
+                <span class="inline-flex items-center gap-1.5 rounded-lg bg-white/20 px-2.5 py-1 text-[11px] font-bold">✓ Unaweza kuomba kutoa</span>
+              @else
+                <span class="inline-flex items-center gap-1.5 rounded-lg bg-rose-500/30 px-2.5 py-1 text-[11px] font-bold">Salio halitoshi (angalau {{ number_format($minW + $feeW) }} TZS)</span>
+              @endif
             </div>
-            <div class="payment-method" data-method="tigopesa">
-              <div class="payment-method-icon">🟠</div>
-              <div class="payment-method-name">TigoPesa</div>
+          </div>
+        </div>
+      </section>
+
+      @if(auth()->user()->role === 'mfanyakazi')
+        <div class="rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50 to-orange-50/40 px-4 py-3 text-[12px] leading-relaxed text-amber-950 shadow-sm ring-1 ring-amber-100/80">
+          <span class="font-bold">Makato ya huduma:</span> Kila kazi inaweza kukatwa {{ $s['commission_rate'] ?? '10' }}% kama ada ya mfumo kabla ya kuonekana hapa. Hiki ni kile kilichobaki baada ya makato hayo.
+        </div>
+      @endif
+
+      {{-- Summary chips --}}
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-1 lg:gap-3">
+        <div class="rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm ring-1 ring-slate-100/80">
+          <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Kiwango cha chini</p>
+          <p class="mt-0.5 text-sm font-bold tabular-nums text-slate-900">{{ number_format($minW) }}</p>
+        </div>
+        <div class="rounded-xl border border-slate-200/80 bg-white p-3 shadow-sm ring-1 ring-slate-100/80">
+          <p class="text-[9px] font-bold uppercase tracking-wider text-slate-500">Kiasi cha juu</p>
+          <p class="mt-0.5 text-sm font-bold tabular-nums text-brand-700">{{ number_format($maxAmount) }}</p>
+        </div>
+        <div class="col-span-2 rounded-xl border border-violet-100 bg-violet-50/80 p-3 shadow-sm ring-1 ring-violet-100/80 sm:col-span-1 lg:col-span-1">
+          <p class="text-[9px] font-bold uppercase tracking-wider text-violet-800">Jumla itakayokatwa</p>
+          <p class="mt-0.5 text-sm font-bold tabular-nums text-violet-900" id="summaryDebit">0 TZS</p>
+          <p class="mt-0.5 text-[10px] text-violet-700/90" id="summaryHint">Ingiza kiasi hapa chini</p>
+        </div>
+      </div>
+
+      </div>
+
+      <div class="space-y-4 lg:col-span-7">
+      <div class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-lg ring-1 ring-slate-100/80">
+        @if($errors->any())
+          <div class="border-b border-red-100 bg-red-50/95 px-5 py-4">
+            <p class="text-[12px] font-bold text-red-800">Tafadhali angalia</p>
+            <ul class="mt-2 list-inside list-disc text-[12px] text-red-700">
+              @foreach($errors->all() as $e)
+                <li>{{ $e }}</li>
+              @endforeach
+            </ul>
+          </div>
+        @endif
+
+        <form method="post" action="{{ route('withdraw.submit') }}" id="withdrawForm" class="space-y-5 p-5 sm:p-6">
+          @csrf
+
+          <div>
+            <label class="mb-2 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="amount">Kiasi unachotaka kutoa (TZS)</label>
+            <input type="number" name="amount" id="amount" required
+              class="w-full rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3.5 text-lg font-bold tabular-nums text-slate-900 shadow-inner focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              placeholder="{{ number_format($minW) }}"
+              min="{{ $minW }}"
+              max="{{ $maxAmount }}"
+              value="{{ old('amount') }}"
+              {{ $canWithdraw ? '' : 'disabled' }}>
+            <div class="mt-2 flex flex-wrap gap-2" id="quickAmounts" {{ $canWithdraw ? '' : 'hidden' }}>
+              <button type="button" data-pct="0.25" class="quick-amt rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm hover:border-brand-300 hover:bg-brand-50">25%</button>
+              <button type="button" data-pct="0.5" class="quick-amt rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm hover:border-brand-300 hover:bg-brand-50">50%</button>
+              <button type="button" data-pct="0.75" class="quick-amt rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm hover:border-brand-300 hover:bg-brand-50">75%</button>
+              <button type="button" data-pct="1" class="quick-amt rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-[11px] font-bold text-brand-800 shadow-sm hover:bg-brand-100">Zote</button>
             </div>
-            <div class="payment-method" data-method="airtel">
-              <div class="payment-method-icon">🔵</div>
-              <div class="payment-method-name">Airtel Money</div>
+            <p class="mt-2 text-[11px] text-slate-500">Kati ya <span class="font-semibold text-slate-700 tabular-nums">{{ number_format($minW) }}</span> na <span class="font-semibold text-slate-700 tabular-nums">{{ number_format($maxAmount) }}</span> TZS</p>
+          </div>
+
+          <div>
+            <p class="mb-2 block text-[11px] font-bold uppercase tracking-wide text-slate-600">Njia ya malipo</p>
+            <div class="grid grid-cols-3 gap-2">
+              <button type="button" data-method="mpesa" data-network="vodacom" class="pay-card flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50/50 px-2 py-4 text-center transition hover:border-brand-300 hover:bg-brand-50/50">
+                <span class="text-2xl">📱</span>
+                <span class="text-[10px] font-bold uppercase leading-tight text-slate-700">M-Pesa</span>
+              </button>
+              <button type="button" data-method="tigopesa" data-network="tigo" class="pay-card flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50/50 px-2 py-4 text-center transition hover:border-brand-300 hover:bg-brand-50/50">
+                <span class="text-2xl">🟠</span>
+                <span class="text-[10px] font-bold uppercase leading-tight text-slate-700">TigoPesa</span>
+              </button>
+              <button type="button" data-method="airtel" data-network="airtel" class="pay-card flex flex-col items-center gap-2 rounded-xl border-2 border-slate-200 bg-slate-50/50 px-2 py-4 text-center transition hover:border-brand-300 hover:bg-brand-50/50">
+                <span class="text-2xl">🔵</span>
+                <span class="text-[10px] font-bold uppercase leading-tight text-slate-700">Airtel</span>
+              </button>
             </div>
+            <input type="hidden" name="method" id="selectedMethod" value="{{ old('method', 'mpesa') }}">
+            <p class="mt-2 text-[11px] text-slate-500">Chaguo linalinganisha na mtandao chini (unaweza kubadilisha).</p>
           </div>
-          <input type="hidden" name="method" id="selectedMethod" value="mpesa">
-        </div>
 
-        <!-- Phone Number -->
-        <div class="form-group">
-          <label class="form-label" for="phone_number">Namba ya Simu</label>
-          <input 
-            type="tel" 
-            id="phone_number"
-            name="phone_number" 
-            class="form-input"
-            placeholder="07xxxxxxxx au 2557xxxxxxxx"
-            value="{{ old('phone_number') }}"
-            required
-          >
-          <div class="form-help">
-            Ingiza namba ya simu yako ya M-Pesa, TigoPesa, au Airtel Money
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="phone_number">Namba ya simu</label>
+            <input type="tel" name="phone_number" id="phone_number" required autocomplete="tel"
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[15px] font-medium tabular-nums tracking-wide focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              placeholder="07XXXXXXXX au 2557XXXXXXXX"
+              value="{{ old('phone_number') }}">
+            <p class="mt-1 text-[11px] text-slate-500">Tumia namba iliyosajiliwa kwenye pochi ya simu.</p>
           </div>
-        </div>
 
-        <!-- Registered Name -->
-        <div class="form-group">
-          <label class="form-label" for="registered_name">Majina yaliyosajiliwa</label>
-          <input 
-            type="text" 
-            id="registered_name"
-            name="registered_name" 
-            class="form-input"
-            placeholder="Majina yaliyosajiliwa kwenye simu"
-            value="{{ old('registered_name') }}"
-            required
-          >
-          <div class="form-help">
-            Ingiza majina yaliyosajiliwa kwenye namba ya simu yako
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="registered_name">Jina lililosajiliwa kwenye simu</label>
+            <input type="text" name="registered_name" id="registered_name" required
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              placeholder="Kama linaonekana kwenye M-Pesa / benki ya simu"
+              value="{{ old('registered_name', auth()->user()->name) }}">
           </div>
-        </div>
 
-        <!-- Network Type -->
-        <div class="form-group">
-          <label class="form-label" for="network_type">Aina ya Mtandao</label>
-          <select 
-            id="network_type"
-            name="network_type" 
-            class="form-input"
-            required
-          >
-            <option value="">Chagua aina ya mtandao</option>
-            <option value="vodacom" {{ old('network_type') == 'vodacom' ? 'selected' : '' }}>Vodacom (M-Pesa)</option>
-            <option value="tigo" {{ old('network_type') == 'tigo' ? 'selected' : '' }}>Tigo (TigoPesa)</option>
-            <option value="airtel" {{ old('network_type') == 'airtel' ? 'selected' : '' }}>Airtel (Airtel Money)</option>
-            <option value="halotel" {{ old('network_type') == 'halotel' ? 'selected' : '' }}>Halotel</option>
-            <option value="ttcl" {{ old('network_type') == 'ttcl' ? 'selected' : '' }}>TTCL</option>
-          </select>
-          <div class="form-help">
-            Chagua aina ya mtandao wa simu yako
+          <div>
+            <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="network_type">Mtandao</label>
+            <select name="network_type" id="network_type" required
+              class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-[14px] font-medium focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20">
+              <option value="vodacom" @selected($netOld === 'vodacom')>Vodacom (M-Pesa)</option>
+              <option value="tigo" @selected($netOld === 'tigo')>Tigo (TigoPesa)</option>
+              <option value="airtel" @selected($netOld === 'airtel')>Airtel Money</option>
+              <option value="halotel" @selected($netOld === 'halotel')>Halotel</option>
+              <option value="ttcl" @selected($netOld === 'ttcl')>TTCL</option>
+            </select>
+            <p class="mt-1 text-[11px] text-slate-500">Lazima liendane na namba na huduma unayotumia.</p>
           </div>
-        </div>
 
-        <!-- Form Actions -->
-        <div class="form-actions">
-          <button type="submit" class="btn btn-primary" {{ $wallet->balance < 5000 ? 'disabled' : '' }}>
-            <span>💰</span>
-            Tuma Ombi
-          </button>
-          <a href="{{ route('dashboard') }}" class="btn btn-outline">
-            <span>↩️</span>
-            Rudi Dashboard
-          </a>
-        </div>
-  </form>
+          <div class="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
+            <a href="{{ route('dashboard') }}" class="inline-flex justify-center rounded-xl border border-slate-200 bg-white px-5 py-3 text-center text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50">Rudi dashboard</a>
+            <button type="submit" id="submitBtn"
+              class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-brand-600 px-6 py-3.5 text-[14px] font-bold text-white shadow-lg shadow-emerald-600/25 transition enabled:hover:from-emerald-700 enabled:hover:to-brand-700 disabled:cursor-not-allowed disabled:opacity-45"
+              {{ $canWithdraw ? '' : 'disabled' }}>
+              <span>💸</span> Tuma ombi la kutoa
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <p class="text-center text-[11px] leading-relaxed text-slate-500 lg:text-left">
+        Ombi lako litapitia uthibitisho. Kama malipo hayajafanikiwa, salio linaweza kurudishwa kwenye wallet yako.
+      </p>
+      </div>
+
+      </div>
     </div>
-
-  </div>
+  </main>
 </div>
 
 <script>
-  // Payment method selection
-  document.querySelectorAll('.payment-method').forEach(method => {
-    method.addEventListener('click', function() {
-      // Remove selected class from all methods
-      document.querySelectorAll('.payment-method').forEach(m => m.classList.remove('selected'));
-      
-      // Add selected class to clicked method
-      this.classList.add('selected');
-      
-      // Update hidden input
-      document.getElementById('selectedMethod').value = this.dataset.method;
+(function () {
+  var minW = {{ $minW }};
+  var feeW = {{ $feeW }};
+  var maxAmount = {{ $maxAmount }};
+  var availableBalance = {{ $avail }};
+  var canWithdraw = {{ $canWithdraw ? 'true' : 'false' }};
+
+  var amountEl = document.getElementById('amount');
+  var methodInput = document.getElementById('selectedMethod');
+  var networkEl = document.getElementById('network_type');
+  var summaryDebit = document.getElementById('summaryDebit');
+  var summaryHint = document.getElementById('summaryHint');
+  var form = document.getElementById('withdrawForm');
+  var submitBtn = document.getElementById('submitBtn');
+
+  function floorTo100(n) {
+    if (n <= 0) return 0;
+    return Math.floor(n / 100) * 100;
+  }
+
+  function updateSummary() {
+    var raw = parseInt(amountEl.value, 10);
+    if (isNaN(raw) || raw < 0) raw = 0;
+    var debit = raw + feeW;
+    summaryDebit.textContent = debit.toLocaleString('en-US') + ' TZS';
+    if (raw === 0) {
+      summaryHint.textContent = 'Ingiza kiasi hapo juu';
+      return;
+    }
+    if (raw < minW) {
+      summaryHint.textContent = 'Chini ya kiwango cha chini (' + minW.toLocaleString('en-US') + ' TZS)';
+      summaryHint.className = 'mt-0.5 text-[10px] text-rose-600 font-semibold';
+      return;
+    }
+    if (debit > availableBalance) {
+      summaryHint.textContent = 'Jumla inazidi salio linalopatikana';
+      summaryHint.className = 'mt-0.5 text-[10px] text-rose-600 font-semibold';
+      return;
+    }
+    summaryHint.textContent = 'Utapokea simu: ' + raw.toLocaleString('en-US') + ' TZS · Ada: ' + feeW.toLocaleString('en-US') + ' TZS';
+    summaryHint.className = 'mt-0.5 text-[10px] text-violet-700/90';
+  }
+
+  function clearPayCards() {
+    document.querySelectorAll('.pay-card').forEach(function (b) {
+      b.classList.remove('pay-on', 'border-brand-500', 'bg-brand-50', 'ring-2', 'ring-brand-500/30');
+      b.classList.add('border-slate-200', 'bg-slate-50/50');
+    });
+  }
+
+  function setPayCardActive(btn) {
+    clearPayCards();
+    btn.classList.add('pay-on', 'border-brand-500', 'bg-brand-50', 'ring-2', 'ring-brand-500/30');
+    btn.classList.remove('border-slate-200', 'bg-slate-50/50');
+    methodInput.value = btn.getAttribute('data-method');
+    var net = btn.getAttribute('data-network');
+    if (net && networkEl) networkEl.value = net;
+  }
+
+  document.querySelectorAll('.pay-card').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      setPayCardActive(btn);
     });
   });
 
-  // Set default selection
-  document.querySelector('.payment-method[data-method="mpesa"]').classList.add('selected');
-
-  // Amount validation
-  document.getElementById('amount').addEventListener('input', function() {
-    const amount = parseInt(this.value);
-    const maxAmount = {{ $wallet->balance }};
-    
-    if (amount > maxAmount) {
-      this.value = maxAmount;
-    }
-    
-    if (amount < 5000 && amount > 0) {
-      this.setCustomValidity('Kiasi cha chini ni TZS 5,000');
+  function syncCardFromNetwork() {
+    var map = { vodacom: 'mpesa', tigo: 'tigopesa', airtel: 'airtel' };
+    var m = map[networkEl.value];
+    if (m) {
+      var c = document.querySelector('.pay-card[data-method="' + m + '"]');
+      if (c) setPayCardActive(c);
     } else {
-      this.setCustomValidity('');
+      clearPayCards();
+      methodInput.value = networkEl.value || 'mpesa';
+    }
+  }
+  syncCardFromNetwork();
+
+  document.querySelectorAll('.quick-amt').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      if (!canWithdraw || maxAmount < minW) return;
+      var pct = parseFloat(btn.getAttribute('data-pct'), 10);
+      var v = floorTo100(maxAmount * pct);
+      if (v < minW) v = minW;
+      if (v > maxAmount) v = maxAmount;
+      amountEl.value = v;
+      amountEl.dispatchEvent(new Event('input'));
+    });
+  });
+
+  amountEl.addEventListener('input', function () {
+    var v = parseInt(amountEl.value, 10);
+    if (isNaN(v)) {
+      updateSummary();
+      return;
+    }
+    if (v > maxAmount) {
+      amountEl.value = maxAmount;
+      v = maxAmount;
+    }
+    if (v < minW && v > 0) {
+      amountEl.setCustomValidity('Kiwango cha chini ni TZS ' + minW.toLocaleString('en-US'));
+    } else {
+      amountEl.setCustomValidity('');
+    }
+    updateSummary();
+  });
+
+  networkEl.addEventListener('change', syncCardFromNetwork);
+
+  form.addEventListener('submit', function (e) {
+    if (!canWithdraw) {
+      e.preventDefault();
+      return;
+    }
+    var v = parseInt(amountEl.value, 10);
+    if (isNaN(v) || v < minW || v + feeW > availableBalance) {
+      e.preventDefault();
+      amountEl.reportValidity();
     }
   });
 
-  // Add some interactive animations
-  document.addEventListener('DOMContentLoaded', function() {
-    // Animate form elements on scroll
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }
-      });
-    }, observerOptions);
-
-    // Observe form elements
-    document.querySelectorAll('.form-group').forEach(group => {
-      group.style.opacity = '0';
-      group.style.transform = 'translateY(20px)';
-      group.style.transition = 'all 0.6s ease';
-      observer.observe(group);
-    });
-  });
+  updateSummary();
+})();
 </script>
 @endsection

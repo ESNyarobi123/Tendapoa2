@@ -1,28 +1,42 @@
 <?php
 
-use App\Http\Controllers\{MyJobsController, WorkerActionsController, WithdrawalController};
+use App\Http\Controllers\Admin\CommissionController;
 use App\Http\Controllers\Admin\WithdrawalAdminController;
-
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\{
-    HomeController,
-    DashboardController,
-    JobController,
-    PaymentController,
-    FeedController,
-    JobViewController,
-    AuthController,
-    AdminController
-};
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\OtpPasswordResetController;
 use App\Http\Controllers\Auth\PasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\CompletionController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\FeedController;
+use App\Http\Controllers\FundingController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\JobController;
+use App\Http\Controllers\JobViewController;
+use App\Http\Controllers\MyJobsController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WithdrawalController;
+use App\Http\Controllers\WorkerActionsController;
+use App\Http\Controllers\WorkerApplicationsController;
+use App\Models\Dispute;
+use App\Models\Job;
+use App\Models\User;
+use App\Models\WalletTransaction;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 // Serve storage files - this route handles all storage requests
 // Must be before other routes to catch storage requests first
@@ -48,7 +62,7 @@ Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
         $path = trim($path, '/');
 
         // Build the full file path
-        $filePath = storage_path('app/public/' . $path);
+        $filePath = storage_path('app/public/'.$path);
 
         // Security: prevent directory traversal
         $normalizedPath = str_replace('\\', '/', realpath($filePath) ?: $filePath);
@@ -56,17 +70,17 @@ Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
 
         // Check if path is within storage directory
         if (strpos($normalizedPath, $normalizedStorage) !== 0) {
-            \Log::warning('Storage access attempt outside public directory', [
+            Log::warning('Storage access attempt outside public directory', [
                 'path' => $path,
                 'filePath' => $filePath,
                 'normalizedPath' => $normalizedPath,
-                'normalizedStorage' => $normalizedStorage
+                'normalizedStorage' => $normalizedStorage,
             ]);
             abort(403, 'Access denied');
         }
 
         // Check if file exists
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             // Log detailed information for debugging
             $storageBase = storage_path('app/public');
             $jobsDir = storage_path('app/public/jobs');
@@ -78,7 +92,7 @@ Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
                 }), 0, 10);
             }
 
-            \Log::warning('Storage file not found - Route handler', [
+            Log::warning('Storage file not found - Route handler', [
                 'requestedPath' => $path,
                 'fullFilePath' => $filePath,
                 'storageBase' => $storageBase,
@@ -87,31 +101,31 @@ Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
                 'jobsDir' => $jobsDir,
                 'jobsDirExists' => is_dir($jobsDir),
                 'jobsDirWritable' => is_dir($jobsDir) ? is_writable($jobsDir) : false,
-                'jobsDirFilesCount' => is_dir($jobsDir) ? count(glob($jobsDir . '/*')) : 0,
+                'jobsDirFilesCount' => is_dir($jobsDir) ? count(glob($jobsDir.'/*')) : 0,
                 'sampleJobsFiles' => $jobsFiles,
                 'symlinkExists' => is_link(public_path('storage')),
-                'symlinkTarget' => is_link(public_path('storage')) ? readlink(public_path('storage')) : null
+                'symlinkTarget' => is_link(public_path('storage')) ? readlink(public_path('storage')) : null,
             ]);
-            abort(404, 'File not found: ' . basename($path));
+            abort(404, 'File not found: '.basename($path));
         }
 
         // Check if it's a file (not directory)
-        if (!is_file($filePath)) {
+        if (! is_file($filePath)) {
             abort(404, 'Not a file');
         }
 
         // Check if readable
-        if (!is_readable($filePath)) {
-            \Log::warning('Storage file not readable', [
+        if (! is_readable($filePath)) {
+            Log::warning('Storage file not readable', [
                 'path' => $path,
-                'permissions' => substr(sprintf('%o', fileperms($filePath)), -4)
+                'permissions' => substr(sprintf('%o', fileperms($filePath)), -4),
             ]);
             abort(403, 'File not accessible');
         }
 
         // Determine MIME type
         $mimeType = mime_content_type($filePath);
-        if (!$mimeType) {
+        if (! $mimeType) {
             // Fallback based on extension
             $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
             $mimeTypes = [
@@ -131,18 +145,18 @@ Route::match(['get', 'head', 'options'], '/image/{path}', function ($path) {
             'Access-Control-Allow-Methods' => 'GET, HEAD, OPTIONS',
             'Access-Control-Allow-Headers' => '*',
         ]);
-    } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+    } catch (HttpException $e) {
         // Re-throw HTTP exceptions (404, 403, etc.)
         throw $e;
-    } catch (\Exception $e) {
-        \Log::error('Storage file serving error', [
+    } catch (Exception $e) {
+        Log::error('Storage file serving error', [
             'path' => $path ?? 'unknown',
             'error' => $e->getMessage(),
             'file' => $e->getFile(),
             'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString()
+            'trace' => $e->getTraceAsString(),
         ]);
-        abort(500, 'Error serving file: ' . $e->getMessage());
+        abort(500, 'Error serving file: '.$e->getMessage());
     }
 })->where('path', '.*')->name('storage.serve');
 
@@ -158,9 +172,9 @@ Route::match(['get', 'head', 'options'], '/storage/{path}', function ($path) {
         ]);
     }
 
-    $filePath = storage_path('app/public/' . $path);
-    
-    if (!file_exists($filePath) || !is_file($filePath)) {
+    $filePath = storage_path('app/public/'.$path);
+
+    if (! file_exists($filePath) || ! is_file($filePath)) {
         abort(404);
     }
 
@@ -201,9 +215,9 @@ Route::get('/download/app', [HomeController::class, 'downloadApp'])->name('app.d
 // AUTH-protected (🚫 hakuna 'role' middleware tena)
 Route::middleware(['auth'])->group(function () {
     // PROFILE
-    Route::get('/profile', [\App\Http\Controllers\ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // DASHBOARD
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -226,79 +240,120 @@ Route::middleware(['auth'])->group(function () {
     // MFANYAKAZI feed + view + comment (role check ndani ya controller)
     Route::get('/feed', [FeedController::class, 'index'])->name('feed');
     Route::get('/jobs/{job}', [JobViewController::class, 'show'])->name('jobs.show');
-    Route::post('/jobs/{job}/comment', [\App\Http\Controllers\CommentController::class, 'store'])->name('jobs.comment');
+    Route::post('/jobs/{job}/comment', [CommentController::class, 'store'])->name('jobs.comment');
 
     // MUHITAJI accept/reject/counter (role check ndani ya controller)
-    Route::post('/jobs/{job}/accept/{comment}', [\App\Http\Controllers\CommentController::class, 'accept'])->name('jobs.accept');
-    Route::post('/jobs/{job}/reject/{comment}', [\App\Http\Controllers\CommentController::class, 'reject'])->name('jobs.reject');
-    Route::post('/jobs/{job}/reply/{comment}', [\App\Http\Controllers\CommentController::class, 'reply'])->name('jobs.reply');
-    Route::post('/jobs/{job}/counter/{comment}', [\App\Http\Controllers\CommentController::class, 'counterOffer'])->name('jobs.counter');
-    Route::post('/jobs/{job}/accept-counter/{comment}', [\App\Http\Controllers\CommentController::class, 'acceptCounter'])->name('jobs.accept-counter');
-    Route::post('/jobs/{job}/increase-budget', [\App\Http\Controllers\CommentController::class, 'increaseBudget'])->name('jobs.increase-budget');
+    Route::post('/jobs/{job}/accept/{comment}', [CommentController::class, 'accept'])->name('jobs.accept');
+    Route::post('/jobs/{job}/reject/{comment}', [CommentController::class, 'reject'])->name('jobs.reject');
+    Route::post('/jobs/{job}/reply/{comment}', [CommentController::class, 'reply'])->name('jobs.reply');
+    Route::post('/jobs/{job}/counter/{comment}', [CommentController::class, 'counterOffer'])->name('jobs.counter');
+    Route::post('/jobs/{job}/accept-counter/{comment}', [CommentController::class, 'acceptCounter'])->name('jobs.accept-counter');
+    Route::post('/jobs/{job}/increase-budget', [CommentController::class, 'increaseBudget'])->name('jobs.increase-budget');
     Route::post('/jobs/{job}/cancel', [JobController::class, 'cancel'])->name('jobs.cancel');
 
+    // ============================================================
+    // NEW WORKFLOW: Applications (worker apply, client manage)
+    // ============================================================
+    Route::post('/jobs/{job}/apply', [ApplicationController::class, 'store'])->name('jobs.apply');
+    Route::post('/jobs/{job}/applications/{application}/shortlist', [ApplicationController::class, 'shortlist'])->name('applications.shortlist');
+    Route::post('/jobs/{job}/applications/{application}/reject', [ApplicationController::class, 'reject'])->name('applications.reject');
+    Route::post('/jobs/{job}/applications/{application}/counter', [ApplicationController::class, 'counter'])->name('applications.counter');
+    Route::post('/jobs/{job}/applications/{application}/accept-counter', [ApplicationController::class, 'acceptCounter'])->name('applications.accept-counter');
+    Route::post('/jobs/{job}/applications/{application}/withdraw', [ApplicationController::class, 'withdraw'])->name('applications.withdraw');
+    Route::post('/jobs/{job}/applications/{application}/select', [ApplicationController::class, 'select'])->name('applications.select');
+
+    // ============================================================
+    // NEW WORKFLOW: Funding (escrow payment after worker selection)
+    // ============================================================
+    Route::get('/jobs/{job}/fund', [FundingController::class, 'show'])->name('jobs.fund');
+    Route::post('/jobs/{job}/fund/wallet', [FundingController::class, 'fundFromWallet'])->name('jobs.fund.wallet');
+    Route::post('/jobs/{job}/fund/external', [FundingController::class, 'fundExternal'])->name('jobs.fund.external');
+    Route::get('/jobs/{job}/fund/wait', [FundingController::class, 'waitPage'])->name('jobs.fund.wait');
+    Route::get('/jobs/{job}/fund/poll', [FundingController::class, 'poll'])->name('jobs.fund.poll');
+
+    // ============================================================
+    // NEW WORKFLOW: Completion (two-sided confirm, disputes, reviews)
+    // ============================================================
+    Route::post('/jobs/{job}/worker-accept', [CompletionController::class, 'workerAccept'])->name('jobs.worker.accept');
+    Route::post('/jobs/{job}/worker-decline', [CompletionController::class, 'workerDecline'])->name('jobs.worker.decline');
+    Route::post('/jobs/{job}/worker-submit', [CompletionController::class, 'workerSubmit'])->name('jobs.worker.submit');
+    Route::post('/jobs/{job}/client-confirm', [CompletionController::class, 'clientConfirm'])->name('jobs.client.confirm');
+    Route::post('/jobs/{job}/client-revision', [CompletionController::class, 'clientRevision'])->name('jobs.client.revision');
+    Route::post('/jobs/{job}/client-dispute', [CompletionController::class, 'clientDispute'])->name('jobs.client.dispute');
+    Route::post('/jobs/{job}/worker-dispute', [CompletionController::class, 'workerDispute'])->name('jobs.worker.dispute');
+    Route::post('/jobs/{job}/review', [CompletionController::class, 'submitReview'])->name('jobs.review');
+
+    // Dispute details page
+    Route::get('/disputes/{dispute}', function (Dispute $dispute) {
+        $dispute->load('job', 'raisedByUser', 'againstUser', 'messages.user');
+
+        return view('disputes.show', compact('dispute'));
+    })->name('disputes.show');
+
     // PRIVATE CHAT/MESSAGING
-    Route::get('/chat', [\App\Http\Controllers\ChatController::class, 'index'])->name('chat.index');
-    Route::get('/chat/{job}', [\App\Http\Controllers\ChatController::class, 'show'])->name('chat.show');
-    Route::post('/chat/{job}/send', [\App\Http\Controllers\ChatController::class, 'send'])->name('chat.send');
-    Route::get('/chat/{job}/poll', [\App\Http\Controllers\ChatController::class, 'poll'])->name('chat.poll');
-    Route::get('/chat/unread-count', [\App\Http\Controllers\ChatController::class, 'unreadCount'])->name('chat.unread');
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::get('/chat/{job}', [ChatController::class, 'show'])->name('chat.show');
+    Route::post('/chat/{job}/send', [ChatController::class, 'send'])->name('chat.send');
+    Route::get('/chat/{job}/poll', [ChatController::class, 'poll'])->name('chat.poll');
+    Route::get('/chat/unread-count', [ChatController::class, 'unreadCount'])->name('chat.unread');
 
-
-    // MUHITAJI — kazi zangu
+    // MUHITAJI — kazi zangu + maombi (inbox)
     Route::get('/my/jobs', [MyJobsController::class, 'index'])->name('my.jobs');
+    Route::get('/my/applications', [MyJobsController::class, 'applications'])->name('my.applications');
 
     // MFANYAKAZI — assigned list + actions
     Route::get('/mfanyakazi/assigned', [WorkerActionsController::class, 'assigned'])->name('mfanyakazi.assigned');
+    Route::get('/mfanyakazi/my-applications', [WorkerApplicationsController::class, 'index'])->name('mfanyakazi.applications');
     Route::post('/mfanyakazi/jobs/{job}/accept', [WorkerActionsController::class, 'accept'])->name('mfanyakazi.jobs.accept');
     Route::post('/mfanyakazi/jobs/{job}/decline', [WorkerActionsController::class, 'decline'])->name('mfanyakazi.jobs.decline');
     Route::post('/mfanyakazi/jobs/{job}/complete', [WorkerActionsController::class, 'complete'])->name('mfanyakazi.jobs.complete');
 
-    // WITHDRAWALS
+    // WALLET: Deposit
+    Route::get('/wallet/deposit', [WalletController::class, 'depositForm'])->name('wallet.deposit');
+    Route::post('/wallet/deposit', [WalletController::class, 'depositSubmit'])->name('wallet.deposit.submit');
+    Route::get('/wallet/deposit/{transaction}/wait', [WalletController::class, 'depositWait'])->name('wallet.deposit.wait');
+    Route::get('/wallet/deposit/{transaction}/poll', [WalletController::class, 'depositPoll'])->name('wallet.deposit.poll');
+
+    // WITHDRAWALS (ClickPesa Payout)
     Route::get('/withdraw', [WithdrawalController::class, 'requestForm'])->name('withdraw.form');
-    Route::post('/withdraw/submit', [WithdrawalController::class, 'submit'])->name('withdraw.submit');
-    // MFANYAKAZI — assigned list + actions
-    Route::get('/mfanyakazi/assigned', [WorkerActionsController::class, 'assigned'])->name('mfanyakazi.assigned');
-    Route::post('/mfanyakazi/jobs/{job}/accept', [WorkerActionsController::class, 'accept'])->name('mfanyakazi.jobs.accept');
-    Route::post('/mfanyakazi/jobs/{job}/decline', [WorkerActionsController::class, 'decline'])->name('mfanyakazi.jobs.decline');
-    Route::post('/mfanyakazi/jobs/{job}/complete', [WorkerActionsController::class, 'complete'])->name('mfanyakazi.jobs.complete');
+    Route::post('/withdraw/submit', [WalletController::class, 'withdrawSubmit'])->name('withdraw.submit');
     // ADMIN — Full Access Routes
     Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
         // Dashboard
-        Route::get('/dashboard', [\App\Http\Controllers\AdminController::class, 'dashboard'])->name('admin.dashboard');
+        Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('admin.dashboard');
 
         // User Management
-        Route::get('/users', [\App\Http\Controllers\AdminController::class, 'users'])->name('admin.users');
-        Route::get('/users/{user}', [\App\Http\Controllers\AdminController::class, 'userDetails'])->name('admin.user.details');
-        Route::get('/users/{user}/dashboard', [\App\Http\Controllers\AdminController::class, 'viewUserDashboard'])->name('admin.user.dashboard');
-        Route::get('/users/{user}/monitor', [\App\Http\Controllers\AdminController::class, 'monitorUser'])->name('admin.user.monitor');
+        Route::get('/users', [AdminController::class, 'users'])->name('admin.users');
+        Route::get('/users/{user}', [AdminController::class, 'userDetails'])->name('admin.user.details');
+        Route::get('/users/{user}/dashboard', [AdminController::class, 'viewUserDashboard'])->name('admin.user.dashboard');
+        Route::get('/users/{user}/monitor', [AdminController::class, 'monitorUser'])->name('admin.user.monitor');
+        Route::get('/users/{user}/chats', [AdminController::class, 'userChats'])->name('admin.user.chats');
 
         // Job Management
-        Route::get('/jobs', [\App\Http\Controllers\AdminController::class, 'jobs'])->name('admin.jobs');
-        Route::get('/jobs/{job}', [\App\Http\Controllers\AdminController::class, 'jobDetails'])->name('admin.job.details');
+        Route::get('/jobs', [AdminController::class, 'jobs'])->name('admin.jobs');
+        Route::get('/jobs/{job}', [AdminController::class, 'jobDetails'])->name('admin.job.details');
 
         // Chat/Conversation Monitoring
-        Route::get('/chats', [\App\Http\Controllers\AdminController::class, 'allChats'])->name('admin.chats');
-        Route::get('/chats/{job}', [\App\Http\Controllers\AdminController::class, 'viewChat'])->name('admin.chat.view');
+        Route::get('/chats', [AdminController::class, 'allChats'])->name('admin.chats');
+        Route::get('/chats/{job}', [AdminController::class, 'viewChat'])->name('admin.chat.view');
 
         // Commission & Fees Tracking
-        Route::get('/commissions', [\App\Http\Controllers\Admin\CommissionController::class, 'index'])->name('admin.commissions');
+        Route::get('/commissions', [CommissionController::class, 'index'])->name('admin.commissions');
 
         // Analytics & Reports
-        Route::get('/analytics', [\App\Http\Controllers\AdminController::class, 'analytics'])->name('admin.analytics');
+        Route::get('/analytics', [AdminController::class, 'analytics'])->name('admin.analytics');
 
         // ADMIN IMPERSONATION - Login as any user
-        Route::get('/impersonate/{user}', [\App\Http\Controllers\AdminController::class, 'impersonate'])->name('admin.impersonate');
-        Route::get('/stop-impersonate', [\App\Http\Controllers\AdminController::class, 'stopImpersonate'])->name('admin.stop-impersonate');
+        Route::get('/impersonate/{user}', [AdminController::class, 'impersonate'])->name('admin.impersonate');
+        Route::get('/stop-impersonate', [AdminController::class, 'stopImpersonate'])->name('admin.stop-impersonate');
 
         // ADMIN FULL CONTROL - User Management
-        Route::get('/users/{user}/edit', [\App\Http\Controllers\AdminController::class, 'editUser'])->name('admin.user.edit');
-        Route::put('/users/{user}', [\App\Http\Controllers\AdminController::class, 'updateUser'])->name('admin.user.update');
-        Route::delete('/users/{user}', [\App\Http\Controllers\AdminController::class, 'deleteUser'])->name('admin.user.delete');
-        Route::post('/users/{user}/toggle-status', [\App\Http\Controllers\AdminController::class, 'toggleUserStatus'])->name('admin.user.toggle-status');
+        Route::get('/users/{user}/edit', [AdminController::class, 'editUser'])->name('admin.user.edit');
+        Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('admin.user.update');
+        Route::delete('/users/{user}', [AdminController::class, 'deleteUser'])->name('admin.user.delete');
+        Route::post('/users/{user}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('admin.user.toggle-status');
 
         // ADMIN FULL CONTROL - Job Management
-        Route::post('/jobs/{job}/force-complete', [\App\Http\Controllers\AdminController::class, 'forceCompleteJob'])->name('admin.job.force-complete');
         Route::post('/jobs/{job}/force-complete', [AdminController::class, 'forceCompleteJob'])->name('admin.job.force-complete');
         Route::post('/jobs/{job}/force-cancel', [AdminController::class, 'forceCancelJob'])->name('admin.job.force-cancel');
 
@@ -318,6 +373,10 @@ Route::middleware(['auth'])->group(function () {
         // ADMIN FULL CONTROL - Communication
         Route::post('/users/{user}/send-message', [AdminController::class, 'sendMessageToUser'])->name('admin.user.send-message');
 
+        // Broadcast Notifications
+        Route::get('/broadcast', [AdminController::class, 'showBroadcast'])->name('admin.broadcast');
+        Route::post('/broadcast', [AdminController::class, 'sendBroadcast'])->name('admin.broadcast.send');
+
         // Withdrawals
         Route::get('/withdrawals', [WithdrawalAdminController::class, 'index'])->name('admin.withdrawals');
         Route::post('/withdrawals/{withdrawal}/paid', [WithdrawalAdminController::class, 'markPaid'])->name('admin.withdrawals.paid');
@@ -325,39 +384,40 @@ Route::middleware(['auth'])->group(function () {
 
         // Completed Jobs by Workers (keeping legacy route)
         Route::get('/completed-jobs', function () {
-            $workers = \App\Models\User::where('role', 'mfanyakazi')
+            $workers = User::where('role', 'mfanyakazi')
                 ->with([
                     'assignedJobs' => function ($query) {
                         $query->where('status', 'completed');
-                    }
+                    },
                 ])
                 ->withCount([
                     'assignedJobs as completed_jobs' => function ($query) {
                         $query->where('status', 'completed');
-                    }
+                    },
                 ])
                 ->orderBy('completed_jobs', 'desc')
                 ->paginate(20);
+
             return view('admin.completed-jobs', compact('workers'));
         })->name('admin.completed-jobs');
     });
 });
 
-// Zeno webhook (no auth)
-Route::post('/payment/zeno/webhook', [PaymentController::class, 'webhook'])->name('zeno.webhook');
+// ClickPesa webhook (no auth)
+Route::post('/payment/clickpesa/webhook', [PaymentController::class, 'webhook'])->name('clickpesa.webhook');
 
 // API routes for dashboard updates
-Route::get('/api/dashboard-updates', [\App\Http\Controllers\Api\DashboardController::class, 'updates'])->middleware('auth');
+Route::get('/api/dashboard-updates', [App\Http\Controllers\Api\DashboardController::class, 'updates'])->middleware('auth');
 
 // Debug route for testing payment flow
-Route::get('/debug/payment/{job}', function (\App\Models\Job $job) {
+Route::get('/debug/payment/{job}', function (Job $job) {
     $worker = $job->acceptedWorker;
-    if (!$worker) {
+    if (! $worker) {
         return response()->json(['error' => 'No worker found']);
     }
 
     $wallet = $worker->ensureWallet();
-    $transactions = \App\Models\WalletTransaction::where('user_id', $worker->id)->latest()->take(5)->get();
+    $transactions = WalletTransaction::where('user_id', $worker->id)->latest()->take(5)->get();
 
     return response()->json([
         'job_id' => $job->id,
@@ -367,7 +427,7 @@ Route::get('/debug/payment/{job}', function (\App\Models\Job $job) {
         'worker_id' => $worker->id,
         'worker_name' => $worker->name,
         'wallet_balance' => $wallet->balance,
-        'recent_transactions' => $transactions
+        'recent_transactions' => $transactions,
     ]);
 })->middleware('auth');
 
@@ -395,6 +455,25 @@ Route::middleware('guest')->group(function () {
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
+
+    // OTP-based forgot password flow
+    Route::get('forgot-password-otp', [OtpPasswordResetController::class, 'showRequestForm'])
+        ->name('password.otp.request');
+
+    Route::post('forgot-password-otp', [OtpPasswordResetController::class, 'sendOtp'])
+        ->name('password.otp.send');
+
+    Route::get('verify-otp', [OtpPasswordResetController::class, 'showVerifyForm'])
+        ->name('password.otp.verify.form');
+
+    Route::post('verify-otp', [OtpPasswordResetController::class, 'verifyOtp'])
+        ->name('password.otp.verify');
+
+    Route::get('reset-password-otp', [OtpPasswordResetController::class, 'showResetForm'])
+        ->name('password.otp.reset.form');
+
+    Route::post('reset-password-otp', [OtpPasswordResetController::class, 'resetPassword'])
+        ->name('password.otp.reset');
 });
 
 Route::middleware('auth')->group(function () {
@@ -421,12 +500,28 @@ Route::middleware('auth')->group(function () {
 
     // Notifications
     Route::get('/notifications', function () {
-        $notifications = \Illuminate\Support\Facades\Auth::user()->notifications()->paginate(15);
-        return view('notifications.index', compact('notifications'));
+        $user = Auth::user();
+        $query = $user->notifications()->latest();
+        if (request('filter') === 'unread') {
+            $query->whereNull('read_at');
+        }
+        $notifications = $query->paginate(15)->withQueryString();
+        $unreadCount = $user->unreadNotifications()->count();
+        $totalCount = $user->notifications()->count();
+
+        return view('notifications.index', compact('notifications', 'unreadCount', 'totalCount'));
     })->name('notifications.index');
 
+    Route::post('/notifications/{id}/read', function (string $id) {
+        $n = Auth::user()->notifications()->where('id', $id)->firstOrFail();
+        $n->markAsRead();
+
+        return back()->with('success', 'Taarifa imewekwa kama imesomwa.');
+    })->name('notifications.read');
+
     Route::post('/notifications/read-all', function () {
-        \Illuminate\Support\Facades\Auth::user()->unreadNotifications->markAsRead();
+        Auth::user()->unreadNotifications->markAsRead();
+
         return back()->with('success', 'Taarifa zote zimewekwa kama zimesomwa.');
     })->name('notifications.readAll');
 });

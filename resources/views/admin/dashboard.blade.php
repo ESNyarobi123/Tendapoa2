@@ -560,34 +560,7 @@
 </style>
 
 @php
-  // Enhanced data for super admin dashboard
-  $totalJobs = \App\Models\Job::count();
-  $completedJobs = \App\Models\Job::where('status', 'completed')->count();
-  $totalRevenue = \App\Models\Job::where('status', 'completed')->sum('price');
-  $totalUsers = \App\Models\User::count();
-  $activeWorkers = \App\Models\User::where('role', 'mfanyakazi')->count();
-  $activeClients = \App\Models\User::where('role', 'muhitaji')->count();
-  $pendingWithdrawals = \App\Models\Withdrawal::where('status', 'PROCESSING')->count();
-  $totalWithdrawals = \App\Models\Withdrawal::sum('amount');
-  $netProfit = $totalRevenue * 0.10;
-  $cancelledJobs = \App\Models\Job::where('status', 'cancelled')->count();
-  
-  // Recent activities
-  $recentJobs = \App\Models\Job::with('muhitaji', 'acceptedWorker', 'category')->latest()->take(5)->get();
-  $recentUsers = \App\Models\User::latest()->take(5)->get();
-  $recentWithdrawals = \App\Models\Withdrawal::with('user')->latest()->take(5)->get();
-  
-  // Top performers
-  $topWorkers = \App\Models\User::where('role', 'mfanyakazi')
-    ->withCount(['jobs as completed_jobs' => function($query) {
-      $query->where('status', 'completed');
-    }])
-    ->orderBy('completed_jobs', 'desc')
-    ->take(5)
-    ->get();
-  
-  // Calculate completion rate
-  $completionRate = $totalJobs > 0 ? round(($completedJobs / $totalJobs) * 100) : 0;
+  $s = $stats ?? [];
 @endphp
 
 <div class="dashboard-container">
@@ -596,21 +569,29 @@
     <div class="admin-header">
       <div class="header-content">
         <div class="header-text">
-          <h1>🛠️ Super Admin Dashboard</h1>
-          <p>Complete system monitoring, analytics, and management control center</p>
+          <h1>🛠️ Dashibodi ya Admin</h1>
+          <p>Muhtasari wa mfumo — kazi, malipo, escrow, na watumiaji (data halisi kutoka database; hakuna takwimu bandia).</p>
         </div>
         <div class="header-actions">
           <a class="btn btn-primary" href="{{ route('jobs.create') }}">
             <span>📝</span>
-            Create Job
+            Chapisha kazi
           </a>
           <a class="btn btn-success" href="{{ route('admin.analytics') }}">
             <span>📊</span>
-            Full Analytics
+            Analytics
           </a>
           <a class="btn btn-warning" href="{{ route('admin.users') }}">
             <span>👥</span>
-            Manage Users
+            Watumiaji
+          </a>
+          <a class="btn" href="{{ route('admin.jobs') }}" style="background:#0ea5e9;color:#fff;border:none;">
+            <span>💼</span>
+            Kazi
+          </a>
+          <a class="btn" href="{{ route('admin.broadcast') }}" style="background:#8b5cf6;color:#fff;border:none;">
+            <span>📢</span>
+            Tuma taarifa
           </a>
         </div>
       </div>
@@ -622,16 +603,26 @@
         <div class="stat-header">
           <div class="stat-icon">📦</div>
           <div class="stat-info">
-            <h3>Total Jobs</h3>
-            <div class="stat-value">{{ number_format($totalJobs) }}</div>
-            <div class="stat-change positive">
-              <span>📈</span>
-              +{{ rand(5, 15) }}% this month
+            <h3>Jumla ya kazi</h3>
+            <div class="stat-value">{{ number_format($s['total_jobs'] ?? 0) }}</div>
+            <div class="stat-trend">
+              <span>⚡</span>
+              {{ number_format($s['active_jobs'] ?? 0) }} zinaendelea • {{ number_format($s['completed_jobs'] ?? 0) }} zimekamilika
             </div>
             <div class="stat-trend">
-              <span>📊</span>
-              {{ $completedJobs }} done • <span style="color: #ef4444;">{{ $cancelledJobs }} cancelled</span>
+              <span>📂</span>
+              Wazi: {{ number_format($s['open_jobs'] ?? 0) }} • Subiri malipo: {{ number_format($s['awaiting_payment_jobs'] ?? 0) }} • Escrow/mchakato: {{ number_format($s['escrow_pipeline_jobs'] ?? 0) }}
             </div>
+            <div class="stat-trend">
+              <span style="color:#f87171;">⚠️</span>
+              Mgogoro: {{ number_format($s['disputed_jobs'] ?? 0) }} • Zilizofutwa: {{ number_format($s['cancelled_jobs'] ?? 0) }}
+            </div>
+            @if(isset($s['jobs_created_trend_pct']) && $s['jobs_created_trend_pct'] !== null)
+              <div class="stat-change {{ ($s['jobs_created_trend_pct'] ?? 0) >= 0 ? 'positive' : 'negative' }}">
+                <span>📈</span>
+                Kazi zilizoongezwa (siku 30): {{ ($s['jobs_created_trend_pct'] ?? 0) >= 0 ? '+' : ''}}{{ $s['jobs_created_trend_pct'] }}% vs siku 30 zilizotangulia
+              </div>
+            @endif
           </div>
         </div>
       </div>
@@ -640,15 +631,19 @@
         <div class="stat-header">
           <div class="stat-icon">💰</div>
           <div class="stat-info">
-            <h3>Net Profit (10%)</h3>
-            <div class="stat-value" style="color: #10b981;">TZS {{ number_format($netProfit) }}</div>
-            <div class="stat-change positive">
-              <span>📈</span>
-              +{{ rand(8, 20) }}% this month
+            <h3>Malipo & ada ya jukwaa</h3>
+            <div class="stat-value" style="color: #10b981;">TZS {{ number_format($s['payments_completed_sum'] ?? 0) }}</div>
+            <div class="stat-trend">
+              <span>🏦</span>
+              Jumla ya malipo yaliyokamilika (payments COMPLETED)
+            </div>
+            <div class="stat-trend">
+              <span>📌</span>
+              Ada iliyorekodiwa (platform_fee): TZS {{ number_format($s['platform_fees_sum'] ?? 0) }}
             </div>
             <div class="stat-trend">
               <span>💳</span>
-              {{ $pendingWithdrawals }} pending withdrawals
+              Kutoa zinazosubiri: {{ number_format($s['pending_withdrawals'] ?? 0) }}
             </div>
           </div>
         </div>
@@ -658,15 +653,21 @@
         <div class="stat-header">
           <div class="stat-icon">👥</div>
           <div class="stat-info">
-            <h3>Total Users</h3>
-            <div class="stat-value">{{ number_format($totalUsers) }}</div>
-            <div class="stat-change positive">
-              <span>📈</span>
-              +{{ rand(10, 25) }}% this month
-            </div>
+            <h3>Watumiaji</h3>
+            <div class="stat-value">{{ number_format($s['total_users'] ?? 0) }}</div>
             <div class="stat-trend">
               <span>👷</span>
-              {{ $activeWorkers }} workers, {{ $activeClients }} clients
+              Wafanyakazi {{ number_format($s['mfanyakazi_count'] ?? 0) }} • Wateja {{ number_format($s['muhitaji_count'] ?? 0) }} • Admin {{ number_format($s['admin_count'] ?? 0) }}
+            </div>
+            @if(isset($s['users_trend_pct']) && $s['users_trend_pct'] !== null)
+              <div class="stat-change {{ ($s['users_trend_pct'] ?? 0) >= 0 ? 'positive' : 'negative' }}">
+                <span>📈</span>
+                Usajili (siku 30): {{ ($s['users_trend_pct'] ?? 0) >= 0 ? '+' : ''}}{{ $s['users_trend_pct'] }}% vs siku 30 zilizotangulia
+              </div>
+            @endif
+            <div class="stat-trend">
+              <span>💬</span>
+              Jumla ya ujumbe: {{ number_format($s['total_messages'] ?? 0) }}
             </div>
           </div>
         </div>
@@ -676,15 +677,11 @@
         <div class="stat-header">
           <div class="stat-icon">⭐</div>
           <div class="stat-info">
-            <h3>Completion Rate</h3>
-            <div class="stat-value">{{ $completionRate }}%</div>
-            <div class="stat-change positive">
-              <span>📈</span>
-              +{{ rand(3, 8) }}% this month
-            </div>
+            <h3>Kiwango cha ukamilishaji</h3>
+            <div class="stat-value">{{ number_format($s['completion_rate_pct'] ?? 0) }}%</div>
             <div class="stat-trend">
               <span>🎯</span>
-              {{ $completedJobs }}/{{ $totalJobs }} jobs completed
+              {{ number_format($s['completed_jobs'] ?? 0) }} / {{ number_format($s['total_jobs'] ?? 0) }} kazi zimekamilika
             </div>
           </div>
         </div>
@@ -695,7 +692,7 @@
     <div class="monitoring-section">
       <div class="monitoring-header">
         <div class="monitoring-icon">📡</div>
-        <div class="monitoring-title">Real-time System Monitoring</div>
+        <div class="monitoring-title">Ufuatiliaji wa kazi (mfumo mpya + zamani)</div>
         <div class="live-indicator"></div>
       </div>
       
@@ -705,28 +702,28 @@
           <div class="monitoring-card-header">
             <div class="monitoring-card-title">
               <span>⚡</span>
-              Active Jobs
+              Kazi kwenye mtiririko
             </div>
             <div class="live-indicator"></div>
           </div>
           <div class="monitoring-list">
-            @foreach($recentJobs->where('status', 'in_progress') as $job)
-              <div class="monitoring-item">
+            @foreach($pipelineMonitorJobs ?? [] as $job)
+              <a href="{{ route('admin.job.details', $job) }}" class="monitoring-item" style="text-decoration:none;color:inherit;">
                 <div class="monitoring-avatar">
                   {{ strtoupper(substr($job->muhitaji->name ?? 'U', 0, 2)) }}
                 </div>
                 <div class="monitoring-details">
-                  <h4>{{ $job->title }}</h4>
-                  <p>Worker: {{ $job->acceptedWorker->name ?? 'Not assigned' }}</p>
+                  <h4>{{ \Illuminate\Support\Str::limit($job->title, 42) }}</h4>
+                  <p>{{ $job->status }} • {{ $job->acceptedWorker->name ?? 'Bila mfanyakazi' }}</p>
                 </div>
-                <div class="monitoring-status active">Active</div>
-              </div>
+                <div class="monitoring-status active">{{ $job->status }}</div>
+              </a>
             @endforeach
-            @if($recentJobs->where('status', 'in_progress')->count() === 0)
+            @if(($pipelineMonitorJobs ?? collect())->isEmpty())
               <div class="monitoring-item">
                 <div class="monitoring-details">
-                  <h4>No active jobs</h4>
-                  <p>All jobs are completed or pending</p>
+                  <h4>Hakuna kazi kwenye mtiririko</h4>
+                  <p>Escrow / in_progress / submitted zote tupu kwa sasa</p>
                 </div>
               </div>
             @endif
@@ -738,13 +735,13 @@
           <div class="monitoring-card-header">
             <div class="monitoring-card-title">
               <span>👥</span>
-              Recent Users
+              Watumiaji wa hivi karibuni
             </div>
             <div class="live-indicator"></div>
           </div>
           <div class="monitoring-list">
             @foreach($recentUsers as $user)
-              <div class="monitoring-item">
+              <a href="{{ route('admin.user.details', $user) }}" class="monitoring-item" style="text-decoration:none;color:inherit;">
                 <div class="monitoring-avatar">
                   {{ strtoupper(substr($user->name, 0, 2)) }}
                 </div>
@@ -752,8 +749,8 @@
                   <h4>{{ $user->name }}</h4>
                   <p>{{ ucfirst($user->role) }} • {{ $user->created_at->diffForHumans() }}</p>
                 </div>
-                <div class="monitoring-status active">New</div>
-              </div>
+                <div class="monitoring-status active">Mpya</div>
+              </a>
             @endforeach
           </div>
         </div>
@@ -763,28 +760,28 @@
           <div class="monitoring-card-header">
             <div class="monitoring-card-title">
               <span>💰</span>
-              Pending Withdrawals
+              Kutoa zinazosubiri (PROCESSING)
             </div>
             <div class="live-indicator"></div>
           </div>
           <div class="monitoring-list">
-            @foreach($recentWithdrawals->where('status', 'PROCESSING') as $withdrawal)
-              <div class="monitoring-item">
+            @foreach(($recentWithdrawals ?? collect())->where('status', 'PROCESSING') as $withdrawal)
+              <a href="{{ route('admin.withdrawals') }}" class="monitoring-item" style="text-decoration:none;color:inherit;">
                 <div class="monitoring-avatar">
-                  {{ strtoupper(substr($withdrawal->user->name, 0, 2)) }}
+                  {{ strtoupper(substr($withdrawal->user->name ?? 'U', 0, 2)) }}
                 </div>
                 <div class="monitoring-details">
-                  <h4>{{ $withdrawal->user->name }}</h4>
+                  <h4>{{ $withdrawal->user->name ?? 'User' }}</h4>
                   <p>TZS {{ number_format($withdrawal->amount) }} • {{ $withdrawal->created_at->diffForHumans() }}</p>
                 </div>
-                <div class="monitoring-status pending">Pending</div>
-              </div>
+                <div class="monitoring-status pending">Subiri</div>
+              </a>
             @endforeach
-            @if($recentWithdrawals->where('status', 'PROCESSING')->count() === 0)
+            @if(($recentWithdrawals ?? collect())->where('status', 'PROCESSING')->count() === 0)
               <div class="monitoring-item">
                 <div class="monitoring-details">
-                  <h4>No pending withdrawals</h4>
-                  <p>All withdrawal requests processed</p>
+                  <h4>Hakuna kutoa zinazosubiri</h4>
+                  <p>Hakuna ombi la PROCESSING kwenye sampuli hii</p>
                 </div>
               </div>
             @endif
@@ -801,13 +798,9 @@
           <div class="chart-header">
             <div class="chart-title">
               <span>📈</span>
-              Revenue Analytics
+              Mapato ya kazi zilizokamilika (siku 7)
             </div>
-            <select class="btn btn-outline" style="font-size: 0.75rem; padding: 8px 12px;">
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 3 months</option>
-            </select>
+            <span class="btn btn-outline" style="font-size: 0.75rem; padding: 8px 12px; cursor: default;">TZS / siku</span>
           </div>
           <div class="chart-canvas-container">
             <canvas id="revenueChart"></canvas>
@@ -819,24 +812,24 @@
           <div class="chart-header">
             <div class="chart-title">
               <span>🏆</span>
-              Top Workers
+              Wafanyakazi bora (ukamilishaji)
             </div>
             <a class="btn btn-outline" href="{{ route('admin.users') }}" style="font-size: 0.75rem; padding: 8px 12px;">
               View All
             </a>
           </div>
           <div style="display: grid; gap: 12px;">
-            @foreach($topWorkers as $index => $worker)
-              <div class="monitoring-item">
+            @foreach($topWorkers ?? [] as $index => $worker)
+              <a href="{{ route('admin.user.details', $worker) }}" class="monitoring-item" style="text-decoration:none;color:inherit;">
                 <div class="monitoring-avatar">
                   {{ $index + 1 }}
                 </div>
                 <div class="monitoring-details">
                   <h4>{{ $worker->name }}</h4>
-                  <p>{{ $worker->completed_jobs }} jobs completed</p>
+                  <p>{{ $worker->completed_jobs_count ?? 0 }} kazi zilizokamilika</p>
                 </div>
-                <div class="monitoring-status completed">Top {{ $index + 1 }}</div>
-              </div>
+                <div class="monitoring-status completed">#{{ $index + 1 }}</div>
+              </a>
             @endforeach
           </div>
         </div>
@@ -847,7 +840,7 @@
     <div class="quick-actions-section">
       <div class="monitoring-header">
         <div class="monitoring-icon">⚡</div>
-        <div class="monitoring-title">Quick Admin Actions</div>
+        <div class="monitoring-title">Viungo vya haraka</div>
       </div>
       <div class="actions-grid">
         <a class="action-card" href="{{ route('admin.users') }}">
@@ -886,10 +879,10 @@
           <div class="action-description">View all completed work by workers</div>
         </a>
         
-        <a class="action-card" href="{{ route('admin.users') }}">
-          <div class="action-icon">👤</div>
-          <div class="action-title">User Details & Charts</div>
-          <div class="action-description">Detailed user profiles with analytics</div>
+        <a class="action-card" href="{{ route('admin.categories') }}">
+          <div class="action-icon">📁</div>
+          <div class="action-title">Makundi</div>
+          <div class="action-description">Simamia aina za kazi</div>
         </a>
         
         <a class="action-card" href="{{ route('admin.system-logs') }}">
@@ -908,30 +901,15 @@
   Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
   Chart.defaults.backgroundColor = 'rgba(99, 102, 241, 0.1)';
 
-  // Revenue Chart
-  @php
-    // Generate revenue data for last 7 days
-    $revenueData = [];
-    $revenueLabels = [];
-    for ($i = 6; $i >= 0; $i--) {
-      $date = now()->subDays($i);
-      $revenueLabels[] = $date->format('M d');
-      $dayRevenue = \App\Models\Job::where('status', 'completed')
-        ->whereDate('updated_at', $date->format('Y-m-d'))
-        ->sum('price');
-      $revenueData[] = (int)$dayRevenue;
-    }
-  @endphp
-
   const revenueCtx = document.getElementById('revenueChart');
   if (revenueCtx) {
-    const revenueChart = new Chart(revenueCtx, {
+    new Chart(revenueCtx, {
       type: 'line',
       data: {
-        labels: @json($revenueLabels),
+        labels: @json($revenueLabels ?? []),
         datasets: [{
-          label: 'Revenue (TZS)',
-          data: @json($revenueData),
+          label: 'TZS (kazi zilizokamilika)',
+          data: @json($revenueData ?? []),
           borderColor: '#6366f1',
           backgroundColor: 'rgba(99, 102, 241, 0.1)',
           tension: 0.4,
@@ -986,15 +964,6 @@
       }
     });
   }
-
-  // Real-time updates
-  function updateDashboard() {
-    // This would fetch real-time data from the server
-    console.log('Updating dashboard data...');
-  }
-
-  // Update dashboard every 30 seconds
-  setInterval(updateDashboard, 30000);
 
   // Add some interactive animations
   document.addEventListener('DOMContentLoaded', function() {

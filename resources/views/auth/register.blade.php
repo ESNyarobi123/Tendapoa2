@@ -1,1004 +1,497 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Jisajili - Tendapoa</title>
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800" rel="stylesheet" />
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #2d1b69 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* Animated Background */
-        body::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
-            animation: rotate 20s linear infinite;
-        }
-
-        @keyframes rotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .register-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            max-width: 1100px;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-            z-index: 1;
-            animation: fadeInUp 0.6s ease-out;
-        }
-
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Left Brand Panel */
-        .brand-panel {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 4rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            color: white;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .brand-panel::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><circle cx="200" cy="200" r="100" fill="rgba(255,255,255,0.1)"/><circle cx="800" cy="300" r="150" fill="rgba(255,255,255,0.1)"/><circle cx="400" cy="700" r="120" fill="rgba(255,255,255,0.1)"/></svg>');
-            opacity: 0.3;
-        }
-
-        .brand-content {
-            position: relative;
-            z-index: 2;
-        }
-
-        .brand-logo {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-        }
-
-        .brand-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-        }
-
-        .brand-subtitle {
-            font-size: 1.125rem;
-            opacity: 0.9;
-            line-height: 1.6;
-            margin-bottom: 2rem;
-        }
-
-        .brand-features {
-            text-align: left;
-            font-size: 0.875rem;
-        }
-
-        .brand-features li {
-            margin: 0.75rem 0;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        /* Right Form Panel */
-        .form-panel {
-            padding: 4rem;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            max-height: 100vh;
-        }
-
-        .form-header {
-            margin-bottom: 2rem;
-        }
-
-        .form-title {
-            font-size: 2rem;
-            font-weight: 800;
-            color: white;
-            margin-bottom: 0.5rem;
-        }
-
-        .form-subtitle {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.875rem;
-        }
-
-        /* Glass Form Card */
-        .form-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border-radius: 16px;
-            padding: 2rem;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .form-label {
-            display: block;
-            color: rgba(255, 255, 255, 0.9);
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            font-size: 0.875rem;
-        }
-
-        .form-input, .form-select {
-            width: 100%;
-            padding: 0.875rem 1rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            color: white;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-input::placeholder {
-            color: rgba(255, 255, 255, 0.4);
-        }
-
-        .form-input:focus, .form-select:focus {
-            outline: none;
-            border-color: #6366f1;
-            background: rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-        }
-
-        .form-select option {
-            background: #1a1a3e;
-            color: white;
-        }
-
-        /* Role Selection Cards */
-        .role-selection {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .role-card {
-            padding: 1.5rem;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-        }
-
-        .role-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .role-card input[type="radio"] {
-            display: none;
-        }
-
-        .role-card input[type="radio"]:checked + .role-content {
-            border-color: #6366f1;
-            background: rgba(99, 102, 241, 0.2);
-        }
-
-        .role-content {
-            padding: 1rem;
-            border-radius: 8px;
-            border: 2px solid transparent;
-            transition: all 0.3s ease;
-        }
-
-        .role-icon {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .role-name {
-            font-weight: 700;
-            color: white;
-            margin-bottom: 0.25rem;
-        }
-
-        .role-desc {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.7);
-        }
-
-        /* Password Wrapper */
-        .password-wrapper {
-            position: relative;
-        }
-
-        .password-toggle {
-            position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: rgba(255, 255, 255, 0.6);
-            cursor: pointer;
-            font-size: 1.25rem;
-            transition: color 0.3s ease;
-        }
-
-        .password-toggle:hover {
-            color: rgba(255, 255, 255, 0.9);
-        }
-
-        /* Location Group */
-        .location-group {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 1.5rem;
-        }
-
-        .location-group-title {
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 1rem;
-            font-size: 0.875rem;
-        }
-
-        .location-inputs {
-            display: grid;
-            grid-template-columns: 1fr 1fr auto;
-            gap: 0.75rem;
-            align-items: end;
-        }
-
-        .gps-btn {
-            padding: 0.875rem 1.5rem;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        }
-
-        .gps-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
-        }
-
-        .location-hint {
-            font-size: 0.75rem;
-            color: rgba(255, 255, 255, 0.6);
-            margin-top: 0.5rem;
-        }
-
-        /* Form Grid */
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 1rem;
-            background: linear-gradient(135deg, #6366f1, #8b5cf6);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
-            margin-bottom: 1rem;
-        }
-
-        .btn-submit:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
-        }
-
-        .form-footer {
-            text-align: center;
-            padding-top: 1.5rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .form-footer-text {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.875rem;
-            margin-bottom: 1rem;
-        }
-
-        .login-link {
-            color: #6366f1;
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.3s ease;
-        }
-
-        .login-link:hover {
-            color: #818cf8;
-        }
-
-        /* Error Messages */
-        .alert-error {
-            background: rgba(244, 63, 94, 0.2);
-            border: 1px solid rgba(244, 63, 94, 0.4);
-            color: #f87171;
-            padding: 1rem;
-            border-radius: 12px;
-            margin-bottom: 1.5rem;
-            font-size: 0.875rem;
-        }
-
-        .alert-error ul {
-            list-style: none;
-            margin-top: 0.5rem;
-        }
-
-        .alert-error li {
-            margin: 0.25rem 0;
-        }
-
-        /* Back to home link */
-        .back-home {
-            position: absolute;
-            top: 2rem;
-            left: 2rem;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            z-index: 10;
-            transition: color 0.3s ease;
-        }
-
-        .back-home:hover {
-            color: white;
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            body {
-                padding: 1rem;
-                align-items: flex-start;
-                min-height: 100vh;
-            }
-
-            .back-home {
-                position: fixed;
-                top: 1rem;
-                left: 1rem;
-                background: rgba(0, 0, 0, 0.3);
-                backdrop-filter: blur(10px);
-                padding: 0.5rem 1rem;
-                border-radius: 8px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
-                z-index: 100;
-            }
-
-            .register-container {
-                grid-template-columns: 1fr;
-                margin-top: 3rem;
-                border-radius: 16px;
-                max-width: 100%;
-                max-height: calc(100vh - 4rem);
-                overflow-y: auto;
-            }
-
-            .brand-panel {
-                padding: 2rem 1.5rem;
-                order: 2;
-            }
-
-            .brand-logo {
-                font-size: 2.5rem;
-            }
-
-            .brand-title {
-                font-size: 1.75rem;
-            }
-
-            .brand-subtitle {
-                font-size: 1rem;
-                line-height: 1.5;
-                margin-bottom: 1.5rem;
-            }
-
-            .brand-features {
-                font-size: 0.8rem;
-            }
-
-            .brand-features li {
-                margin: 0.5rem 0;
-            }
-
-            .form-panel {
-                padding: 2rem 1.5rem;
-                max-height: none;
-                order: 1;
-            }
-
-            .form-header {
-                margin-bottom: 1.5rem;
-            }
-
-            .form-title {
-                font-size: clamp(1.5rem, 4vw, 1.75rem);
-            }
-
-            .form-subtitle {
-                font-size: 0.8rem;
-            }
-
-            .form-card {
-                padding: 1.5rem;
-            }
-
-            .form-group {
-                margin-bottom: 1.25rem;
-            }
-
-            .form-input,
-            .form-select {
-                padding: 0.75rem 0.875rem;
-                font-size: 1rem;
-            }
-
-            .form-grid {
-                grid-template-columns: 1fr;
-                gap: 0;
-            }
-
-            .form-grid .form-group {
-                margin-bottom: 1.25rem;
-            }
-
-            .role-selection {
-                grid-template-columns: 1fr;
-                gap: 0.75rem;
-            }
-
-            .role-card {
-                padding: 1.25rem;
-            }
-
-            .role-icon {
-                font-size: 2rem;
-            }
-
-            .role-name {
-                font-size: 0.95rem;
-            }
-
-            .role-desc {
-                font-size: 0.7rem;
-            }
-
-            .location-group {
-                padding: 1.25rem;
-            }
-
-            .location-group-title {
-                font-size: 0.8rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .location-inputs {
-                grid-template-columns: 1fr;
-                gap: 0.75rem;
-            }
-
-            .location-inputs .form-group {
-                margin: 0;
-            }
-
-            .gps-btn {
-                padding: 0.75rem 1.25rem;
-                width: 100%;
-                font-size: 0.9rem;
-            }
-
-            .location-hint {
-                font-size: 0.7rem;
-                margin-top: 0.75rem;
-            }
-
-            .btn-submit {
-                padding: 0.875rem;
-                font-size: 0.95rem;
-            }
-
-            .form-footer {
-                padding-top: 1.25rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            body {
-                padding: 0.75rem;
-            }
-
-            .back-home {
-                top: 0.75rem;
-                left: 0.75rem;
-                padding: 0.5rem 0.75rem;
-                font-size: 0.8rem;
-            }
-
-            .register-container {
-                margin-top: 2.5rem;
-                border-radius: 12px;
-                max-height: calc(100vh - 3.5rem);
-            }
-
-            .brand-panel {
-                padding: 1.5rem 1rem;
-            }
-
-            .brand-logo {
-                font-size: 2rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .brand-title {
-                font-size: 1.5rem;
-                margin-bottom: 0.75rem;
-            }
-
-            .brand-subtitle {
-                font-size: 0.9rem;
-                margin-bottom: 1.25rem;
-            }
-
-            .brand-features {
-                font-size: 0.75rem;
-            }
-
-            .brand-features li {
-                margin: 0.4rem 0;
-            }
-
-            .form-panel {
-                padding: 1.5rem 1rem;
-            }
-
-            .form-header {
-                margin-bottom: 1.25rem;
-            }
-
-            .form-title {
-                font-size: 1.5rem;
-            }
-
-            .form-subtitle {
-                font-size: 0.75rem;
-            }
-
-            .form-card {
-                padding: 1.25rem;
-                border-radius: 12px;
-            }
-
-            .form-label {
-                font-size: 0.8rem;
-            }
-
-            .form-input,
-            .form-select {
-                padding: 0.7rem 0.8rem;
-                font-size: 0.95rem;
-            }
-
-            .password-toggle {
-                font-size: 1.1rem;
-                right: 0.75rem;
-            }
-
-            .role-card {
-                padding: 1rem;
-            }
-
-            .role-icon {
-                font-size: 1.75rem;
-            }
-
-            .role-name {
-                font-size: 0.9rem;
-            }
-
-            .role-desc {
-                font-size: 0.65rem;
-            }
-
-            .location-group {
-                padding: 1rem;
-            }
-
-            .location-group-title {
-                font-size: 0.75rem;
-            }
-
-            .gps-btn {
-                padding: 0.7rem 1rem;
-                font-size: 0.85rem;
-            }
-
-            .location-hint {
-                font-size: 0.65rem;
-            }
-
-            .btn-submit {
-                padding: 0.8rem;
-                font-size: 0.9rem;
-            }
-
-            .form-footer-text,
-            .login-link {
-                font-size: 0.8rem;
-            }
-
-            .alert-error {
-                padding: 0.875rem;
-                font-size: 0.8rem;
-            }
-        }
-    </style>
+    <title>Jisajili — TendaPoa</title>
+    <x-auth-head-assets />
 </head>
-<body>
-    <a href="{{ route('home') }}" class="back-home">
-        <span>←</span> Rudi Nyumbani
+@php
+    $wizardStep = 1;
+    if ($errors->any()) {
+        if ($errors->has('name') || $errors->has('email')) {
+            $wizardStep = 1;
+        } elseif ($errors->has('password')) {
+            $wizardStep = 2;
+        } elseif ($errors->has('role')) {
+            $wizardStep = 3;
+        } else {
+            $wizardStep = 4;
+        }
+    }
+@endphp
+<body class="min-h-full bg-slate-100 font-sans text-sm text-slate-800 antialiased">
+    <a href="{{ route('home') }}" class="absolute left-4 top-4 z-10 inline-flex min-h-[44px] min-w-[44px] items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-600 transition hover:bg-white hover:text-brand-700">
+        ← Rudi Nyumbani
     </a>
 
-    <div class="register-container">
-        <!-- Left Brand Panel -->
-        <div class="brand-panel">
-            <div class="brand-content">
-                <div class="brand-logo">🧹</div>
-                <h1 class="brand-title">Fungua Akaunti</h1>
-                <p class="brand-subtitle">
-                    Jiunge na Tendapoa leo na ufurahie huduma bora za usafi na kazi za kuegemea.
-                </p>
-                <ul class="brand-features">
-                    <li>✅ Huduma salama na ya kuegemea</li>
-                    <li>✅ Malipo salama kupitia ZenoPay</li>
-                    <li>✅ Wafanyakazi waliochunguzwa</li>
-                    <li>✅ Msaada wa masaa 24</li>
-                </ul>
-            </div>
+    <div class="mx-auto max-w-5xl px-4 py-16 pt-20 md:flex md:min-h-screen md:items-center md:py-12">
+        {{-- Panel ya brand: inaonekana kutoka md+ (iPad portrait pamoja) --}}
+        <div class="mb-6 hidden w-full flex-col justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-8 text-white shadow-sm sm:p-10 md:mb-0 md:mr-0 md:flex md:w-[38%] md:rounded-r-none">
+            <div class="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-lg font-bold">T</div>
+            <h1 class="text-2xl font-bold tracking-tight">Fungua akaunti</h1>
+            <p id="brandStepHint" class="mt-3 text-[13px] leading-relaxed text-white/85"></p>
+            <ul id="brandBullets" class="mt-6 space-y-2 text-[12px] text-white/80">
+                <li class="brand-bullet flex gap-2" data-for-step="1"><span class="text-white/60">1.</span> Jina na barua pepe</li>
+                <li class="brand-bullet flex gap-2" data-for-step="2"><span class="text-white/60">2.</span> Neno siri salama</li>
+                <li class="brand-bullet flex gap-2" data-for-step="3"><span class="text-white/60">3.</span> Chagua nafasi yako</li>
+                <li class="brand-bullet flex gap-2" data-for-step="4"><span class="text-white/60">4.</span> Simu na eneo (hiari)</li>
+            </ul>
         </div>
 
-        <!-- Right Form Panel -->
-        <div class="form-panel">
-            <div class="form-header">
-                <h2 class="form-title">Anza Sasa</h2>
-                <p class="form-subtitle">Jaza taarifa zako ili kufungua akaunti</p>
+        <div class="w-full rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8 md:max-h-[calc(100vh-4rem)] md:overflow-y-auto md:rounded-l-none md:border-l-0 md:min-h-0">
+            <div class="mb-5">
+                <p class="text-[11px] font-semibold uppercase tracking-wider text-brand-700">Jisajili</p>
+                <h2 id="stepTitle" class="mt-1 text-xl font-semibold text-slate-900">Hatua 1 kati ya 4</h2>
+                <p id="stepSubtitle" class="mt-1 text-[13px] text-slate-500"></p>
             </div>
 
-@if($errors->any())
-  <div class="alert-error">
-    <b>Angalia makosa:</b>
-                    <ul>
+            {{-- Maendeleo --}}
+            <nav class="mb-8" aria-label="Hatua za jisajili">
+                <ol class="flex items-center gap-1 sm:gap-2" id="stepIndicators">
+                    @for ($s = 1; $s <= 4; $s++)
+                        <li class="flex flex-1 items-center gap-1 sm:gap-2 min-w-0">
+                            <button type="button"
+                                class="step-dot flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-bold transition sm:h-10 sm:w-10 {{ $s <= $wizardStep ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-200 bg-white text-slate-400' }} {{ $s < $wizardStep ? 'ring-2 ring-brand-200' : '' }}"
+                                data-step="{{ $s }}"
+                                aria-current="{{ $s === $wizardStep ? 'step' : 'false' }}"
+                                @if($s > $wizardStep) disabled @endif
+                            >{{ $s }}</button>
+                            @if($s < 4)
+                                <div class="step-connector h-0.5 flex-1 min-w-[4px] rounded-full {{ $s < $wizardStep ? 'bg-brand-500' : 'bg-slate-200' }}" aria-hidden="true"></div>
+                            @endif
+                        </li>
+                    @endfor
+                </ol>
+                <p class="mt-2 text-center text-[12px] text-slate-500 sm:hidden" id="stepMobileLabel"></p>
+            </nav>
+
+            @if($errors->any())
+                <div class="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-800" role="alert">
+                    <p class="font-semibold">Angalia makosa</p>
+                    <ul class="mt-2 list-inside list-disc space-y-0.5">
                         @foreach($errors->all() as $e)
                             <li>{{ $e }}</li>
                         @endforeach
                     </ul>
-  </div>
-@endif
+                </div>
+            @endif
 
-            <form method="post" action="{{ route('register.post') }}" class="form-card">
-  @csrf
+            <div id="stepError" class="mb-4 hidden rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] text-amber-900 outline-none" role="status" aria-live="polite" tabindex="-1"></div>
 
-                <div class="form-group">
-                    <label class="form-label" for="name">Jina Kamili</label>
-                    <input 
-                        type="text" 
-                        id="name"
-                        name="name" 
-                        class="form-input" 
-                        value="{{ old('name') }}" 
-                        placeholder="Jina lako kamili"
-                        required
-                        autofocus
-                    >
+            <form method="post" action="{{ route('register.post') }}" id="registerForm" class="space-y-5" novalidate>
+                @csrf
+
+                {{-- Hatua 1: Wasiliano --}}
+                <div class="step-panel space-y-4" data-step="1" @if($wizardStep !== 1) hidden @endif>
+                    <div>
+                        <label for="name" class="mb-1.5 block text-[13px] font-medium text-slate-700">Jina kamili</label>
+                        <input type="text" id="name" name="name" value="{{ old('name') }}" required autocomplete="name"
+                            @if($wizardStep === 1) autofocus @endif
+                            class="block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            placeholder="Jina lako kamili">
+                    </div>
+                    <div>
+                        <label for="email" class="mb-1.5 block text-[13px] font-medium text-slate-700">Barua pepe</label>
+                        <input type="email" id="email" name="email" value="{{ old('email') }}" required autocomplete="email"
+                            class="block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            placeholder="jina@example.com">
+                        <p class="mt-1.5 text-[12px] text-slate-500">Tutatumia barua hii kwa arifa na kuingia akaunti.</p>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label" for="email">Barua Pepe</label>
-                    <input 
-                        type="email" 
-                        id="email"
-                        name="email" 
-                        class="form-input" 
-                        value="{{ old('email') }}" 
-                        placeholder="jina@example.com"
-                        required
-                    >
+                {{-- Hatua 2: Neno siri --}}
+                <div class="step-panel space-y-4" data-step="2" @if($wizardStep !== 2) hidden @endif>
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="password" class="mb-1.5 block text-[13px] font-medium text-slate-700">Neno siri</label>
+                            <div class="relative">
+                                <input type="password" id="password" name="password" required autocomplete="new-password" minlength="8"
+                                    @if($wizardStep === 2) autofocus @endif
+                                    class="block w-full rounded-lg border border-slate-200 px-3 py-2.5 pr-11 text-[13px] text-slate-900 shadow-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                                    placeholder="Angalau herufi 8">
+                                <button type="button" class="toggle-pw absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" data-target="password" aria-label="Onyesha neno siri">👁</button>
+                            </div>
+                            <div class="mt-2 h-1 overflow-hidden rounded-full bg-slate-100">
+                                <div id="strengthFill" class="h-full w-0 rounded-full transition-all duration-300"></div>
+                            </div>
+                            <p id="strengthLabel" class="mt-1 text-[11px] text-slate-500"></p>
+                        </div>
+                        <div>
+                            <label for="password_confirmation" class="mb-1.5 block text-[13px] font-medium text-slate-700">Rudia neno siri</label>
+                            <div class="relative">
+                                <input type="password" id="password_confirmation" name="password_confirmation" required autocomplete="new-password" minlength="8"
+                                    class="block w-full rounded-lg border border-slate-200 px-3 py-2.5 pr-11 text-[13px] text-slate-900 shadow-sm transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                                    placeholder="Rudia neno siri">
+                                <button type="button" class="toggle-pw absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600" data-target="password_confirmation" aria-label="Onyesha neno siri">👁</button>
+                            </div>
+                            <p id="pwMatchHint" class="mt-2 text-[12px] text-slate-500"></p>
+                        </div>
+                    </div>
+                    <ul class="rounded-xl border border-slate-100 bg-slate-50/90 px-3 py-2.5 text-[12px] text-slate-600">
+                        <li>• Angalau herufi 8</li>
+                        <li>• Changanya herufi, nambari au alama kwa usalama bora</li>
+                    </ul>
                 </div>
 
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="password">Neno Siri</label>
-                        <div class="password-wrapper">
-                            <input 
-                                type="password" 
-                                id="password"
-                                name="password" 
-                                class="form-input" 
-                                placeholder="••••••••"
-                                required
-                            >
-                            <button 
-                                type="button" 
-                                class="password-toggle" 
-                                onclick="togglePassword('password')"
-                                aria-label="Toggle password visibility"
-                            >
-                                👁️
+                {{-- Hatua 3: Jukumu --}}
+                <div class="step-panel space-y-4" data-step="3" @if($wizardStep !== 3) hidden @endif>
+                    <p class="text-[13px] font-medium text-slate-700">Wewe ni nani kwenye TendaPoa?</p>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="role-card flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition {{ old('role', 'muhitaji') === 'muhitaji' ? 'border-brand-500 bg-brand-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300' }}">
+                            <input type="radio" name="role" value="muhitaji" class="mt-1 text-brand-600 focus:ring-brand-500" {{ old('role', 'muhitaji') === 'muhitaji' ? 'checked' : '' }} required>
+                            <span>
+                                <span class="block text-[13px] font-semibold text-slate-900">Muhitaji</span>
+                                <span class="text-[12px] text-slate-500">Ninatafuta wafanyakazi kwa kazi zangu</span>
+                            </span>
+                        </label>
+                        <label class="role-card flex cursor-pointer items-start gap-3 rounded-xl border-2 p-4 transition {{ old('role') === 'mfanyakazi' ? 'border-brand-500 bg-brand-50/50 shadow-sm' : 'border-slate-200 hover:border-slate-300' }}">
+                            <input type="radio" name="role" value="mfanyakazi" class="mt-1 text-brand-600 focus:ring-brand-500" {{ old('role') === 'mfanyakazi' ? 'checked' : '' }}>
+                            <span>
+                                <span class="block text-[13px] font-semibold text-slate-900">Mfanyakazi</span>
+                                <span class="text-[12px] text-slate-500">Ninafanya kazi na kuomba kazi</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                {{-- Hatua 4: Ziada --}}
+                <div class="step-panel space-y-4" data-step="4" @if($wizardStep !== 4) hidden @endif>
+                    <div>
+                        <label for="phone" class="mb-1.5 block text-[13px] font-medium text-slate-700">Nambari ya simu <span class="font-normal text-slate-400">(hiari)</span></label>
+                        <input type="tel" id="phone" name="phone" value="{{ old('phone') }}" inputmode="numeric" autocomplete="tel"
+                            class="block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-[13px] text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                            placeholder="07xxxxxxxx au 2557xxxxxxxx">
+                        <p class="mt-1 text-[12px] text-slate-500">Mfumo: 07xxxxxxxx au 2557xxxxxxxx</p>
+                    </div>
+                    <div class="rounded-xl border border-slate-100 bg-slate-50/80 p-4">
+                        <p class="mb-1 text-[13px] font-medium text-slate-800">Eneo la GPS <span class="font-normal text-slate-400">(hiari)</span></p>
+                        <p class="mb-3 text-[12px] text-slate-500">Tunasaidia kuonyesha kazi karibu na wewe. Unaweza kuruka hatua hii.</p>
+                        <div class="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+                            <div>
+                                <label for="lat" class="mb-1 block text-[11px] font-medium text-slate-600">Latitudo</label>
+                                <input type="text" id="lat" name="lat" value="{{ old('lat') }}" inputmode="decimal"
+                                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" placeholder="-6.xxx">
+                            </div>
+                            <div>
+                                <label for="lng" class="mb-1 block text-[11px] font-medium text-slate-600">Longitudo</label>
+                                <input type="text" id="lng" name="lng" value="{{ old('lng') }}" inputmode="decimal"
+                                    class="w-full rounded-lg border border-slate-200 px-3 py-2 text-[13px] focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20" placeholder="39.xxx">
+                            </div>
+                            <button type="button" id="gps" class="rounded-lg bg-brand-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-brand-700 sm:shrink-0 min-h-[44px]">
+                                Tumia eneo langu
                             </button>
                         </div>
                     </div>
-
-                    <div class="form-group">
-                        <label class="form-label" for="password_confirmation">Rudia Neno Siri</label>
-                        <div class="password-wrapper">
-                            <input 
-                                type="password" 
-                                id="password_confirmation"
-                                name="password_confirmation" 
-                                class="form-input" 
-                                placeholder="••••••••"
-                                required
-                            >
-                            <button 
-                                type="button" 
-                                class="password-toggle" 
-                                onclick="togglePassword('password_confirmation')"
-                                aria-label="Toggle password visibility"
-                            >
-                                👁️
-                            </button>
-                        </div>
-                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Nafasi (Chagua Jinsi Unavyotaka Kutumia)</label>
-                    <div class="role-selection">
-                        <label class="role-card">
-                            <input 
-                                type="radio" 
-                                name="role" 
-                                value="muhitaji" 
-                                {{ old('role')==='muhitaji'?'checked':'' }}
-                                required
-                            >
-                            <div class="role-content">
-                                <div class="role-icon">👤</div>
-                                <div class="role-name">Muhitaji (Mteja)</div>
-                                <div class="role-desc">Nataka wafanyakazi</div>
-                            </div>
-    </label>
-                        <label class="role-card">
-                            <input 
-                                type="radio" 
-                                name="role" 
-                                value="mfanyakazi" 
-                                {{ old('role')==='mfanyakazi'?'checked':'' }}
-                            >
-                            <div class="role-content">
-                                <div class="role-icon">👷</div>
-                                <div class="role-name">Mfanyakazi</div>
-                                <div class="role-desc">Ninafanya kazi</div>
-                            </div>
-    </label>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" for="phone">Namba ya Simu (Hiari)</label>
-                    <input 
-                        type="tel" 
-                        id="phone"
-                        name="phone" 
-                        class="form-input" 
-                        value="{{ old('phone') }}" 
-                        placeholder="07xxxxxxxx au 2557xxxxxxxx"
-                    >
-                </div>
-
-                <div class="location-group">
-                    <div class="location-group-title">Mahali (Hiari - husaidia kuonyesha umbali wa kazi)</div>
-                    <div class="location-inputs">
-                        <div class="form-group" style="margin: 0;">
-                            <label class="form-label" for="lat" style="font-size: 0.75rem;">Latitude</label>
-                            <input 
-                                type="text" 
-                                id="lat"
-                                name="lat" 
-                                class="form-input" 
-                                value="{{ old('lat') }}" 
-                                placeholder="Lat"
-                            >
-                        </div>
-                        <div class="form-group" style="margin: 0;">
-                            <label class="form-label" for="lng" style="font-size: 0.75rem;">Longitude</label>
-                            <input 
-                                type="text" 
-                                id="lng"
-                                name="lng" 
-                                class="form-input" 
-                                value="{{ old('lng') }}" 
-                                placeholder="Lng"
-                            >
-                        </div>
-                        <button 
-                            type="button" 
-                            id="gps" 
-                            class="gps-btn"
-                            onclick="getGPSLocation()"
-                        >
-                            📍 GPS
+                <div class="flex flex-col-reverse gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                    <button type="button" id="btnPrev" class="hidden min-h-[44px] rounded-lg border border-slate-200 px-4 py-2.5 text-[13px] font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300">
+                        ← Nyuma
+                    </button>
+                    <div class="flex flex-1 justify-end gap-3 sm:justify-end">
+                        <button type="button" id="btnNext" class="min-h-[44px] w-full rounded-lg bg-brand-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 sm:w-auto sm:min-w-[140px]">
+                            Endelea →
+                        </button>
+                        <button type="submit" id="btnSubmit" class="hidden min-h-[44px] w-full rounded-lg bg-brand-600 px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 sm:w-auto sm:min-w-[180px]">
+                            Maliza jisajili
                         </button>
                     </div>
-                    <p class="location-hint">Bonyeza "GPS" ili kujaza eneo lako kiotomatiki</p>
-                </div>
-
-                <button type="submit" class="btn-submit">
-                    🚀 Sajili Sasa
-                </button>
-
-                <div class="form-footer">
-                    <p class="form-footer-text">
-                        Tayari una akaunti?
-                    </p>
-                    <a href="{{ route('login') }}" class="login-link">
-                        Ingia hapa →
-                    </a>
                 </div>
             </form>
+
+            <p class="mt-6 border-t border-slate-100 pt-6 text-center text-[13px] text-slate-600">
+                Tayari una akaunti?
+                <a href="{{ route('login') }}" class="font-semibold text-brand-700 hover:text-brand-800">Ingia</a>
+            </p>
         </div>
     </div>
 
     <script>
-        function togglePassword(inputId) {
-            const passwordInput = document.getElementById(inputId);
-            const toggleButtons = document.querySelectorAll(`button[onclick="togglePassword('${inputId}')"]`);
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggleButtons.forEach(btn => btn.textContent = '🙈');
-            } else {
-                passwordInput.type = 'password';
-                toggleButtons.forEach(btn => btn.textContent = '👁️');
-            }
-        }
+(function () {
+    const TOTAL = 4;
+    let current = {{ (int) $wizardStep }};
+    const form = document.getElementById('registerForm');
+    const btnPrev = document.getElementById('btnPrev');
+    const btnNext = document.getElementById('btnNext');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const stepTitle = document.getElementById('stepTitle');
+    const stepSubtitle = document.getElementById('stepSubtitle');
+    const brandHint = document.getElementById('brandStepHint');
+    const mobileLabel = document.getElementById('stepMobileLabel');
 
-        function getGPSLocation() {
-            const latInput = document.getElementById('lat');
-            const lngInput = document.getElementById('lng');
-            const gpsBtn = document.getElementById('gps');
-            
-            if (navigator.geolocation) {
-                gpsBtn.textContent = '⏳...';
-                gpsBtn.disabled = true;
-                
-                navigator.geolocation.getCurrentPosition(
-                    position => {
-                        latInput.value = position.coords.latitude.toFixed(6);
-                        lngInput.value = position.coords.longitude.toFixed(6);
-                        gpsBtn.textContent = '✅ GPS';
-                        gpsBtn.disabled = false;
-                        
-                        setTimeout(() => {
-                            gpsBtn.textContent = '📍 GPS';
-                        }, 2000);
-                    },
-                    error => {
-                        alert('Hauwezi kupata eneo lako. Hakikisha umeongeza ruhusa ya eneo.');
-                        gpsBtn.textContent = '📍 GPS';
-                        gpsBtn.disabled = false;
-                    }
-                );
-            } else {
-                alert('Vifaa vyako havitaalamu GPS.');
-            }
+    const copy = {
+        1: {
+            title: 'Taarifa za wasiliano',
+            subtitle: 'Jina lako na barua pepe ya kuingia.',
+            brand: 'Anza kwa taarifa za msingi. Hatua hii inachukua sekunde chache tu.'
+        },
+        2: {
+            title: 'Unda neno siri',
+            subtitle: 'Chagua neno siri lenye nguvu na thibitisha.',
+            brand: 'Akaunti yako inalindwa kwa neno siri salama.'
+        },
+        3: {
+            title: 'Chagua nafasi yako',
+            subtitle: 'Muhitaji au mfanyakazi — unaweza kubadilisha baadaye ikiwa inahitajika.',
+            brand: 'Tunabadilisha dashibodi kulingana na jukumu lako.'
+        },
+        4: {
+            title: 'Maelezo ya ziada',
+            subtitle: 'Simu na eneo ni hiari — lakini zinasaidia uzoefu bora.',
+            brand: 'Karibu kumaliza! Baada ya hii utaingia moja kwa moja.'
         }
+    };
 
-        // Role card selection styling
-        document.querySelectorAll('.role-card input[type="radio"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                document.querySelectorAll('.role-card input[type="radio"]').forEach(r => {
-                    const content = r.closest('.role-card').querySelector('.role-content');
-                    content.style.borderColor = 'transparent';
-                    content.style.background = 'transparent';
-                });
-                
-                if (this.checked) {
-                    const content = this.closest('.role-card').querySelector('.role-content');
-                    content.style.borderColor = '#6366f1';
-                    content.style.background = 'rgba(99, 102, 241, 0.2)';
+    const phoneRe = /^(0[6-7]\d{8}|255[6-7]\d{8})$/;
+    const stepErrorEl = document.getElementById('stepError');
+
+    function showStepError(msg) {
+        stepErrorEl.textContent = msg;
+        stepErrorEl.classList.remove('hidden');
+        stepErrorEl.focus();
+    }
+
+    function clearStepError() {
+        stepErrorEl.textContent = '';
+        stepErrorEl.classList.add('hidden');
+    }
+
+    function showStep(n) {
+        current = Math.min(Math.max(1, n), TOTAL);
+        document.querySelectorAll('.step-panel').forEach(function (el) {
+            const s = parseInt(el.getAttribute('data-step'), 10);
+            el.hidden = s !== current;
+        });
+
+        const c = copy[current];
+        stepTitle.textContent = 'Hatua ' + current + ' kati ya ' + TOTAL + ': ' + c.title;
+        stepSubtitle.textContent = c.subtitle;
+        brandHint.textContent = c.brand;
+        mobileLabel.textContent = c.title + ' (' + current + '/' + TOTAL + ')';
+
+        btnPrev.classList.toggle('hidden', current === 1);
+        btnNext.classList.toggle('hidden', current === TOTAL);
+        btnSubmit.classList.toggle('hidden', current !== TOTAL);
+
+        document.querySelectorAll('.step-dot').forEach(function (btn) {
+            const s = parseInt(btn.getAttribute('data-step'), 10);
+            const done = s < current;
+            const active = s === current;
+            btn.disabled = s > current;
+            btn.setAttribute('aria-current', active ? 'step' : 'false');
+            btn.className = 'step-dot flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-bold transition sm:h-10 sm:w-10 ' +
+                (active ? 'border-brand-600 bg-brand-600 text-white ring-2 ring-brand-200 ring-offset-2 ring-offset-white ' : '') +
+                (done ? 'border-brand-600 bg-brand-600 text-white ' : '') +
+                (!active && !done ? 'border-slate-200 bg-white text-slate-400 ' : '');
+        });
+
+        const connectors = document.querySelectorAll('.step-connector');
+        connectors.forEach(function (line, i) {
+            line.classList.toggle('bg-brand-500', i < current - 1);
+            line.classList.toggle('bg-slate-200', i >= current - 1);
+        });
+
+        document.querySelectorAll('.brand-bullet').forEach(function (li) {
+            const forStep = parseInt(li.getAttribute('data-for-step'), 10);
+            li.classList.toggle('opacity-100', forStep === current);
+            li.classList.toggle('opacity-50', forStep !== current);
+        });
+
+        syncRoleCardStyles();
+    }
+
+    function syncRoleCardStyles() {
+        document.querySelectorAll('.role-card').forEach(function (label) {
+            const input = label.querySelector('input[type="radio"]');
+            const on = input && input.checked;
+            label.classList.toggle('border-brand-500', on);
+            label.classList.toggle('bg-brand-50/50', on);
+            label.classList.toggle('shadow-sm', on);
+            label.classList.toggle('border-slate-200', !on);
+        });
+    }
+
+    document.querySelectorAll('input[name="role"]').forEach(function (r) {
+        r.addEventListener('change', syncRoleCardStyles);
+    });
+
+    function validateStep(s) {
+        if (s === 1) {
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            if (name.length < 2) {
+                showStepError('Tafadhali weka jina kamili.');
+                document.getElementById('name').focus();
+                return false;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showStepError('Tafadhali weka barua pepe halali.');
+                document.getElementById('email').focus();
+                return false;
+            }
+            return true;
+        }
+        if (s === 2) {
+            const p = document.getElementById('password').value;
+            const c = document.getElementById('password_confirmation').value;
+            if (p.length < 8) {
+                showStepError('Neno siri lazima liwe na angalau herufi 8.');
+                document.getElementById('password').focus();
+                return false;
+            }
+            if (p !== c) {
+                showStepError('Maneno siri hayalingani. Rudia tena.');
+                document.getElementById('password_confirmation').focus();
+                return false;
+            }
+            return true;
+        }
+        if (s === 3) {
+            const picked = document.querySelector('input[name="role"]:checked');
+            if (!picked) {
+                showStepError('Chagua muhitaji au mfanyakazi.');
+                return false;
+            }
+            return true;
+        }
+        if (s === 4) {
+            const phone = document.getElementById('phone').value.trim();
+            if (phone && !phoneRe.test(phone)) {
+                showStepError('Nambari ya simu si sahihi. Tumia 07xxxxxxxx au 2557xxxxxxxx, au acha tupu.');
+                document.getElementById('phone').focus();
+                return false;
+            }
+            const lat = document.getElementById('lat').value.trim();
+            const lng = document.getElementById('lng').value.trim();
+            if (lat || lng) {
+                const la = parseFloat(lat);
+                const ln = parseFloat(lng);
+                if (isNaN(la) || la < -90 || la > 90 || isNaN(ln) || ln < -180 || ln > 180) {
+                    showStepError('Latitudo au longitudo si sahihi. Futa sehemu hizi au tumia kitufe cha GPS.');
+                    return false;
                 }
-            });
-        });
-
-        // Set initial checked state
-        document.querySelectorAll('.role-card input[type="radio"]').forEach(radio => {
-            if (radio.checked) {
-                const content = radio.closest('.role-card').querySelector('.role-content');
-                content.style.borderColor = '#6366f1';
-                content.style.background = 'rgba(99, 102, 241, 0.2)';
             }
-        });
+            return true;
+        }
+        return true;
+    }
 
-        // Add focus animation
-        document.querySelectorAll('.form-input, .form-select').forEach(input => {
-            input.addEventListener('focus', function() {
-                this.style.transform = 'scale(1.02)';
-            });
-            
-            input.addEventListener('blur', function() {
-                this.style.transform = 'scale(1)';
-            });
+    btnNext.addEventListener('click', function () {
+        clearStepError();
+        if (!validateStep(current)) return;
+        showStep(current + 1);
+    });
+
+    btnPrev.addEventListener('click', function () {
+        clearStepError();
+        showStep(current - 1);
+    });
+
+    document.querySelectorAll('.step-dot').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const target = parseInt(btn.getAttribute('data-step'), 10);
+            if (target >= current) return;
+            clearStepError();
+            showStep(target);
         });
-</script>
+    });
+
+    document.querySelectorAll('.toggle-pw').forEach(function (b) {
+        b.addEventListener('click', function () {
+            const id = b.getAttribute('data-target');
+            const input = document.getElementById(id);
+            if (!input) return;
+            input.type = input.type === 'password' ? 'text' : 'password';
+            b.textContent = input.type === 'password' ? '👁' : '🙈';
+        });
+    });
+
+    const strengthFill = document.getElementById('strengthFill');
+    const strengthLabel = document.getElementById('strengthLabel');
+    const pwMatchHint = document.getElementById('pwMatchHint');
+
+    function checkStrength(val) {
+        let score = 0;
+        if (val.length >= 8) score++;
+        if (/[A-Z]/.test(val)) score++;
+        if (/[0-9]/.test(val)) score++;
+        if (/[^A-Za-z0-9]/.test(val)) score++;
+        const colors = ['#ef4444', '#f97316', '#eab308', '#059669'];
+        const labels = ['Dhaifu sana', 'Dhaifu', 'Wastani', 'Imara'];
+        const widths = ['25%', '50%', '75%', '100%'];
+        if (!val) {
+            strengthFill.style.width = '0';
+            strengthLabel.textContent = '';
+            return;
+        }
+        const i = Math.max(0, Math.min(score - 1, 3));
+        strengthFill.style.width = widths[i];
+        strengthFill.style.backgroundColor = colors[i];
+        strengthLabel.textContent = labels[i];
+        strengthLabel.style.color = colors[i];
+    }
+
+    document.getElementById('password').addEventListener('input', function () {
+        checkStrength(this.value);
+    });
+    document.getElementById('password_confirmation').addEventListener('input', function () {
+        const p = document.getElementById('password').value;
+        const c = this.value;
+        if (!c) {
+            pwMatchHint.textContent = '';
+            pwMatchHint.className = 'mt-2 text-[12px] text-slate-500';
+            return;
+        }
+        if (p === c) {
+            pwMatchHint.textContent = '✓ Maneno siri yalingana';
+            pwMatchHint.className = 'mt-2 text-[12px] font-medium text-emerald-600';
+        } else {
+            pwMatchHint.textContent = 'Bado hayalingani';
+            pwMatchHint.className = 'mt-2 text-[12px] font-medium text-amber-600';
+        }
+    });
+
+    window.getGPSLocation = function () {
+        const latInput = document.getElementById('lat');
+        const lngInput = document.getElementById('lng');
+        const gpsBtn = document.getElementById('gps');
+        if (!navigator.geolocation) {
+            showStepError('Kivinjari hakiungi mkono GPS.');
+            return;
+        }
+        gpsBtn.disabled = true;
+        const prev = gpsBtn.textContent;
+        gpsBtn.textContent = 'Inapakia…';
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                latInput.value = pos.coords.latitude.toFixed(6);
+                lngInput.value = pos.coords.longitude.toFixed(6);
+                gpsBtn.textContent = prev;
+                gpsBtn.disabled = false;
+            },
+            function () {
+                showStepError('Haiwezekani kupata eneo. Angalia ruhusa za eneo kwenye kifaa.');
+                gpsBtn.textContent = prev;
+                gpsBtn.disabled = false;
+            }
+        );
+    };
+    document.getElementById('gps').addEventListener('click', window.getGPSLocation);
+
+    form.addEventListener('submit', function (e) {
+        clearStepError();
+        if (!validateStep(4)) {
+            e.preventDefault();
+            showStep(4);
+            return;
+        }
+    });
+
+    showStep(current);
+    checkStrength(document.getElementById('password').value);
+})();
+    </script>
 </body>
 </html>

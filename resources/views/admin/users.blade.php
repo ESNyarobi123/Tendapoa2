@@ -551,21 +551,28 @@
                 <td>{{ $user->updated_at?->diffForHumans() ?? 'N/A' }}</td>
                 <td>
                   <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                    <a class="btn btn-outline" href="{{ url('/admin/users/'.$user->id) }}">
+                    <a class="btn btn-outline" href="{{ route('admin.user.details', $user) }}">
                       <span>👁️</span>
                       View
                     </a>
                     @if($user->role !== 'admin')
-                      <button class="btn btn-warning" onclick="toggleUserStatus({{ $user->id }})">
-                        <span>🔄</span>
-                        Toggle
-                      </button>
+                      <form method="POST" action="{{ route('admin.user.toggle-status', $user) }}" class="inline" style="display:inline;">
+                        @csrf
+                        <button type="button" class="btn btn-warning" onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Badilisha hali ya mtumiaji (active/suspended)?'):Promise.resolve(confirm('Toggle user status?'))).then(function(ok){ if(ok) f.submit(); });">
+                          <span>🔄</span>
+                          Badili hali
+                        </button>
+                      </form>
                     @endif
                     @if($user->role !== 'admin')
-                      <button class="btn btn-danger" onclick="deleteUser({{ $user->id }})">
-                        <span>🗑️</span>
-                        Delete
-                      </button>
+                      <form method="POST" action="{{ route('admin.user.delete', $user) }}" class="inline" style="display:inline;" onsubmit="return false;">
+                        @csrf
+                        @method('DELETE')
+                        <button type="button" class="btn btn-danger" onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Futa mtumiaji huyu kabisa? Hatua haiwezi kutenduliwa.'):Promise.resolve(confirm('Delete user?'))).then(function(ok){ if(ok) f.submit(); });">
+                          <span>🗑️</span>
+                          Futa
+                        </button>
+                      </form>
                     @endif
                   </div>
                 </td>
@@ -638,20 +645,6 @@
     rows.forEach(row => {
       row.style.display = '';
     });
-  }
-
-  function toggleUserStatus(userId) {
-    if (confirm('Are you sure you want to toggle this user\'s status?')) {
-      // This would need a backend endpoint
-      console.log('Toggle user status:', userId);
-    }
-  }
-
-  function deleteUser(userId) {
-    if (confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      // This would need a backend endpoint
-      console.log('Delete user:', userId);
-    }
   }
 
   // Add some interactive animations

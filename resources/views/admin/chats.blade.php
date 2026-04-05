@@ -405,10 +405,21 @@
   <div class="page-header">
     <div class="header-content">
       <div class="header-text">
-        <h1>💬 Conversation Monitor</h1>
-        <p>Monitor and manage all private conversations between users</p>
+        @isset($chatsForUser)
+          <h1>💬 Mazungumzo — {{ $chatsForUser->name }}</h1>
+          <p>Kazi zilizo na ujumbe wa faragha kwa mtumiaji huyu (muhitaji au mfanyakazi)</p>
+        @else
+          <h1>💬 Conversation Monitor</h1>
+          <p>Monitor and manage all private conversations between users</p>
+        @endisset
       </div>
       <div class="header-actions">
+        @isset($chatsForUser)
+          <a class="btn btn-outline" href="{{ route('admin.user.details', $chatsForUser) }}">
+            <span>👤</span>
+            Wasifu wa mtumiaji
+          </a>
+        @endisset
         <a class="btn btn-outline" href="{{ route('admin.dashboard') }}">
           <span>↩️</span>
           Back to Dashboard
@@ -498,7 +509,7 @@
       </div>
 
       <!-- Pagination -->
-      <div style="display: flex; justify-content: center; margin-top: 32px;">
+      <div class="adm-pagination" style="display: flex; justify-content: center; margin-top: 32px;">
         {{ $conversations->links() }}
       </div>
     @endif

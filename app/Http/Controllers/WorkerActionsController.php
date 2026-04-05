@@ -2,33 +2,42 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
 use App\Models\Job;
 use App\Models\Setting;
+use App\Notifications\JobCompletedNotification;
+use App\Notifications\WorkerAcceptedNotification;
+use App\Services\EscrowService;
+use App\Services\WalletService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class WorkerActionsController extends Controller
 {
     protected function responseColumn(): ?string
     {
-        if (Schema::hasColumn('work_orders', 'mfanyakazi_response'))
+        if (Schema::hasColumn('work_orders', 'mfanyakazi_response')) {
             return 'mfanyakazi_response';
-        if (Schema::hasColumn('work_orders', 'worker_response'))
+        }
+        if (Schema::hasColumn('work_orders', 'worker_response')) {
             return 'worker_response';
-        if (Schema::hasColumn('work_orders', 'assignee_response'))
+        }
+        if (Schema::hasColumn('work_orders', 'assignee_response')) {
             return 'assignee_response';
+        }
+
         return null;
     }
 
     public function assigned()
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin']))
+        if (! $u || ! in_array($u->role, ['mfanyakazi', 'admin'])) {
             abort(403);
+        }
 
         $jobs = Job::with('muhitaji', 'category')
             ->where('accepted_worker_id', $u->id)
-            ->whereIn('status', ['assigned', 'in_progress', 'ready_for_confirmation'])
+            ->whereIn('status', [Job::S_FUNDED, Job::S_IN_PROGRESS, Job::S_SUBMITTED, 'assigned', 'in_progress', 'ready_for_confirmation'])
             ->latest()->paginate(12);
 
         return view('mfanyakazi.assigned', compact('jobs'));
@@ -37,24 +46,26 @@ class WorkerActionsController extends Controller
     public function accept(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin']))
+        if (! $u || ! in_array($u->role, ['mfanyakazi', 'admin'])) {
             abort(403);
-        if ($job->accepted_worker_id !== $u->id)
+        }
+        if ($job->accepted_worker_id !== $u->id) {
             abort(403);
+        }
 
-        if (!$job->completion_code) {
+        if (! $job->completion_code) {
             $job->completion_code = (string) random_int(100000, 999999);
         }
 
-        $job->status = 'in_progress';
+        $job->transitionStatus(Job::S_IN_PROGRESS, $u->id, 'Worker accepted job (web)');
         if ($col = $this->responseColumn()) {
-            $job->{$col} = 'ok'; // Use shorter value
+            $job->{$col} = 'ok';
         }
         $job->save();
 
         // Notify Client
         try {
-            $job->muhitaji->notify(new \App\Notifications\WorkerAcceptedNotification($job, $u));
+            $job->muhitaji->notify(new WorkerAcceptedNotification($job, $u));
         } catch (\Exception $e) {
         }
 
@@ -64,17 +75,29 @@ class WorkerActionsController extends Controller
     public function decline(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin']))
+        if (! $u || ! in_array($u->role, ['mfanyakazi', 'admin'])) {
             abort(403);
-        if ($job->accepted_worker_id !== $u->id)
+        }
+        if ($job->accepted_worker_id !== $u->id) {
             abort(403);
+        }
 
         if ($col = $this->responseColumn()) {
-            $job->{$col} = 'no'; // Use shorter value
+            $job->{$col} = 'no';
         }
-        $job->status = 'posted';
+        // NEW: Declining a funded job triggers refund back to open
+        $job->transitionStatus(Job::S_OPEN, $u->id, 'Worker declined job');
         $job->accepted_worker_id = null;
         $job->save();
+
+        // Refund escrow if job was funded
+        if ($job->escrow_amount > 0) {
+            try {
+                app(EscrowService::class)->refundToClient($job, 'Worker declined after funding');
+            } catch (\Exception $e) {
+                \Log::error('Refund failed on worker decline: '.$e->getMessage());
+            }
+        }
 
         return redirect()->route('mfanyakazi.assigned')->with('status', 'Umeikataa kazi.');
     }
@@ -83,32 +106,34 @@ class WorkerActionsController extends Controller
     public function apiAssigned()
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin'])) {
+        if (! $u || ! in_array($u->role, ['mfanyakazi', 'admin'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
+                'message' => 'Huna ruhusa (mfanyakazi/admin tu).',
             ], 403);
         }
 
-        // Get jobs that need accept/decline response (status = 'assigned' only)
+        // NEW: funded = needs accept/decline, assigned = legacy needs accept/decline
         $pendingJobs = Job::with('muhitaji', 'category')
             ->where('accepted_worker_id', $u->id)
-            ->where('status', 'assigned')
+            ->whereIn('status', [Job::S_FUNDED, 'assigned'])
             ->latest()
             ->get()
             ->map(function ($job) {
                 $job->needs_response = true;
+
                 return $job;
             });
 
-        // Get active jobs (already accepted - in_progress or ready_for_confirmation)
+        // Active jobs: in_progress, submitted, or legacy ready_for_confirmation
         $activeJobs = Job::with('muhitaji', 'category')
             ->where('accepted_worker_id', $u->id)
-            ->whereIn('status', ['in_progress', 'ready_for_confirmation'])
+            ->whereIn('status', [Job::S_IN_PROGRESS, Job::S_SUBMITTED, 'in_progress', 'ready_for_confirmation'])
             ->latest()
             ->get()
             ->map(function ($job) {
                 $job->needs_response = false;
+
                 return $job;
             });
 
@@ -118,32 +143,32 @@ class WorkerActionsController extends Controller
             'pending_jobs' => $pendingJobs,
             'active_jobs' => $activeJobs,
             'pending_count' => $pendingJobs->count(),
-            'active_count' => $activeJobs->count()
+            'active_count' => $activeJobs->count(),
         ]);
     }
 
     public function apiAccept(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin'])) {
+        if (! $u || ! in_array($u->role, ['mfanyakazi', 'admin'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
+                'message' => 'Huna ruhusa (mfanyakazi/admin tu).',
             ], 403);
         }
 
         if ($job->accepted_worker_id !== $u->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Hii sio kazi yako.'
+                'message' => 'Hii sio kazi yako.',
             ], 403);
         }
 
-        if (!$job->completion_code) {
+        if (! $job->completion_code) {
             $job->completion_code = (string) random_int(100000, 999999);
         }
 
-        $job->status = 'in_progress';
+        $job->transitionStatus(Job::S_IN_PROGRESS, $u->id, 'Worker accepted job (API)');
         if ($col = $this->responseColumn()) {
             $job->{$col} = 'ok';
         }
@@ -151,7 +176,7 @@ class WorkerActionsController extends Controller
 
         // Notify Client
         try {
-            $job->muhitaji->notify(new \App\Notifications\WorkerAcceptedNotification($job, $u));
+            $job->muhitaji->notify(new WorkerAcceptedNotification($job, $u));
         } catch (\Exception $e) {
         }
 
@@ -159,54 +184,63 @@ class WorkerActionsController extends Controller
             'success' => true,
             'data' => $job->load('muhitaji', 'category'),
             'message' => 'Umeikubali kazi.',
-            'completion_code' => $job->completion_code
+            'completion_code' => $job->completion_code,
         ]);
     }
 
     public function apiDecline(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin'])) {
+        if (! $u || ! in_array($u->role, ['mfanyakazi', 'admin'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
+                'message' => 'Huna ruhusa (mfanyakazi/admin tu).',
             ], 403);
         }
 
         if ($job->accepted_worker_id !== $u->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Hii sio kazi yako.'
+                'message' => 'Hii sio kazi yako.',
             ], 403);
         }
 
         if ($col = $this->responseColumn()) {
             $job->{$col} = 'no';
         }
-        $job->status = 'posted';
+        $job->transitionStatus(Job::S_OPEN, $u->id, 'Worker declined job (API)');
         $job->accepted_worker_id = null;
         $job->save();
 
+        // Refund escrow if job was funded
+        if ($job->escrow_amount > 0) {
+            try {
+                app(EscrowService::class)->refundToClient($job, 'Worker declined after funding');
+            } catch (\Exception $e) {
+                \Log::error('Refund failed on worker decline (API): '.$e->getMessage());
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Umeikataa kazi.'
+            'message' => 'Umeikataa kazi.',
         ]);
     }
 
     public function apiComplete(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin'])) {
+        if (! $u || ! in_array($u->role, ['mfanyakazi', 'admin'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
+                'message' => 'Huna ruhusa (mfanyakazi/admin tu).',
             ], 403);
         }
 
         if ($job->accepted_worker_id !== $u->id) {
             return response()->json([
                 'success' => false,
-                'message' => 'Hii sio kazi yako.'
+                'message' => 'Hii sio kazi yako.',
             ], 403);
         }
 
@@ -214,7 +248,7 @@ class WorkerActionsController extends Controller
         if ($job->status !== 'in_progress') {
             return response()->json([
                 'success' => false,
-                'message' => 'Kazi hii haijaendelea au imekamilika tayari.'
+                'message' => 'Kazi hii haijaendelea au imekamilika tayari.',
             ], 400);
         }
 
@@ -226,7 +260,7 @@ class WorkerActionsController extends Controller
         if ($providedCode !== $actualCode) {
             return response()->json([
                 'success' => false,
-                'message' => 'Code si sahihi. Angalia code uliyopewa na mteja.'
+                'message' => 'Code si sahihi. Angalia code uliyopewa na mteja.',
             ], 422);
         }
 
@@ -245,23 +279,26 @@ class WorkerActionsController extends Controller
             'success' => true,
             'data' => $job->load('muhitaji', 'category'),
             'message' => 'Kazi imethibitishwa! Utapokea malipo yako.',
-            'amount_earned' => $job->amount
+            'amount_earned' => $job->amount,
         ]);
     }
 
     public function complete(Job $job)
     {
         $u = Auth::user();
-        if (!$u || !in_array($u->role, ['mfanyakazi', 'admin']))
+        if (! $u || ! in_array($u->role, ['mfanyakazi', 'admin'])) {
             abort(403);
-        if ($job->accepted_worker_id !== $u->id)
+        }
+        if ($job->accepted_worker_id !== $u->id) {
             abort(403);
+        }
 
         // Check if job is in the right status (allow both assigned and in_progress)
-        if (!in_array($job->status, ['assigned', 'in_progress'])) {
+        if (! in_array($job->status, ['assigned', 'in_progress'])) {
             if (request()->expectsJson()) {
                 return response()->json(['success' => false, 'message' => 'Kazi hii haijaendelea au imekamilika tayari.']);
             }
+
             return back()->withErrors(['code' => 'Kazi hii haijaendelea au imekamilika tayari.']);
         }
 
@@ -277,6 +314,7 @@ class WorkerActionsController extends Controller
             if (request()->expectsJson()) {
                 return response()->json(['success' => false, 'message' => 'Code si sahihi. Angalia code uliyopewa na mteja.']);
             }
+
             return back()->withErrors(['code' => 'Code si sahihi. Angalia code uliyopewa na mteja.']);
         }
 
@@ -302,8 +340,9 @@ class WorkerActionsController extends Controller
     {
         try {
             $worker = $job->acceptedWorker;
-            if (!$worker) {
-                \Log::error('No worker found for job: ' . $job->id);
+            if (! $worker) {
+                \Log::error('No worker found for job: '.$job->id);
+
                 return;
             }
 
@@ -321,7 +360,7 @@ class WorkerActionsController extends Controller
             \Log::info("Worker wallet before payment: TZS {$wallet->balance}");
 
             // Add money to worker's wallet (Net Amount)
-            $walletService = app(\App\Services\WalletService::class);
+            $walletService = app(WalletService::class);
             $updatedWallet = $walletService->credit($worker, $netAmount, 'EARN', "Job completion payment (Job #{$job->id}) - 10% Service Fee Deducted");
 
             \Log::info("Payment processed successfully: Net TZS {$netAmount} to worker {$worker->id} for job {$job->id}");
@@ -329,13 +368,13 @@ class WorkerActionsController extends Controller
 
             // Notification to Worker
             try {
-                $worker->notify(new \App\Notifications\JobCompletedNotification($job, $netAmount));
+                $worker->notify(new JobCompletedNotification($job, $netAmount));
             } catch (\Exception $e) {
             }
 
         } catch (\Exception $e) {
-            \Log::error('Payment processing failed for job ' . $job->id . ': ' . $e->getMessage());
-            \Log::error('Error details: ' . $e->getTraceAsString());
+            \Log::error('Payment processing failed for job '.$job->id.': '.$e->getMessage());
+            \Log::error('Error details: '.$e->getTraceAsString());
         }
     }
 }

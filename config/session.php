@@ -214,9 +214,4 @@ return [
 
     'partitioned' => env('SESSION_PARTITIONED_COOKIE', false),
 
-    'zeno' => [
-    'base_url' => env('ZENO_BASE_URL', 'https://zenoapi.com/api'),
-    ],
-    
-
 ];

@@ -163,12 +163,12 @@
                 </form>
                 
                 @if($user->id !== auth()->id())
-                <form action="{{ route('admin.user.delete', $user) }}" method="POST" class="inline" 
-                      onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone!')">
+                <form action="{{ route('admin.user.delete', $user) }}" method="POST" class="inline">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" 
-                            class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105">
+                    <button type="button" 
+                            class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105"
+                            onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Futa mtumiaji? Hatua haiwezi kutenduliwa.'):Promise.resolve(confirm('Delete?'))).then(function(ok){ if(ok) f.submit(); });">
                         🗑️ Delete User
                     </button>
                 </form>

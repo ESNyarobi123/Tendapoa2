@@ -20,32 +20,104 @@ use Illuminate\Support\Facades\Storage;
 class AdminController extends Controller
 {
     /**
-     * Admin Dashboard - Overview
-     * Note: Admin middleware is applied at route level
+     * Admin Dashboard — overview (takwimu halisi kwa mfumo wa escrow + hali za zamani).
      */
     public function dashboard()
     {
+        $terminal = [Job::S_COMPLETED, Job::S_CANCELLED, Job::S_EXPIRED, Job::S_REFUNDED, 'completed', 'cancelled'];
+
         $stats = [
             'total_users' => User::count(),
             'muhitaji_count' => User::where('role', 'muhitaji')->count(),
             'mfanyakazi_count' => User::where('role', 'mfanyakazi')->count(),
+            'admin_count' => User::where('role', 'admin')->count(),
             'total_jobs' => Job::count(),
-            'active_jobs' => Job::whereIn('status', ['posted', 'assigned', 'in_progress'])->count(),
-            'completed_jobs' => Job::where('status', 'completed')->count(),
+            'active_jobs' => Job::whereNotIn('status', $terminal)->count(),
+            'completed_jobs' => Job::whereIn('status', [Job::S_COMPLETED, 'completed'])->count(),
+            'open_jobs' => Job::where('status', Job::S_OPEN)->count(),
+            'awaiting_payment_jobs' => Job::where('status', Job::S_AWAITING_PAYMENT)->count(),
+            'escrow_pipeline_jobs' => Job::whereIn('status', [Job::S_FUNDED, Job::S_IN_PROGRESS, Job::S_SUBMITTED])->count(),
+            'disputed_jobs' => Job::where('status', Job::S_DISPUTED)->count(),
+            'cancelled_jobs' => Job::whereIn('status', [Job::S_CANCELLED, 'cancelled'])->count(),
             'total_messages' => PrivateMessage::count(),
-            'total_revenue' => Payment::where('status', 'paid')->sum('amount'),
-            'pending_withdrawals' => Withdrawal::where('status', 'pending')->count(),
+            'payments_completed_sum' => (int) Payment::where('status', 'COMPLETED')->sum('amount'),
+            'pending_withdrawals' => Withdrawal::where('status', 'PROCESSING')->count(),
+            'platform_fees_sum' => (int) Job::whereIn('status', [Job::S_COMPLETED, 'completed'])->sum('platform_fee_amount'),
         ];
 
-        // Recent activities
-        $recentJobs = Job::with(['muhitaji', 'acceptedWorker'])
+        $stats['completion_rate_pct'] = $stats['total_jobs'] > 0
+            ? (int) round(($stats['completed_jobs'] / $stats['total_jobs']) * 100)
+            : 0;
+
+        $usersLast30 = User::where('created_at', '>=', now()->subDays(30))->count();
+        $usersPrev30 = User::whereBetween('created_at', [now()->subDays(60), now()->subDays(30)])->count();
+        $stats['users_trend_pct'] = $usersPrev30 > 0
+            ? (int) round((($usersLast30 - $usersPrev30) / $usersPrev30) * 100)
+            : null;
+
+        $jobsCreatedLast30 = Job::where('created_at', '>=', now()->subDays(30))->count();
+        $jobsCreatedPrev30 = Job::whereBetween('created_at', [now()->subDays(60), now()->subDays(30)])->count();
+        $stats['jobs_created_trend_pct'] = $jobsCreatedPrev30 > 0
+            ? (int) round((($jobsCreatedLast30 - $jobsCreatedPrev30) / $jobsCreatedPrev30) * 100)
+            : null;
+
+        $recentJobs = Job::with(['muhitaji', 'acceptedWorker', 'category'])
             ->latest()
             ->limit(10)
             ->get();
 
         $recentUsers = User::latest()->limit(10)->get();
 
-        return view('admin.dashboard', compact('stats', 'recentJobs', 'recentUsers'));
+        $recentWithdrawals = Withdrawal::with('user')->latest()->limit(10)->get();
+
+        $topWorkers = User::where('role', 'mfanyakazi')
+            ->withCount([
+                'assignedJobs as completed_jobs_count' => fn ($q) => $q->whereIn('status', [Job::S_COMPLETED, 'completed']),
+            ])
+            ->orderByDesc('completed_jobs_count')
+            ->limit(5)
+            ->get();
+
+        $pipelineMonitorJobs = Job::with(['muhitaji', 'acceptedWorker'])
+            ->whereIn('status', [
+                Job::S_FUNDED,
+                Job::S_IN_PROGRESS,
+                Job::S_SUBMITTED,
+                'assigned',
+                'in_progress',
+                'ready_for_confirmation',
+            ])
+            ->latest()
+            ->limit(8)
+            ->get();
+
+        $revenueLabels = [];
+        $revenueData = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = now()->subDays($i);
+            $revenueLabels[] = $date->format('M d');
+            $d = $date->format('Y-m-d');
+            $sum = Job::whereIn('status', [Job::S_COMPLETED, 'completed'])
+                ->where(function ($q) use ($d) {
+                    $q->whereDate('completed_at', $d)
+                        ->orWhere(function ($q2) use ($d) {
+                            $q2->whereNull('completed_at')->whereDate('updated_at', $d);
+                        });
+                })
+                ->sum('price');
+            $revenueData[] = (int) $sum;
+        }
+
+        return view('admin.dashboard', compact(
+            'stats',
+            'recentJobs',
+            'recentUsers',
+            'recentWithdrawals',
+            'topWorkers',
+            'pipelineMonitorJobs',
+            'revenueLabels',
+            'revenueData',
+        ));
     }
 
     /**
@@ -80,53 +152,49 @@ class AdminController extends Controller
     public function userDetails(User $user)
     {
         try {
-            // Debug: Log the user ID being passed
-            \Log::info('Admin userDetails - Requested User ID: ' . $user->id);
-            \Log::info('Admin userDetails - Requested User Name: ' . $user->name);
-            \Log::info('Admin userDetails - Requested User Email: ' . $user->email);
-
-            // Force refresh the user from database
             $user = User::find($user->id);
-            if (!$user) {
+            if (! $user) {
                 abort(404, 'User not found');
             }
 
-            // Load all user relationships
             $user->load([
-                'jobs' => fn($q) => $q->with(['acceptedWorker', 'category'])->latest(),
-                'assignedJobs' => fn($q) => $q->with(['muhitaji', 'category'])->latest(),
+                'jobs' => fn ($q) => $q->with(['acceptedWorker', 'category'])->latest(),
+                'assignedJobs' => fn ($q) => $q->with(['muhitaji', 'category'])->latest(),
                 'wallet',
-                'withdrawals' => fn($q) => $q->latest(),
-                'sentMessages' => fn($q) => $q->with(['receiver', 'job'])->latest()->limit(50),
-                'receivedMessages' => fn($q) => $q->with(['sender', 'job'])->latest()->limit(50),
+                'withdrawals' => fn ($q) => $q->latest(),
+                'sentMessages' => fn ($q) => $q->with(['receiver', 'job'])->latest()->limit(50),
+                'receivedMessages' => fn ($q) => $q->with(['sender', 'job'])->latest()->limit(50),
             ]);
 
-            // Debug: Log user data
-            \Log::info('Admin userDetails - User ID: ' . $user->id);
-            \Log::info('Admin userDetails - User loaded: ' . $user->name);
-            \Log::info('Admin userDetails - User email: ' . $user->email);
-            \Log::info('Admin userDetails - Jobs count: ' . $user->jobs->count());
-            \Log::info('Admin userDetails - Assigned jobs count: ' . $user->assignedJobs->count());
+            $wallet = $user->wallet;
 
-            // Get comprehensive user statistics
             $stats = [
                 'jobs_posted' => $user->jobs()->count(),
                 'jobs_assigned' => $user->assignedJobs()->count(),
-                'jobs_completed' => $user->assignedJobs()->where('status', 'completed')->count(),
-                'jobs_in_progress' => $user->assignedJobs()->where('status', 'in_progress')->count(),
-                'jobs_cancelled' => $user->jobs()->where('status', 'cancelled')->count(),
-                'wallet_balance' => $user->wallet->balance ?? 0,
+                'jobs_completed' => $user->assignedJobs()->whereIn('status', [Job::S_COMPLETED, 'completed'])->count(),
+                'jobs_in_progress' => $user->assignedJobs()->whereIn('status', [
+                    Job::S_FUNDED,
+                    Job::S_IN_PROGRESS,
+                    Job::S_SUBMITTED,
+                    'in_progress',
+                    'assigned',
+                    'ready_for_confirmation',
+                ])->count(),
+                'jobs_cancelled' => $user->jobs()->whereIn('status', [Job::S_CANCELLED, 'cancelled'])->count(),
+                'wallet_balance' => $wallet->balance ?? 0,
+                'wallet_available' => $wallet ? $wallet->available_balance : 0,
                 'total_earned' => WalletTransaction::where('user_id', $user->id)
-                    ->where('type', 'credit')
+                    ->where('type', 'EARN')
+                    ->where('amount', '>', 0)
                     ->sum('amount'),
-                'total_spent' => WalletTransaction::where('user_id', $user->id)
-                    ->where('type', 'debit')
-                    ->sum('amount'),
+                'total_spent' => abs((int) WalletTransaction::where('user_id', $user->id)
+                    ->where('amount', '<', 0)
+                    ->sum('amount')),
                 'total_withdrawn' => Withdrawal::where('user_id', $user->id)
-                    ->where('status', 'paid')
+                    ->where('status', 'PAID')
                     ->sum('amount'),
                 'pending_withdrawals' => Withdrawal::where('user_id', $user->id)
-                    ->where('status', 'pending')
+                    ->where('status', 'PROCESSING')
                     ->sum('amount'),
                 'messages_sent' => PrivateMessage::where('sender_id', $user->id)->count(),
                 'messages_received' => PrivateMessage::where('receiver_id', $user->id)->count(),
@@ -147,7 +215,7 @@ class AdminController extends Controller
                     'color' => 'blue',
                     'title' => 'Posted Job',
                     'description' => $job->title,
-                    'details' => "Budget: Tsh " . number_format($job->budget ?? $job->amount) . " | Status: " . ucfirst($job->status),
+                    'details' => 'Bei: TZS '.number_format($job->price ?? $job->agreed_amount ?? $job->budget ?? 0).' | Status: '.$job->status,
                     'timestamp' => $job->created_at,
                     'link' => route('admin.job.details', $job),
                     'data' => $job,
@@ -162,8 +230,8 @@ class AdminController extends Controller
                     'color' => 'green',
                     'title' => 'Assigned to Job',
                     'description' => $job->title,
-                    'details' => "By: " . $job->muhitaji->name . " | Amount: Tsh " . number_format($job->amount),
-                    'timestamp' => $job->accepted_at ?? $job->updated_at,
+                    'details' => 'Mteja: '.($job->muhitaji->name ?? '—').' | TZS '.number_format($job->agreed_amount ?? $job->price ?? 0),
+                    'timestamp' => $job->accepted_by_worker_at ?? $job->updated_at,
                     'link' => route('admin.job.details', $job),
                     'data' => $job,
                 ]);
@@ -279,9 +347,20 @@ class AdminController extends Controller
             $query->where('title', 'like', "%{$search}%");
         }
 
-        $jobs = $query->latest()->paginate(20);
+        $filterUser = null;
+        if ($uid = $request->get('user')) {
+            $filterUser = User::find($uid);
+            if ($filterUser) {
+                $query->where(function ($q) use ($filterUser) {
+                    $q->where('user_id', $filterUser->id)
+                        ->orWhere('accepted_worker_id', $filterUser->id);
+                });
+            }
+        }
 
-        return view('admin.jobs', compact('jobs'));
+        $jobs = $query->latest()->paginate(20)->withQueryString();
+
+        return view('admin.jobs', compact('jobs', 'filterUser'));
     }
 
     /**
@@ -316,7 +395,8 @@ class AdminController extends Controller
             )
             ->groupBy('work_order_id')
             ->orderBy('last_message_at', 'desc')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
         // Load job details
         $jobIds = $conversations->pluck('work_order_id');
@@ -333,6 +413,44 @@ class AdminController extends Controller
         });
 
         return view('admin.chats', compact('conversations'));
+    }
+
+    /**
+     * Mazungumzo ya faragha yanayohusisha mtumiaji (muhitaji au mfanyakazi kwenye kazi).
+     */
+    public function userChats(User $user)
+    {
+        $conversations = DB::table('private_messages')
+            ->join('work_orders', 'private_messages.work_order_id', '=', 'work_orders.id')
+            ->where(function ($q) use ($user) {
+                $q->where('work_orders.user_id', $user->id)
+                    ->orWhere('work_orders.accepted_worker_id', $user->id);
+            })
+            ->select(
+                'private_messages.work_order_id',
+                DB::raw('MAX(private_messages.created_at) as last_message_at'),
+                DB::raw('COUNT(*) as message_count')
+            )
+            ->groupBy('private_messages.work_order_id')
+            ->orderBy('last_message_at', 'desc')
+            ->paginate(20)
+            ->withQueryString();
+
+        $jobIds = $conversations->pluck('work_order_id');
+        $jobs = Job::with(['muhitaji', 'acceptedWorker'])
+            ->whereIn('id', $jobIds)
+            ->get()
+            ->keyBy('id');
+
+        $conversations->getCollection()->transform(function ($conv) use ($jobs) {
+            $conv->job = $jobs->get($conv->work_order_id);
+
+            return $conv;
+        });
+
+        $chatsForUser = $user;
+
+        return view('admin.chats', compact('conversations', 'chatsForUser'));
     }
 
     /**

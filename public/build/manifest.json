@@ -1,0 +1,35 @@
+{
+  "_tp-ui-hLfDouKJ.js": {
+    "file": "assets/tp-ui-hLfDouKJ.js",
+    "name": "tp-ui"
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-ChtFm58s.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/js/admin-entry.js": {
+    "file": "assets/admin-entry-B6wHhgAA.js",
+    "name": "admin-entry",
+    "src": "resources/js/admin-entry.js",
+    "isEntry": true,
+    "imports": [
+      "_tp-ui-hLfDouKJ.js"
+    ],
+    "css": [
+      "assets/admin-entry-BZsG6Vnn.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-IJ_nIAhW.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "_tp-ui-hLfDouKJ.js"
+    ]
+  }
+}

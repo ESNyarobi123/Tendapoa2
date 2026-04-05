@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class PrivateMessage extends Model
 {
@@ -48,9 +48,11 @@ class PrivateMessage extends Model
     public function scopeBetweenUsers($query, $userId1, $userId2)
     {
         return $query->where(function ($q) use ($userId1, $userId2) {
-            $q->where('sender_id', $userId1)->where('receiver_id', $userId2);
-        })->orWhere(function ($q) use ($userId1, $userId2) {
-            $q->where('sender_id', $userId2)->where('receiver_id', $userId1);
+            $q->where(function ($q2) use ($userId1, $userId2) {
+                $q2->where('sender_id', $userId1)->where('receiver_id', $userId2);
+            })->orWhere(function ($q2) use ($userId1, $userId2) {
+                $q2->where('sender_id', $userId2)->where('receiver_id', $userId1);
+            });
         });
     }
 
@@ -62,7 +64,7 @@ class PrivateMessage extends Model
     // Helper methods
     public function markAsRead()
     {
-        if (!$this->is_read) {
+        if (! $this->is_read) {
             $this->update([
                 'is_read' => true,
                 'read_at' => now(),
@@ -70,4 +72,3 @@ class PrivateMessage extends Model
         }
     }
 }
-

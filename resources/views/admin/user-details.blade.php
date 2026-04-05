@@ -533,9 +533,9 @@
   // IMPORTANT: Do NOT override $user coming from controller.
   // Remove legacy demo fallback; use passed-in $user only.
   $userJobs = isset($user) && isset($user->jobs) ? $user->jobs : collect();
-  $completedJobs = $userJobs->where('status', 'completed');
+  $completedJobs = $userJobs->whereIn('status', [\App\Models\Job::S_COMPLETED, 'completed']);
   $totalEarnings = $completedJobs->sum('price');
-  $activeJobs = $userJobs->where('status', 'in_progress');
+  $activeJobs = $userJobs->whereIn('status', [\App\Models\Job::S_OPEN, \App\Models\Job::S_AWAITING_PAYMENT, 'posted']);
 @endphp
 
 <div class="user-details-page">
@@ -553,7 +553,7 @@
             <!-- Admin Impersonation -->
             <a href="{{ route('admin.impersonate', $user) }}" 
                class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
-               onclick="return confirm('Are you sure you want to login as this user?')">
+               onclick="event.preventDefault(); var u=this.href; (typeof tpConfirm==='function'?tpConfirm('Ingia kama mtumiaji huyu? Utaona jukwaa kama yeye.'):Promise.resolve(confirm('Login as user?'))).then(function(ok){ if(ok) window.location.href=u; }); return false;">
               🎭 Login as User
             </a>
             
@@ -566,9 +566,9 @@
             <!-- Toggle Status -->
             <form action="{{ route('admin.user.toggle-status', $user) }}" method="POST" class="inline">
               @csrf
-              <button type="submit" 
+              <button type="button" 
                       class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
-                      onclick="return confirm('Are you sure you want to {{ $user->is_active ? 'suspend' : 'activate' }} this user?')">
+                      onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm(@json($user->is_active ? 'Sitisha mtumiaji huyu?' : 'Washa mtumiaji huyu?')):Promise.resolve(confirm('Confirm?'))).then(function(ok){ if(ok) f.submit(); });">
                 {{ $user->is_active ? '🚫 Suspend' : '✅ Activate' }}
               </button>
             </form>
@@ -578,9 +578,9 @@
             <form action="{{ route('admin.user.delete', $user) }}" method="POST" class="inline">
               @csrf
               @method('DELETE')
-              <button type="submit" 
+              <button type="button" 
                       class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold transition-all duration-300 transform hover:scale-105"
-                      onclick="return confirm('Are you sure you want to DELETE this user? This action cannot be undone!')">
+                      onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Futa mtumiaji kabisa? Hatua haiwezi kutenduliwa.'):Promise.resolve(confirm('Delete user?'))).then(function(ok){ if(ok) f.submit(); });">
                 🗑️ Delete
               </button>
             </form>
@@ -591,7 +591,7 @@
               <span>↩️</span>
               Rudi Dashboard
             </a>
-            <a class="btn btn-primary" href="{{ url('/admin/users') }}">
+            <a class="btn btn-primary" href="{{ route('admin.users') }}">
               <span>👥</span>
               All Users
             </a>
@@ -610,7 +610,6 @@
           <h2>{{ $user->name }}</h2>
           <p>{{ $user->email }} • {{ $user->phone ?? 'No phone' }}</p>
           <p style="font-size: 0.8rem; color: #666;">User ID: {{ $user->id }}</p>
-          <p style="font-size: 0.8rem; color: #666;">Request ID: {{ request()->route('user') }}</p>
           <div class="profile-badges">
             <span class="profile-badge {{ $user->role }}">{{ ucfirst($user->role) }}</span>
             <span class="profile-badge {{ $user->email_verified_at ? 'verified' : 'unverified' }}">
@@ -642,7 +641,7 @@
             <div class="profile-stat-value">TZS {{ isset($stats) ? number_format($stats['total_spent']) : '0' }}</div>
             <div class="profile-stat-label">Total Spent</div>
           </div>
-          <div class="profile-stat">
+          <div class="profile-stat" id="adm-wallet">
             <div class="profile-stat-value">TZS {{ isset($stats) ? number_format($stats['wallet_balance']) : '0' }}</div>
             <div class="profile-stat-label">Wallet Balance</div>
           </div>
@@ -888,29 +887,36 @@
           Edit Profile
         </a>
         
-        <a class="btn btn-success" href="{{ url('/admin/users/'.$user->id.'/jobs') }}">
+        <a class="btn btn-success" href="{{ route('admin.jobs', ['user' => $user->id]) }}">
           <span>📋</span>
           View All Jobs
         </a>
         
-        <a class="btn btn-warning" href="{{ url('/admin/users/'.$user->id.'/wallet') }}">
+        <a class="btn btn-warning" href="{{ route('admin.user.details', $user) }}#adm-wallet">
           <span>💰</span>
           Manage Wallet
         </a>
         
-        <a class="btn btn-outline" href="{{ url('/admin/users/'.$user->id.'/conversations') }}">
+        <a class="btn btn-outline" href="{{ route('admin.user.chats', $user) }}">
           <span>💬</span>
           View Conversations
         </a>
         
-        <a class="btn btn-danger" href="{{ url('/admin/users/'.$user->id.'/suspend') }}">
-          <span>🚫</span>
-          Suspend User
-        </a>
+        <form method="POST" action="{{ route('admin.user.toggle-status', $user) }}" class="inline" onsubmit="return confirm('Badilisha hali ya akaunti ya {{ $user->name }}?');">
+          @csrf
+          <button type="submit" class="btn btn-danger" style="border:none;cursor:pointer;font:inherit;">
+            <span>🚫</span>
+            @if($user->is_active)
+              Zuia akaunti
+            @else
+              Rudisha akaunti
+            @endif
+          </button>
+        </form>
         
-        <a class="btn btn-outline" href="{{ url('/admin/users/'.$user->id.'/analytics') }}">
+        <a class="btn btn-outline" href="{{ route('admin.user.monitor', $user) }}">
           <span>📊</span>
-          Detailed Analytics
+          Shughuli &amp; mfululizo
         </a>
       </div>
     </div>

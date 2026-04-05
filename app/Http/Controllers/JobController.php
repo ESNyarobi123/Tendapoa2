@@ -2,11 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{Job, Category, Wallet, WalletTransaction, Setting, User};
-use App\Services\TranslationService;
-use App\Services\ZenoPayService;
-use App\Notifications\JobAvailableNotification;
+use App\Models\Category;
+use App\Models\Job;
+use App\Models\JobStatusLog;
+use App\Models\Setting;
+use App\Models\User;
+use App\Models\Wallet;
+use App\Models\WalletTransaction;
 use App\Notifications\JobStatusNotification;
+use App\Services\ClickPesaService;
+use App\Services\EscrowService;
+use App\Services\NotificationService;
+use App\Services\TranslationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +25,7 @@ class JobController extends Controller
     private function ensureMuhitajiOrAdmin(): void
     {
         $role = Auth::user()->role ?? null;
-        if (!in_array($role, ['muhitaji', 'admin'], true)) {
+        if (! in_array($role, ['muhitaji', 'admin'], true)) {
             abort(403, 'Huna ruhusa (muhitaji/admin tu).');
         }
     }
@@ -29,12 +36,13 @@ class JobController extends Controller
      */
     private function handleImageUpload($file, $existingImage = null): ?string
     {
-        if (!$file || !$file->isValid()) {
+        if (! $file || ! $file->isValid()) {
             \Log::info('handleImageUpload: No file or invalid file', [
                 'hasFile' => $file !== null,
                 'isValid' => $file ? $file->isValid() : false,
-                'existingImage' => $existingImage
+                'existingImage' => $existingImage,
             ]);
+
             return $existingImage; // Return existing if no new file
         }
 
@@ -42,39 +50,57 @@ class JobController extends Controller
             'originalName' => $file->getClientOriginalName(),
             'mimeType' => $file->getMimeType(),
             'size' => $file->getSize(),
-            'extension' => $file->getClientOriginalExtension()
+            'extension' => $file->getClientOriginalExtension(),
         ]);
-
-        // Validate image
-        $validated = validator(['image' => $file], [
-            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'] // 5MB max
-        ])->validate();
 
         // Delete old image if exists
         if ($existingImage && Storage::disk('public')->exists($existingImage)) {
             Storage::disk('public')->delete($existingImage);
         }
 
+        // HEIC/HEIF: GD cannot process these — save as-is
+        $ext = strtolower($file->getClientOriginalExtension());
+        if (in_array($ext, ['heic', 'heif'])) {
+            $dir = storage_path('app/public/jobs');
+            if (! is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $uniqueName = Str::random(40).'.'.$ext;
+            try {
+                $file->move($dir, $uniqueName);
+                $filename = 'jobs/'.$uniqueName;
+                @chmod($dir.DIRECTORY_SEPARATOR.$uniqueName, 0644);
+                \Log::info('Image uploaded (HEIC/HEIF) - saved as-is', ['filename' => $filename]);
+
+                return $filename;
+            } catch (\Exception $e) {
+                \Log::error('HEIC upload failed', ['error' => $e->getMessage()]);
+
+                return $existingImage;
+            }
+        }
+
         // Check if GD extension is available
         $gdAvailable = extension_loaded('gd') && function_exists('imagecreatefromjpeg');
 
-        if (!$gdAvailable) {
+        if (! $gdAvailable) {
             // GD not available - just save the file as-is using direct move
             $extension = strtolower($file->getClientOriginalExtension()) ?: 'jpg';
-            $uniqueName = Str::random(40) . '.' . $extension;
-            $filename = 'jobs/' . $uniqueName;
+            $uniqueName = Str::random(40).'.'.$extension;
+            $filename = 'jobs/'.$uniqueName;
 
             // Ensure directory exists
             $dir = storage_path('app/public/jobs');
-            if (!is_dir($dir)) {
-                if (!mkdir($dir, 0755, true)) {
+            if (! is_dir($dir)) {
+                if (! mkdir($dir, 0755, true)) {
                     \Log::error('Image upload - Failed to create jobs directory', ['dir' => $dir]);
+
                     return $existingImage;
                 }
             }
 
             // Use move() directly to ensure file is saved
-            $fullPath = $dir . DIRECTORY_SEPARATOR . $uniqueName;
+            $fullPath = $dir.DIRECTORY_SEPARATOR.$uniqueName;
 
             try {
                 $file->move($dir, $uniqueName);
@@ -86,23 +112,26 @@ class JobController extends Controller
                         'filename' => $filename,
                         'fullPath' => $fullPath,
                         'fileSize' => filesize($fullPath),
-                        'isReadable' => is_readable($fullPath)
+                        'isReadable' => is_readable($fullPath),
                     ]);
+
                     return $filename;
                 } else {
                     \Log::error('Image upload (no GD) - File not found after move', [
                         'filename' => $filename,
                         'fullPath' => $fullPath,
-                        'dir' => $dir
+                        'dir' => $dir,
                     ]);
+
                     return $existingImage;
                 }
             } catch (\Exception $e) {
                 \Log::error('Image upload (no GD) - Exception during move', [
                     'error' => $e->getMessage(),
                     'filename' => $filename,
-                    'dir' => $dir
+                    'dir' => $dir,
                 ]);
+
                 return $existingImage;
             }
         }
@@ -110,11 +139,11 @@ class JobController extends Controller
         // GD is available - proceed with resizing
         // Get image info
         $imageInfo = getimagesize($file->getRealPath());
-        if (!$imageInfo) {
+        if (! $imageInfo) {
             return $existingImage; // Invalid image
         }
 
-        list($width, $height, $type) = $imageInfo;
+        [$width, $height, $type] = $imageInfo;
 
         // Max dimensions (1200px width, maintain aspect ratio)
         $maxWidth = 1200;
@@ -131,12 +160,12 @@ class JobController extends Controller
         }
 
         // Generate unique filename (always save as jpg for consistency when resizing)
-        $filename = 'jobs/' . Str::random(40) . '.jpg';
-        $fullPath = storage_path('app/public/' . $filename);
+        $filename = 'jobs/'.Str::random(40).'.jpg';
+        $fullPath = storage_path('app/public/'.$filename);
 
         // Ensure directory exists with proper permissions
         $dir = dirname($fullPath);
-        if (!is_dir($dir)) {
+        if (! is_dir($dir)) {
             mkdir($dir, 0755, true);
             // Set permissions explicitly (Windows compatible)
             if (is_dir($dir)) {
@@ -165,11 +194,11 @@ class JobController extends Controller
             default:
                 // Unsupported type - save as-is
                 $extension = $file->getClientOriginalExtension();
-                $filename = 'jobs/' . Str::random(40) . '.' . $extension;
+                $filename = 'jobs/'.Str::random(40).'.'.$extension;
 
                 // Ensure directory exists
                 $dir = storage_path('app/public/jobs');
-                if (!is_dir($dir)) {
+                if (! is_dir($dir)) {
                     mkdir($dir, 0755, true);
                     chmod($dir, 0755);
                 }
@@ -177,34 +206,34 @@ class JobController extends Controller
                 $stored = $file->storeAs('public', $filename);
 
                 // Set file permissions
-                $fullPath = storage_path('app/public/' . $filename);
+                $fullPath = storage_path('app/public/'.$filename);
                 if (file_exists($fullPath)) {
                     chmod($fullPath, 0644);
                     \Log::info('Image uploaded (unsupported type) - File saved', [
                         'filename' => $filename,
                         'storedPath' => $stored,
                         'fullPath' => $fullPath,
-                        'fileSize' => filesize($fullPath)
+                        'fileSize' => filesize($fullPath),
                     ]);
                 } else {
                     \Log::error('Image upload (unsupported type) - File not found after storeAs', [
                         'filename' => $filename,
                         'storedPath' => $stored,
-                        'fullPath' => $fullPath
+                        'fullPath' => $fullPath,
                     ]);
                 }
 
                 return $filename;
         }
 
-        if (!$source) {
+        if (! $source) {
             // If we can't create source, save file as-is
             $extension = $file->getClientOriginalExtension();
-            $filename = 'jobs/' . Str::random(40) . '.' . $extension;
+            $filename = 'jobs/'.Str::random(40).'.'.$extension;
 
             // Ensure directory exists
             $dir = storage_path('app/public/jobs');
-            if (!is_dir($dir)) {
+            if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
                 chmod($dir, 0755);
             }
@@ -212,20 +241,20 @@ class JobController extends Controller
             $stored = $file->storeAs('public', $filename);
 
             // Set file permissions
-            $fullPath = storage_path('app/public/' . $filename);
+            $fullPath = storage_path('app/public/'.$filename);
             if (file_exists($fullPath)) {
                 chmod($fullPath, 0644);
                 \Log::info('Image uploaded (no source) - File saved', [
                     'filename' => $filename,
                     'storedPath' => $stored,
                     'fullPath' => $fullPath,
-                    'fileSize' => filesize($fullPath)
+                    'fileSize' => filesize($fullPath),
                 ]);
             } else {
                 \Log::error('Image upload (no source) - File not found after storeAs', [
                     'filename' => $filename,
                     'storedPath' => $stored,
-                    'fullPath' => $fullPath
+                    'fullPath' => $fullPath,
                 ]);
             }
 
@@ -249,31 +278,31 @@ class JobController extends Controller
         // Save as JPEG with 85% quality
         $saved = @imagejpeg($resized, $fullPath, 85);
 
-        if (!$saved || !file_exists($fullPath)) {
+        if (! $saved || ! file_exists($fullPath)) {
             \Log::error('Failed to save resized image', [
                 'fullPath' => $fullPath,
                 'filename' => $filename,
                 'saved' => $saved,
                 'fileExists' => file_exists($fullPath),
                 'directoryExists' => is_dir(dirname($fullPath)),
-                'directoryWritable' => is_writable(dirname($fullPath))
+                'directoryWritable' => is_writable(dirname($fullPath)),
             ]);
             // Fallback: try to save original file using Laravel's storeAs
             $extension = $file->getClientOriginalExtension();
-            $filename = 'jobs/' . Str::random(40) . '.' . $extension;
+            $filename = 'jobs/'.Str::random(40).'.'.$extension;
             $dir = storage_path('app/public/jobs');
-            if (!is_dir($dir)) {
+            if (! is_dir($dir)) {
                 mkdir($dir, 0755, true);
                 chmod($dir, 0755);
             }
             $stored = $file->storeAs('public', $filename);
-            $fullPath = storage_path('app/public/' . $filename);
+            $fullPath = storage_path('app/public/'.$filename);
 
             \Log::info('Image saved using fallback method', [
                 'filename' => $filename,
                 'stored' => $stored,
                 'fullPath' => $fullPath,
-                'fileExists' => file_exists($fullPath)
+                'fileExists' => file_exists($fullPath),
             ]);
         }
 
@@ -288,7 +317,7 @@ class JobController extends Controller
                 $storageDirectPath = storage_path($filename);
                 $storageDirectDir = dirname($storageDirectPath);
 
-                if (!is_dir($storageDirectDir)) {
+                if (! is_dir($storageDirectDir)) {
                     @mkdir($storageDirectDir, 0755, true);
                 }
 
@@ -311,14 +340,14 @@ class JobController extends Controller
                 'fileSize' => $fileSize,
                 'isReadable' => $isReadable,
                 'permissions' => substr(sprintf('%o', fileperms($fullPath)), -4),
-                'expectedUrl' => asset('storage/' . $filename)
+                'expectedUrl' => asset('storage/'.$filename),
             ]);
 
             // Verify the file has content
             if ($fileSize === 0) {
                 \Log::error('Image file is empty after save', [
                     'filename' => $filename,
-                    'fullPath' => $fullPath
+                    'fullPath' => $fullPath,
                 ]);
             }
         } else {
@@ -326,12 +355,14 @@ class JobController extends Controller
                 'filename' => $filename,
                 'fullPath' => $fullPath,
                 'directoryExists' => is_dir(dirname($fullPath)),
-                'directoryWritable' => is_writable(dirname($fullPath))
+                'directoryWritable' => is_writable(dirname($fullPath)),
             ]);
             // Return null so we don't save invalid path to database
             imagedestroy($source);
-            if (isset($resized))
+            if (isset($resized)) {
                 imagedestroy($resized);
+            }
+
             return null;
         }
 
@@ -345,28 +376,38 @@ class JobController extends Controller
     public function create()
     {
         $this->ensureMuhitajiOrAdmin();
-        return view('jobs.create', ['categories' => Category::all()]);
+
+        $wallet = Auth::user()->ensureWallet();
+
+        return view('jobs.create', [
+            'categories' => Category::all(),
+            'wallet' => $wallet,
+        ]);
     }
 
-    public function store(Request $r, ZenoPayService $zeno)
+    public function store(Request $r)
     {
         $this->ensureMuhitajiOrAdmin();
 
         $r->validate([
             'title' => ['required', 'max:120'],
             'category_id' => ['required', 'exists:categories,id'],
-            'price' => ['required', 'integer', 'min:500'],
+            'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
-            'phone' => ['required', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
-            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'], // 5MB max
+            'description' => ['nullable'],
+            'address_text' => ['nullable'],
+            'urgency' => ['nullable', 'in:normal,urgent,flexible'],
+            'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
+                if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
+                    $fail('Faili lazima iwe picha.');
+                }
+            }],
         ], [
-            'phone.regex' => 'Weka 06/07xxxxxxxx au 2556/2557xxxxxxxx.',
             'lat.required' => 'Eneo la kazi ni lazima. Tafadhali weka pini eneo la kazi kwenye ramani.',
             'lng.required' => 'Eneo la kazi ni lazima. Tafadhali weka pini eneo la kazi kwenye ramani.',
             'lat.between' => 'Latitude si sahihi. Tafadhali weka eneo sahihi kwenye ramani.',
             'lng.between' => 'Longitude si sahihi. Tafadhali weka eneo sahihi kwenye ramani.',
-            'image.image' => 'Faili lazima iwe picha (jpeg, jpg, png, au webp).',
             'image.max' => 'Picha haipaswi kuwa kubwa zaidi ya 5MB.',
         ]);
 
@@ -375,14 +416,14 @@ class JobController extends Controller
 
         // Log the image path for debugging
         if ($imagePath) {
-            $fullPath = storage_path('app/public/' . $imagePath);
+            $fullPath = storage_path('app/public/'.$imagePath);
             \Log::info('Job creation (store) - Image path saved', [
                 'imagePath' => $imagePath,
                 'fullStoragePath' => $fullPath,
                 'fileExists' => file_exists($fullPath),
                 'fileSize' => file_exists($fullPath) ? filesize($fullPath) : 0,
-                'expectedUrl' => asset('storage/' . $imagePath),
-                'storageDiskExists' => Storage::disk('public')->exists($imagePath)
+                'expectedUrl' => asset('storage/'.$imagePath),
+                'storageDiskExists' => Storage::disk('public')->exists($imagePath),
             ]);
         } else {
             \Log::info('Job creation (store) - No image uploaded');
@@ -390,18 +431,18 @@ class JobController extends Controller
 
         // Verify image file exists before saving to database
         if ($imagePath) {
-            $imageFullPath = storage_path('app/public/' . $imagePath);
-            if (!file_exists($imageFullPath)) {
+            $imageFullPath = storage_path('app/public/'.$imagePath);
+            if (! file_exists($imageFullPath)) {
                 \Log::error('Image path provided but file does not exist - not saving to database', [
                     'imagePath' => $imagePath,
-                    'fullPath' => $imageFullPath
+                    'fullPath' => $imageFullPath,
                 ]);
                 $imagePath = null; // Don't save invalid path
             } else {
                 \Log::info('Image verified before saving to database', [
                     'imagePath' => $imagePath,
                     'fullPath' => $imageFullPath,
-                    'fileSize' => filesize($imageFullPath)
+                    'fileSize' => filesize($imageFullPath),
                 ]);
             }
         }
@@ -411,10 +452,11 @@ class JobController extends Controller
             $r->input('description')
         );
 
+        // NEW WORKFLOW: Free posting — job goes live immediately as 'open'
         $job = Job::create([
             'user_id' => Auth::id(),
             'category_id' => (int) $r->input('category_id'),
-            'title' => $r->input('title'), // legacy column
+            'title' => $r->input('title'),
             'title_sw' => $localized['title_sw'],
             'title_en' => $localized['title_en'],
             'description' => $r->input('description'),
@@ -425,68 +467,40 @@ class JobController extends Controller
             'lat' => (float) $r->input('lat'),
             'lng' => (float) $r->input('lng'),
             'address_text' => $r->input('address_text'),
-            'status' => Setting::get('payments_enabled', '1') == '1' ? 'pending_payment' : 'posted',
-            'published_at' => Setting::get('payments_enabled', '1') == '1' ? null : now(),
+            'urgency' => $r->input('urgency', 'normal'),
+            'status' => Job::S_OPEN,
+            'published_at' => now(),
         ]);
+
+        // Log status transition
+        JobStatusLog::log($job, Job::S_OPEN, Auth::id(), 'Job created and published (free posting)');
 
         // Log final state after database save
         \Log::info('Job created with image', [
             'jobId' => $job->id,
             'imagePath' => $job->image,
-            'imageUrl' => $job->image ? asset('storage/' . $job->image) : null,
-            'fileExists' => $job->image ? file_exists(storage_path('app/public/' . $job->image)) : false
+            'imageUrl' => $job->image ? asset('storage/'.$job->image) : null,
+            'fileExists' => $job->image ? file_exists(storage_path('app/public/'.$job->image)) : false,
         ]);
 
-        if (Setting::get('payments_enabled', '1') == '0') {
-            // Notify client triggers
-            try {
-                Auth::user()->notify(new JobStatusNotification($job, 'posted'));
-            } catch (\Exception $e) {
-            }
-
-            // Notify workers
-            $this->notifyNearbyWorkers($job);
-
-            return redirect()->route('my.jobs')->with('success', 'Kazi imechapishwa kwa mafanikio!');
-        }
-
-        $orderId = (string) Str::ulid();
-        $job->payment()->create([
-            'order_id' => $orderId,
-            'amount' => $job->price,
-            'status' => 'PENDING',
-        ]);
-
-        $buyer = Auth::user();
-        $payload = [
-            'order_id' => $orderId,
-            'buyer_email' => $buyer?->email ?? 'client@tendapoa.local',
-            'buyer_name' => $buyer?->name ?? 'Client',
-            'buyer_phone' => $r->input('phone'),
-            'amount' => $job->price,
-            // 'webhook_url' => route('zeno.webhook'), // User requested polling only
-        ];
-
-        $res = $zeno->startPayment($payload);
-        if (!$res['ok']) {
-            return back()->withErrors(['pay' => 'Imeshindikana kuanzisha malipo. Jaribu tena.']);
-        }
-
-        // Notify client pending payment
+        // Notify client
         try {
-            Auth::user()->notify(new JobStatusNotification($job, 'pending'));
+            Auth::user()->notify(new JobStatusNotification($job, 'posted'));
         } catch (\Exception $e) {
         }
 
-        return redirect()->route('jobs.pay.wait', $job);
+        // Notify nearby workers
+        $this->notifyNearbyWorkers($job);
+
+        return redirect()->route('jobs.show', $job)->with('success', 'Kazi imechapishwa bure! Wafanyakazi wataona na kuomba.');
     }
 
     public function edit(Job $job)
     {
         $this->ensureMuhitajiOrAdmin();
 
-        // Only allow editing if job is posted or assigned (not in progress or completed)
-        if (!in_array($job->status, ['posted', 'assigned'])) {
+        // Only allow editing if job is open or awaiting_payment (not in progress or completed)
+        if (! in_array($job->status, [Job::S_OPEN, Job::S_AWAITING_PAYMENT, 'posted', 'assigned'])) {
             return back()->withErrors(['edit' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.']);
         }
 
@@ -497,16 +511,16 @@ class JobController extends Controller
 
         return view('jobs.edit', [
             'job' => $job,
-            'categories' => Category::all()
+            'categories' => Category::all(),
         ]);
     }
 
-    public function update(Request $r, Job $job, ZenoPayService $zeno)
+    public function update(Request $r, Job $job, ClickPesaService $clickpesa)
     {
         $this->ensureMuhitajiOrAdmin();
 
         // Only allow editing if job is posted or assigned
-        if (!in_array($job->status, ['posted', 'assigned'])) {
+        if (! in_array($job->status, ['posted', 'assigned'])) {
             return back()->withErrors(['edit' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.']);
         }
 
@@ -518,16 +532,19 @@ class JobController extends Controller
         $r->validate([
             'title' => ['required', 'max:120'],
             'category_id' => ['required', 'exists:categories,id'],
-            'price' => ['required', 'integer', 'min:500'],
+            'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
-            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'], // 5MB max
+            'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
+                if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
+                    $fail('Faili lazima iwe picha.');
+                }
+            }],
         ], [
             'lat.required' => 'Eneo la kazi ni lazima. Tafadhali weka pini eneo la kazi kwenye ramani.',
             'lng.required' => 'Eneo la kazi ni lazima. Tafadhali weka pini eneo la kazi kwenye ramani.',
             'lat.between' => 'Latitude si sahihi. Tafadhali weka eneo sahihi kwenye ramani.',
             'lng.between' => 'Longitude si sahihi. Tafadhali weka eneo sahihi kwenye ramani.',
-            'image.image' => 'Faili lazima iwe picha (jpeg, jpg, png, au webp).',
             'image.max' => 'Picha haipaswi kuwa kubwa zaidi ya 5MB.',
         ]);
 
@@ -570,30 +587,24 @@ class JobController extends Controller
 
         // If price increased, process additional payment
         if ($priceDifference > 0 && Setting::get('payments_enabled', '1') == '1') {
-            $orderId = (string) Str::ulid();
+            $orderId = strtoupper(Str::random(16));
             $job->payment()->create([
                 'order_id' => $orderId,
                 'amount' => $priceDifference,
                 'status' => 'PENDING',
             ]);
 
-            $buyer = Auth::user();
-            $payload = [
-                'order_id' => $orderId,
-                'buyer_email' => $buyer?->email ?? 'client@tendapoa.local',
-                'buyer_name' => $buyer?->name ?? 'Client',
-                'buyer_phone' => $buyer?->phone ?? '000000000',
+            $res = $clickpesa->startPayment([
+                'orderReference' => $orderId,
+                'phoneNumber' => Auth::user()?->phone ?? '000000000',
                 'amount' => $priceDifference,
-                // 'webhook_url' => route('zeno.webhook'), // User requested polling only
-            ];
-
-            $res = $zeno->startPayment($payload);
-            if (!$res['ok']) {
+            ]);
+            if (! $res['ok']) {
                 return back()->withErrors(['pay' => 'Imeshindikana kuanzisha malipo ya ziada. Jaribu tena.']);
             }
 
             return redirect()->route('jobs.pay.wait', $job)
-                ->with('success', 'Kazi imebadilishwa! Malipo ya ziada ya TZS ' . number_format($priceDifference) . ' yanahitajika.');
+                ->with('success', 'Kazi imebadilishwa! Malipo ya ziada ya TZS '.number_format($priceDifference).' yanahitajika.');
         }
 
         return redirect()->route('my.jobs')
@@ -606,10 +617,10 @@ class JobController extends Controller
         $this->ensureMuhitajiOrAdmin();
 
         // Only allow editing if job is posted or assigned
-        if (!in_array($job->status, ['posted', 'assigned'])) {
+        if (! in_array($job->status, ['posted', 'assigned'])) {
             return response()->json([
                 'error' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.',
-                'status' => 'error'
+                'status' => 'error',
             ], 400);
         }
 
@@ -617,7 +628,7 @@ class JobController extends Controller
         if ($job->user_id !== Auth::id()) {
             return response()->json([
                 'error' => 'Huna ruhusa ya kubadilisha kazi hii.',
-                'status' => 'forbidden'
+                'status' => 'forbidden',
             ], 403);
         }
 
@@ -635,21 +646,21 @@ class JobController extends Controller
                 'created_at' => $job->created_at,
                 'updated_at' => $job->updated_at,
             ],
-            'categories' => \App\Models\Category::all(),
+            'categories' => Category::all(),
             'can_edit' => true,
-            'status' => 'success'
+            'status' => 'success',
         ]);
     }
 
-    public function apiUpdate(Request $r, Job $job, ZenoPayService $zeno)
+    public function apiUpdate(Request $r, Job $job, ClickPesaService $clickpesa)
     {
         $this->ensureMuhitajiOrAdmin();
 
         // Only allow editing if job is posted or assigned
-        if (!in_array($job->status, ['posted', 'assigned'])) {
+        if (! in_array($job->status, ['posted', 'assigned'])) {
             return response()->json([
                 'error' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.',
-                'status' => 'error'
+                'status' => 'error',
             ], 400);
         }
 
@@ -657,23 +668,26 @@ class JobController extends Controller
         if ($job->user_id !== Auth::id()) {
             return response()->json([
                 'error' => 'Huna ruhusa ya kubadilisha kazi hii.',
-                'status' => 'forbidden'
+                'status' => 'forbidden',
             ], 403);
         }
 
         $r->validate([
             'title' => ['required', 'max:120'],
             'category_id' => ['required', 'exists:categories,id'],
-            'price' => ['required', 'integer', 'min:500'],
+            'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
-            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'], // 5MB max
+            'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
+                if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
+                    $fail('Faili lazima iwe picha.');
+                }
+            }],
         ], [
             'lat.required' => 'Eneo la kazi ni lazima.',
             'lng.required' => 'Eneo la kazi ni lazima.',
             'lat.between' => 'Latitude si sahihi.',
             'lng.between' => 'Longitude si sahihi.',
-            'image.image' => 'Faili lazima iwe picha (jpeg, jpg, png, au webp).',
             'image.max' => 'Picha haipaswi kuwa kubwa zaidi ya 5MB.',
         ]);
 
@@ -686,7 +700,7 @@ class JobController extends Controller
             return response()->json([
                 'error' => 'Huwezi kupunguza bei ya kazi. Unaweza kuongeza tu.',
                 'status' => 'validation_error',
-                'field' => 'price'
+                'field' => 'price',
             ], 422);
         }
 
@@ -720,11 +734,11 @@ class JobController extends Controller
 
         $imageUrl = null;
         if ($job->image) {
-            $imageUrl = asset('storage/' . $job->image);
+            $imageUrl = asset('storage/'.$job->image);
             // Add cache busting
             if (Storage::disk('public')->exists($job->image)) {
-                $timestamp = filemtime(storage_path('app/public/' . $job->image));
-                $imageUrl = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                $timestamp = filemtime(storage_path('app/public/'.$job->image));
+                $imageUrl = asset('storage/'.$job->image).'?v='.$timestamp;
             }
         }
 
@@ -738,59 +752,54 @@ class JobController extends Controller
                 'image' => $imageUrl,
                 'updated_at' => $job->updated_at,
             ],
-            'status' => 'success'
+            'status' => 'success',
         ];
 
         // If price increased, process additional payment
         if ($priceDifference > 0) {
-            $orderId = (string) Str::ulid();
+            $orderId = strtoupper(Str::random(16));
             $job->payment()->create([
                 'order_id' => $orderId,
                 'amount' => $priceDifference,
                 'status' => 'PENDING',
             ]);
 
-            $buyer = Auth::user();
-            $payload = [
-                'order_id' => $orderId,
-                'buyer_email' => $buyer?->email ?? 'client@tendapoa.local',
-                'buyer_name' => $buyer?->name ?? 'Client',
-                'buyer_phone' => $buyer?->phone ?? '000000000',
+            $res = $clickpesa->startPayment([
+                'orderReference' => $orderId,
+                'phoneNumber' => Auth::user()?->phone ?? '000000000',
                 'amount' => $priceDifference,
-                // 'webhook_url' => route('zeno.webhook'), // User requested polling only
-            ];
-
-            $res = $zeno->startPayment($payload);
-            if (!$res['ok']) {
+            ]);
+            if (! $res['ok']) {
                 return response()->json([
                     'error' => 'Imeshindikana kuanzisha malipo ya ziada. Jaribu tena.',
-                    'status' => 'payment_error'
+                    'status' => 'payment_error',
                 ], 500);
             }
 
             $response['payment_required'] = true;
             $response['payment_amount'] = $priceDifference;
             $response['payment_url'] = route('jobs.pay.wait', $job);
-            $response['message'] = 'Kazi imebadilishwa! Malipo ya ziada ya TZS ' . number_format($priceDifference) . ' yanahitajika.';
+            $response['message'] = 'Kazi imebadilishwa! Malipo ya ziada ya TZS '.number_format($priceDifference).' yanahitajika.';
         }
 
         return response()->json($response);
     }
 
-    public function apiStore(Request $r, ZenoPayService $zeno)
+    public function apiStore(Request $r)
     {
         $this->ensureMuhitajiOrAdmin();
 
         $r->validate([
             'title' => ['required', 'max:120'],
             'category_id' => ['required', 'exists:categories,id'],
-            'price' => ['required', 'integer', 'min:500'],
+            'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
-            'phone' => ['required', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
-            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'], // 5MB max
+            'description' => ['nullable'],
+            'address_text' => ['nullable'],
+            'urgency' => ['nullable', 'in:normal,urgent,flexible'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
         ], [
-            'phone.regex' => 'Weka 06/07xxxxxxxx au 2556/2557xxxxxxxx.',
             'lat.required' => 'Eneo la kazi ni lazima.',
             'lng.required' => 'Eneo la kazi ni lazima.',
             'lat.between' => 'Latitude si sahihi.',
@@ -802,98 +811,63 @@ class JobController extends Controller
         // Handle image upload
         $imagePath = $this->handleImageUpload($r->file('image'));
 
-        $paymentsEnabled = Setting::get('payments_enabled', '1') == '1';
-        $status = $paymentsEnabled ? 'pending_payment' : 'posted';
-        $publishedAt = $paymentsEnabled ? null : now();
+        $localized = TranslationService::ensureBothLanguages(
+            $r->input('title'),
+            $r->input('description')
+        );
 
+        // NEW WORKFLOW: Free posting — job goes live immediately as 'open'
         $job = Job::create([
             'user_id' => Auth::id(),
             'category_id' => (int) $r->input('category_id'),
             'title' => $r->input('title'),
+            'title_sw' => $localized['title_sw'],
+            'title_en' => $localized['title_en'],
             'description' => $r->input('description'),
+            'description_sw' => $localized['description_sw'],
+            'description_en' => $localized['description_en'],
             'image' => $imagePath,
             'price' => (int) $r->input('price'),
             'lat' => (float) $r->input('lat'),
             'lng' => (float) $r->input('lng'),
             'address_text' => $r->input('address_text'),
-            'status' => $status,
-            'published_at' => $publishedAt,
+            'urgency' => $r->input('urgency', 'normal'),
+            'status' => Job::S_OPEN,
+            'published_at' => now(),
         ]);
+
+        // Log status transition
+        JobStatusLog::log($job, Job::S_OPEN, Auth::id(), 'Job created via API (free posting)');
 
         $imageUrl = null;
         if ($job->image) {
-            $imageUrl = asset('storage/' . $job->image);
+            $imageUrl = asset('storage/'.$job->image);
             if (Storage::disk('public')->exists($job->image)) {
-                $timestamp = filemtime(storage_path('app/public/' . $job->image));
-                $imageUrl = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                $timestamp = filemtime(storage_path('app/public/'.$job->image));
+                $imageUrl = asset('storage/'.$job->image).'?v='.$timestamp;
             }
         }
 
-        if (!$paymentsEnabled) {
-            // Notify client triggers
-            try {
-                Auth::user()->notify(new JobStatusNotification($job, 'posted'));
-            } catch (\Exception $e) {
-            }
-
-            // Notify workers
-            $this->notifyNearbyWorkers($job);
-
-            return response()->json([
-                'message' => 'Kazi imechapishwa kwa mafanikio!',
-                'job' => [
-                    'id' => $job->id,
-                    'title' => $job->title,
-                    'price' => $job->price,
-                    'status' => $job->status,
-                    'image' => $imageUrl,
-                ],
-                'status' => 'success'
-            ]);
-        }
-
-        // Handle Payment
-        $orderId = (string) Str::ulid();
-        $job->payment()->create([
-            'order_id' => $orderId,
-            'amount' => $job->price,
-            'status' => 'PENDING',
-        ]);
-
-        $buyer = Auth::user();
-        $payload = [
-            'order_id' => $orderId,
-            'buyer_email' => $buyer?->email ?? 'client@tendapoa.local',
-            'buyer_name' => $buyer?->name ?? 'Client',
-            'buyer_phone' => $r->input('phone'),
-            'amount' => $job->price,
-        ];
-
-        $res = $zeno->startPayment($payload);
-        if (!$res['ok']) {
-            return response()->json([
-                'error' => 'Imeshindikana kuanzisha malipo. Jaribu tena.',
-                'status' => 'payment_error'
-            ], 500);
-        }
-
-        // Notify client pending payment
+        // Notify client
         try {
-            Auth::user()->notify(new JobStatusNotification($job, 'pending'));
+            Auth::user()->notify(new JobStatusNotification($job, 'posted'));
         } catch (\Exception $e) {
         }
 
+        // Notify nearby workers
+        $this->notifyNearbyWorkers($job);
+
         return response()->json([
-            'message' => 'Kazi imechapishwa! Malipo yanahitajika.',
+            'message' => 'Kazi imechapishwa bure! Wafanyakazi wataona na kuomba.',
             'job' => [
                 'id' => $job->id,
                 'title' => $job->title,
                 'price' => $job->price,
                 'status' => $job->status,
                 'image' => $imageUrl,
+                'published_at' => $job->published_at->toISOString(),
             ],
-            'payment_url' => route('jobs.pay.wait', $job),
-            'status' => 'success'
+            'status' => 'success',
         ]);
     }
 
@@ -901,10 +875,11 @@ class JobController extends Controller
     {
         $this->ensureMuhitajiOrAdmin();
         $job->load('payment');
+
         return view('jobs.wait', ['job' => $job]);
     }
 
-    public function retryPayment(Job $job, ZenoPayService $zeno)
+    public function retryPayment(Job $job, ClickPesaService $clickpesa)
     {
         $this->ensureMuhitajiOrAdmin();
 
@@ -920,25 +895,20 @@ class JobController extends Controller
         $job->payment()->where('status', 'PENDING')->delete();
 
         // Create new
-        $orderId = (string) Str::ulid();
+        $orderId = strtoupper(Str::random(16));
         $job->payment()->create([
             'order_id' => $orderId,
             'amount' => $job->price,
             'status' => 'PENDING',
         ]);
 
-        $buyer = Auth::user();
-        $payload = [
-            'order_id' => $orderId,
-            'buyer_email' => $buyer?->email ?? 'client@tendapoa.local',
-            'buyer_name' => $buyer?->name ?? 'Client',
-            'buyer_phone' => $buyer?->phone ?? '000000000',
+        $res = $clickpesa->startPayment([
+            'orderReference' => $orderId,
+            'phoneNumber' => Auth::user()?->phone ?? '000000000',
             'amount' => $job->price,
-        ];
+        ]);
 
-        $res = $zeno->startPayment($payload);
-
-        if (!$res['ok']) {
+        if (! $res['ok']) {
             return back()->withErrors(['pay' => 'Imeshindikana kuanzisha malipo. Jaribu tena.']);
         }
 
@@ -956,7 +926,7 @@ class JobController extends Controller
         return view('jobs.create-mfanyakazi', ['categories' => Category::all()]);
     }
 
-    public function storeMfanyakazi(Request $request, ZenoPayService $zeno)
+    public function storeMfanyakazi(Request $request, ClickPesaService $clickpesa)
     {
         $user = Auth::user();
         if ($user->role !== 'mfanyakazi') {
@@ -984,8 +954,8 @@ class JobController extends Controller
             // Deduct from wallet
             return $this->processWalletPayment($request, $postingFee, $userWallet);
         } else {
-            // Use ZenoPay for payment
-            return $this->processZenoPayment($request, $postingFee, $zeno);
+            // Use ClickPesa for payment
+            return $this->processClickPesaPayment($request, $postingFee, $clickpesa);
         }
     }
 
@@ -1020,11 +990,11 @@ class JobController extends Controller
                 'reference' => "JOB_POST_{$job->id}",
             ]);
 
-            return redirect()->route('dashboard')->with('success', 'Kazi imechapishwa kwa mafanikio! Ada ya TZS ' . number_format($postingFee) . ' imekatwa kutoka kwenye salio lako.');
+            return redirect()->route('dashboard')->with('success', 'Kazi imechapishwa kwa mafanikio! Ada ya TZS '.number_format($postingFee).' imekatwa kutoka kwenye salio lako.');
         });
     }
 
-    private function processZenoPayment(Request $request, $postingFee, ZenoPayService $zeno)
+    private function processClickPesaPayment(Request $request, $postingFee, ClickPesaService $clickpesa)
     {
         // Create job with pending payment
         $job = Job::create([
@@ -1041,30 +1011,25 @@ class JobController extends Controller
             'posting_fee' => $postingFee,
         ]);
 
-        $orderId = (string) Str::ulid();
+        $orderId = strtoupper(Str::random(16));
         $job->payment()->create([
             'order_id' => $orderId,
             'amount' => $postingFee,
             'status' => 'PENDING',
         ]);
 
-        $user = Auth::user();
-        $payload = [
-            'order_id' => $orderId,
-            'buyer_email' => $user->email ?? 'worker@tendapoa.local',
-            'buyer_name' => $user->name ?? 'Worker',
-            'buyer_phone' => $request->input('phone'),
+        $res = $clickpesa->startPayment([
+            'orderReference' => $orderId,
+            'phoneNumber' => $request->input('phone'),
             'amount' => $postingFee,
-            // 'webhook_url' => route('zeno.webhook'), // User requested polling only
-        ];
-
-        $res = $zeno->startPayment($payload);
-        if (!$res['ok']) {
+        ]);
+        if (! $res['ok']) {
             return back()->withErrors(['pay' => 'Imeshindikana kuanzisha malipo. Jaribu tena.']);
         }
 
         return redirect()->route('jobs.pay.wait', $job);
     }
+
     public function cancel(Job $job)
     {
         $this->ensureMuhitajiOrAdmin();
@@ -1073,22 +1038,16 @@ class JobController extends Controller
             abort(403, 'Huna ruhusa ya ku-cancel kazi hii.');
         }
 
-        // 1. If job is pending payment, just delete it or mark cancelled (no refund needed)
-        if ($job->status === 'pending_payment') {
-            $job->delete(); // Or $job->update(['status' => 'cancelled']);
-            return redirect()->route('my.jobs')->with('success', 'Kazi imefutwa kwa sababu haikulipiwa.');
-        }
-
-        // 2. If job is posted but not assigned, cancel and refund
-        if ($job->status === 'posted' && is_null($job->accepted_worker_id)) {
+        // NEW WORKFLOW: open jobs are free — just cancel, no refund
+        if (in_array($job->status, [Job::S_OPEN, 'posted', 'pending_payment']) && is_null($job->accepted_worker_id)) {
             DB::transaction(function () use ($job) {
-                // Refund to wallet if it was paid
-                // Check if payment exists and was completed
+                $job->transitionStatus(Job::S_CANCELLED, Auth::id(), 'Client cancelled job');
+
+                // Legacy: refund if old pay-before-post payment exists
                 $payment = $job->payment;
                 if ($payment && $payment->status === 'COMPLETED') {
                     $wallet = Auth::user()->ensureWallet();
                     $wallet->increment('balance', $job->price);
-
                     WalletTransaction::create([
                         'user_id' => Auth::id(),
                         'type' => 'refund',
@@ -1098,26 +1057,36 @@ class JobController extends Controller
                     ]);
                 }
 
-                // Update job status
-                $job->update([
-                    'status' => 'cancelled',
-                ]);
-
                 try {
-                    // Notify user about cancellation safely
-                    // Reload user to be sure
                     $job->load('muhitaji');
-                    $userToNotify = $job->muhitaji ?? $job->user;
-
-                    if ($userToNotify) {
-                        $userToNotify->notify(new JobStatusNotification($job, 'cancelled'));
-                    }
+                    ($job->muhitaji ?? $job->user)?->notify(new JobStatusNotification($job, 'cancelled'));
                 } catch (\Exception $e) {
-                    \Log::warning('Cancel notification failed for Job #' . $job->id . ': ' . $e->getMessage());
+                    \Log::warning('Cancel notification failed for Job #'.$job->id.': '.$e->getMessage());
                 }
             });
 
-            return redirect()->route('my.jobs')->with('success', 'Kazi imefutwa na pesa imerudishwa kwenye wallet yako (kama ililipiwa).');
+            return redirect()->route('my.jobs')->with('success', 'Kazi imefutwa.');
+        }
+
+        // Awaiting payment — cancel, no escrow to refund
+        if ($job->status === Job::S_AWAITING_PAYMENT) {
+            $job->transitionStatus(Job::S_CANCELLED, Auth::id(), 'Client cancelled before funding');
+
+            return redirect()->route('my.jobs')->with('success', 'Kazi imefutwa.');
+        }
+
+        // Funded but not yet in progress — refund escrow
+        if ($job->status === Job::S_FUNDED) {
+            DB::transaction(function () use ($job) {
+                try {
+                    app(EscrowService::class)->refundToClient($job, 'Client cancelled funded job');
+                } catch (\Exception $e) {
+                    \Log::error('Escrow refund failed on cancel: '.$e->getMessage());
+                }
+                $job->transitionStatus(Job::S_CANCELLED, Auth::id(), 'Client cancelled funded job — escrow refunded');
+            });
+
+            return redirect()->route('my.jobs')->with('success', 'Kazi imefutwa na pesa imerudishwa kwenye wallet yako.');
         }
 
         return back()->withErrors(['cancel' => 'Huwezi ku-cancel kazi hii kwa sasa (huenda imeshaanza au imekamilika).']);
@@ -1128,33 +1097,21 @@ class JobController extends Controller
     {
         $user = Auth::user();
 
-        // Check permission
         if ($job->user_id !== $user->id && $user->role !== 'admin') {
-            return response()->json([
-                'success' => false,
-                'message' => 'Huna ruhusa ya ku-cancel kazi hii.'
-            ], 403);
+            return response()->json(['success' => false, 'message' => 'Huna ruhusa ya ku-cancel kazi hii.'], 403);
         }
 
-        // 1. If job is pending payment, delete it
-        if ($job->status === 'pending_payment') {
-            $job->delete();
-            return response()->json([
-                'success' => true,
-                'message' => 'Kazi imefutwa kwa sababu haikulipiwa.'
-            ]);
-        }
-
-        // 2. If job is posted but not assigned, cancel and refund
-        if ($job->status === 'posted' && is_null($job->accepted_worker_id)) {
+        // NEW WORKFLOW: open/posted/pending_payment — free cancel
+        if (in_array($job->status, [Job::S_OPEN, 'posted', 'pending_payment']) && is_null($job->accepted_worker_id)) {
             try {
                 DB::transaction(function () use ($job, $user) {
-                    // Refund logic (only if payment was completed)
+                    $job->transitionStatus(Job::S_CANCELLED, $user->id, 'Client cancelled job (API)');
+
+                    // Legacy refund if old pay-before-post
                     $payment = $job->payment;
                     if ($payment && $payment->status === 'COMPLETED') {
                         $wallet = $user->ensureWallet();
                         $wallet->increment('balance', $job->price);
-
                         WalletTransaction::create([
                             'user_id' => $user->id,
                             'type' => 'refund',
@@ -1164,38 +1121,46 @@ class JobController extends Controller
                         ]);
                     }
 
-                    // Update job status
-                    $job->update([
-                        'status' => 'cancelled',
-                    ]);
-
                     try {
-                        // Notify user about cancellation
-                        if ($user) {
-                            $user->notify(new JobStatusNotification($job, 'cancelled'));
-                        }
+                        $user->notify(new JobStatusNotification($job, 'cancelled'));
                     } catch (\Exception $e) {
                     }
                 });
 
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Kazi imefutwa na pesa imerudishwa kwenye wallet yako (kama ililipiwa).'
-                ]);
+                return response()->json(['success' => true, 'message' => 'Kazi imefutwa.']);
             } catch (\Exception $e) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Imeshindikana kufuta kazi: ' . $e->getMessage()
-                ], 500);
+                return response()->json(['success' => false, 'message' => 'Imeshindikana: '.$e->getMessage()], 500);
+            }
+        }
+
+        // Awaiting payment — cancel, no escrow
+        if ($job->status === Job::S_AWAITING_PAYMENT) {
+            $job->transitionStatus(Job::S_CANCELLED, $user->id, 'Client cancelled before funding (API)');
+
+            return response()->json(['success' => true, 'message' => 'Kazi imefutwa.']);
+        }
+
+        // Funded but not in progress — refund escrow
+        if ($job->status === Job::S_FUNDED) {
+            try {
+                DB::transaction(function () use ($job, $user) {
+                    app(EscrowService::class)->refundToClient($job, 'Client cancelled funded job (API)');
+                    $job->transitionStatus(Job::S_CANCELLED, $user->id, 'Client cancelled funded job — escrow refunded (API)');
+                });
+
+                return response()->json(['success' => true, 'message' => 'Kazi imefutwa na pesa imerudishwa.']);
+            } catch (\Exception $e) {
+                return response()->json(['success' => false, 'message' => 'Imeshindikana: '.$e->getMessage()], 500);
             }
         }
 
         return response()->json([
             'success' => false,
-            'message' => 'Huwezi ku-cancel kazi hii kwa sasa (huenda imeshaanza au imekamilika).'
+            'message' => 'Huwezi ku-cancel kazi hii kwa sasa (huenda imeshaanza au imekamilika).',
         ], 400);
     }
-    public function apiRetryPayment(Job $job, ZenoPayService $zeno)
+
+    public function apiRetryPayment(Job $job, ClickPesaService $clickpesa)
     {
         $this->ensureMuhitajiOrAdmin();
 
@@ -1208,7 +1173,7 @@ class JobController extends Controller
         }
 
         // Create new payment record
-        $orderId = (string) Str::ulid();
+        $orderId = strtoupper(Str::random(16));
 
         // Futa payment ya zamani iliyo pending kama ipo
         $job->payment()->where('status', 'PENDING')->delete();
@@ -1219,22 +1184,17 @@ class JobController extends Controller
             'status' => 'PENDING',
         ]);
 
-        $buyer = Auth::user();
-        $payload = [
-            'order_id' => $orderId,
-            'buyer_email' => $buyer?->email ?? 'client@tendapoa.local',
-            'buyer_name' => $buyer?->name ?? 'Client',
-            'buyer_phone' => $buyer?->phone ?? '000000000',
+        $res = $clickpesa->startPayment([
+            'orderReference' => $orderId,
+            'phoneNumber' => Auth::user()?->phone ?? '000000000',
             'amount' => $job->price,
-        ];
+        ]);
 
-        $res = $zeno->startPayment($payload);
-
-        if (!$res['ok']) {
+        if (! $res['ok']) {
             return response()->json([
                 'success' => false,
                 'message' => 'Imeshindikana kuanzisha malipo. Jaribu tena.',
-                'error' => $res
+                'error' => $res,
             ], 500);
         }
 
@@ -1244,65 +1204,20 @@ class JobController extends Controller
             'data' => [
                 'job_id' => $job->id,
                 'payment' => $payment,
-                'zenopay_response' => $res
-            ]
+                'clickpesa_response' => $res,
+            ],
         ]);
     }
 
     /**
-     * Notify nearby workers
+     * Notify nearby workers (delegates to NotificationService — DB notifications + shared Haversine query).
      */
-    public function notifyNearbyWorkers(Job $job)
+    public function notifyNearbyWorkers(Job $job): void
     {
-        // Pata wafanyakazi wote walio na location
-        $workers = User::where('role', 'mfanyakazi')
-            ->whereNotNull('lat')
-            ->whereNotNull('lng')
-            ->where('id', '!=', $job->user_id)
-            ->get();
-
-        foreach ($workers as $worker) {
-            $distance = $this->calculateDistance($job->lat, $job->lng, $worker->lat, $worker->lng);
-
-            // Tuma notification ikiwa ndani ya 50km
-            if ($distance <= 50) {
-                $label = 'Mbali';
-                if ($distance <= 5)
-                    $label = 'Karibu Sana';
-                elseif ($distance <= 15)
-                    $label = 'Karibu';
-                elseif ($distance <= 30)
-                    $label = 'Wastani';
-
-                try {
-                    /** @var \App\Models\User $worker */
-                    $worker->notify(new JobAvailableNotification($job, $distance, $label));
-                } catch (\Exception $e) {
-                    \Log::error("Failed to notify worker {$worker->id}: " . $e->getMessage());
-                }
-            }
+        try {
+            app(NotificationService::class)->notifyNearbyWorkers($job, 50);
+        } catch (\Throwable $e) {
+            \Log::error('notifyNearbyWorkers failed: '.$e->getMessage());
         }
-    }
-
-    private function calculateDistance($lat1, $lon1, $lat2, $lon2)
-    {
-        if (($lat1 == $lat2) && ($lon1 == $lon2)) {
-            return 0;
-        }
-
-        $theta = $lon1 - $lon2;
-        $dist = sin(deg2rad($lat1)) * sin(deg2rad($lat2)) + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * cos(deg2rad($theta));
-
-        // Clamp value to -1.0 to 1.0 to check for precision errors
-        if ($dist > 1)
-            $dist = 1;
-        if ($dist < -1)
-            $dist = -1;
-
-        $dist = acos($dist);
-        $dist = rad2deg($dist);
-        $miles = $dist * 60 * 1.1515;
-
-        return ($miles * 1.609344); // Convert to KM
     }
 }

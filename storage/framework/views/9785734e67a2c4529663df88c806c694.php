@@ -1,0 +1,815 @@
+<?php $__env->startSection('title', 'Admin — Withdrawal Management'); ?>
+
+<?php $__env->startSection('content'); ?>
+<style>
+  /* ====== Modern Admin Withdrawals Page - Dark Theme ====== */
+  .page-container {
+    --primary: #6366f1;
+    --secondary: #06b6d4;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #f43f5e;
+    --card-bg: rgba(255,255,255,0.05);
+    --card-bg-hover: rgba(255,255,255,0.08);
+    --text-primary: #ffffff;
+    --text-muted: #94a3b8;
+    --border: rgba(255,255,255,0.1);
+    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+  }
+
+  .page-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    gap: 24px;
+  }
+
+  /* Header */
+  .page-header {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .page-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease infinite;
+  }
+  
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  .header-content {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+  }
+
+  .header-text h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+    z-index: 1;
+  }
+
+  .header-text p {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Filters */
+  .filters-section {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .filters-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    align-items: end;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .filter-select {
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 0.875rem;
+    background: rgba(255,255,255,0.05);
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+  }
+  
+  .filter-select option {
+    background: #1a1a3e;
+    color: white;
+  }
+
+  .filter-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  /* Withdrawals List */
+  .withdrawals-section {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .withdrawals-list {
+    display: grid;
+    gap: 16px;
+  }
+
+  .withdrawal-card {
+    background: rgba(255,255,255,0.03);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .withdrawal-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg, #6366f1, #8b5cf6);
+    transition: width 0.3s ease;
+  }
+  
+  .withdrawal-card[data-status="paid"]::before {
+    background: linear-gradient(180deg, #10b981, #06b6d4);
+  }
+  
+  .withdrawal-card[data-status="rejected"]::before {
+    background: linear-gradient(180deg, #f43f5e, #ec4899);
+  }
+  
+  .withdrawal-card[data-status="processing"]::before {
+    background: linear-gradient(180deg, #f59e0b, #f97316);
+  }
+
+  .withdrawal-card:hover {
+    background: rgba(255,255,255,0.08);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+  
+  .withdrawal-card:hover::before {
+    width: 6px;
+  }
+
+  .withdrawal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .withdrawal-info h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+  }
+
+  .withdrawal-meta {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    flex-wrap: wrap;
+  }
+
+  .withdrawal-amount {
+    font-size: 1.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #10b981, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-align: right;
+  }
+
+  .withdrawal-status {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    display: inline-block;
+  }
+
+  .withdrawal-status.pending {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.4);
+  }
+
+  .withdrawal-status.processing {
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
+    border: 1px solid rgba(99, 102, 241, 0.4);
+    animation: pulse 2s infinite;
+  }
+
+  .withdrawal-status.paid {
+    background: rgba(16, 185, 129, 0.2);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+
+  .withdrawal-status.rejected {
+    background: rgba(244, 63, 94, 0.2);
+    color: #f87171;
+    border: 1px solid rgba(244, 63, 94, 0.4);
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  .withdrawal-details {
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .detail-row:last-child {
+    border-bottom: none;
+  }
+
+  .detail-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .detail-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .withdrawal-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    font-size: 0.875rem;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), #1d4ed8);
+    color: white;
+    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
+  }
+
+  .btn-success {
+    background: linear-gradient(135deg, var(--success), #059669);
+    color: white;
+    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);
+  }
+
+  .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.6);
+  }
+
+  .btn-danger {
+    background: linear-gradient(135deg, var(--danger), #dc2626);
+    color: white;
+    box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.4);
+  }
+
+  .btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px 0 rgba(239, 68, 68, 0.6);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+  }
+
+  .btn-outline:hover {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-warning {
+    background: linear-gradient(135deg, var(--warning), #d97706);
+    color: white;
+    box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.4);
+  }
+
+  .btn-warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px 0 rgba(245, 158, 11, 0.6);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+
+  /* Empty State */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    background: rgba(255,255,255,0.02);
+    border-radius: 16px;
+    border: 2px dashed var(--border);
+  }
+
+  .empty-state-icon {
+    font-size: 4rem;
+    margin-bottom: 16px;
+    opacity: 0.6;
+  }
+
+  .empty-state h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+  }
+
+  .empty-state p {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin: 0;
+  }
+
+  /* Pagination */
+  .pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin-top: 32px;
+  }
+
+  /* Stats Cards */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    text-align: center;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
+  }
+  
+  .stat-card:hover {
+    background: var(--card-bg-hover);
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .stat-icon {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stat-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .withdrawals-page {
+      padding: 16px;
+    }
+    
+    .page-header {
+      padding: 24px;
+    }
+    
+    .header-content {
+      grid-template-columns: 1fr;
+      text-align: center;
+    }
+    
+    .header-text h1 {
+      font-size: 2rem;
+    }
+    
+    .filters-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    .withdrawal-header {
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .withdrawal-meta {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    
+    .withdrawal-actions {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<div class="page-container">
+  <div class="page-container">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-text">
+          <h1>💰 Withdrawal Management</h1>
+          <p>Dhibiti na simamia maombi ya withdrawal ya wafanyakazi</p>
+        </div>
+        <div class="header-actions">
+          <a class="btn btn-outline" href="<?php echo e(route('dashboard')); ?>">
+            <span>↩️</span>
+            Rudi Dashboard
+          </a>
+          <a class="btn btn-primary" href="<?php echo e(url('/admin/withdrawals/export')); ?>">
+            <span>📊</span>
+            Export Data
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📊</div>
+        <div class="stat-value"><?php echo e($items->total()); ?></div>
+        <div class="stat-label">Total Withdrawals</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-value"><?php echo e($items->where('status', 'PROCESSING')->count()); ?></div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-value"><?php echo e($items->where('status', 'PAID')->count()); ?></div>
+        <div class="stat-label">Approved</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">❌</div>
+        <div class="stat-value"><?php echo e($items->where('status', 'REJECTED')->count()); ?></div>
+        <div class="stat-label">Rejected</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters-section">
+      <div class="filters-grid">
+        <div class="filter-group">
+          <label class="filter-label" for="status">Status</label>
+          <select class="filter-select" id="status" onchange="filterByStatus(this.value)">
+            <option value="">All Status</option>
+            <option value="PROCESSING">Processing</option>
+            <option value="PAID">Paid</option>
+            <option value="REJECTED">Rejected</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="amount">Amount Range</label>
+          <select class="filter-select" id="amount" onchange="filterByAmount(this.value)">
+            <option value="">All Amounts</option>
+            <option value="0-10000">TZS 0 - 10,000</option>
+            <option value="10000-50000">TZS 10,000 - 50,000</option>
+            <option value="50000+">TZS 50,000+</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label class="filter-label" for="date">Date Range</label>
+          <select class="filter-select" id="date" onchange="filterByDate(this.value)">
+            <option value="">All Dates</option>
+            <option value="today">Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <button class="btn btn-outline" onclick="clearFilters()">
+            <span>🔄</span>
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Withdrawals List -->
+    <div class="withdrawals-section">
+      <?php if($items->count()): ?>
+        <div class="withdrawals-list">
+          <?php $__currentLoopData = $items; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $w): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="withdrawal-card" data-status="<?php echo e(strtolower($w->status)); ?>" data-amount="<?php echo e($w->amount); ?>">
+              <div class="withdrawal-header">
+                <div class="withdrawal-info">
+                  <div class="withdrawal-status <?php echo e(strtolower($w->status)); ?>">
+                    <?php echo e(strtoupper($w->status)); ?>
+
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <h3><?php echo e($w->user->name ?? 'Unknown User'); ?></h3>
+                    <span class="monitoring-status <?php echo e($w->user->role === 'mfanyakazi' ? 'active' : 'pending'); ?>" style="font-size: 0.65rem; padding: 2px 8px;">
+                      <?php echo e(strtoupper($w->user->role ?? 'USER')); ?>
+
+                    </span>
+                  </div>
+                  <div class="withdrawal-meta">
+                    <span>📱 <?php echo e($w->account ?? 'N/A'); ?></span>
+                    <span>📧 <?php echo e($w->user->email ?? 'N/A'); ?></span>
+                    <span>⏱️ <?php echo e($w->created_at?->diffForHumans() ?? ''); ?></span>
+                    <span>🆔 #<?php echo e($w->id); ?></span>
+                  </div>
+                </div>
+                <div class="withdrawal-amount">TZS <?php echo e(number_format($w->amount)); ?></div>
+              </div>
+
+              <div class="withdrawal-details">
+                <div class="detail-row">
+                  <span class="detail-label">User ID:</span>
+                  <span class="detail-value">#<?php echo e($w->user_id); ?></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Phone Number:</span>
+                  <span class="detail-value"><?php echo e($w->account ?? 'N/A'); ?></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Registered Name:</span>
+                  <span class="detail-value"><?php echo e($w->registered_name ?? 'N/A'); ?></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Network Type:</span>
+                  <span class="detail-value"><?php echo e(ucfirst($w->network_type ?? 'N/A')); ?></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Method:</span>
+                  <span class="detail-value"><?php echo e(ucfirst(str_replace('_', ' ', $w->method ?? 'mobile_money'))); ?></span>
+                </div>
+                <div class="detail-row">
+                  <span class="detail-label">Requested At:</span>
+                  <span class="detail-value"><?php echo e($w->created_at?->format('M d, Y H:i') ?? 'N/A'); ?></span>
+                </div>
+                <?php if($w->updated_at && $w->updated_at != $w->created_at): ?>
+                  <div class="detail-row">
+                    <span class="detail-label">Last Updated:</span>
+                    <span class="detail-value"><?php echo e($w->updated_at->format('M d, Y H:i')); ?></span>
+                  </div>
+                <?php endif; ?>
+              </div>
+
+              <div class="withdrawal-actions">
+                <?php if($w->status !== 'PAID'): ?>
+                  <form method="POST" action="<?php echo e(route('admin.withdrawals.paid', $w)); ?>" style="display: inline;">
+        <?php echo csrf_field(); ?>
+                    <button class="btn btn-success" type="button" onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Thibitisha malipo yamekamilika (PAID)?'):Promise.resolve(confirm('Thibitisha PAID?'))).then(function(ok){ if(ok) f.submit(); });">
+                      <span>✅</span>
+                      Mark as Paid
+                    </button>
+      </form>
+                  <form method="POST" action="<?php echo e(route('admin.withdrawals.reject', $w)); ?>" style="display: inline;">
+        <?php echo csrf_field(); ?>
+                    <button class="btn btn-danger" type="button" onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Kataa kutoa hili? Pesa zitarudi kwa mtumiaji.'):Promise.resolve(confirm('Reject withdrawal?'))).then(function(ok){ if(ok) f.submit(); });">
+                      <span>❌</span>
+                      Reject
+                    </button>
+      </form>
+                <?php else: ?>
+                  <span class="btn btn-outline" style="cursor: default;">
+                    <span>✅</span>
+                    Already Paid
+                  </span>
+                <?php endif; ?>
+                <a class="btn btn-outline" href="<?php echo e(route('admin.user.details', $w->user_id)); ?>">
+                  <span>👤</span>
+                  View User
+                </a>
+              </div>
+            </div>
+          <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-wrapper">
+          <?php echo e($items->links()); ?>
+
+        </div>
+      <?php else: ?>
+        <div class="empty-state">
+          <div class="empty-state-icon">💰</div>
+          <h3>No Withdrawals Found</h3>
+          <p>There are no withdrawal requests to display at the moment.</p>
+        </div>
+      <?php endif; ?>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Filter functions
+  function filterByStatus(status) {
+    const cards = document.querySelectorAll('.withdrawal-card');
+    cards.forEach(card => {
+      if (!status || card.dataset.status === status.toLowerCase()) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
+
+  function filterByAmount(range) {
+    const cards = document.querySelectorAll('.withdrawal-card');
+    cards.forEach(card => {
+      const amount = parseInt(card.dataset.amount);
+      let show = true;
+      
+      if (range) {
+        switch(range) {
+          case '0-10000':
+            show = amount >= 0 && amount <= 10000;
+            break;
+          case '10000-50000':
+            show = amount > 10000 && amount <= 50000;
+            break;
+          case '50000+':
+            show = amount > 50000;
+            break;
+        }
+      }
+      
+      card.style.display = show ? 'block' : 'none';
+    });
+  }
+
+  function filterByDate(range) {
+    // This would need server-side implementation for proper date filtering
+    // For now, just show all cards
+    const cards = document.querySelectorAll('.withdrawal-card');
+    cards.forEach(card => {
+      card.style.display = 'block';
+    });
+  }
+
+  function clearFilters() {
+    document.getElementById('status').value = '';
+    document.getElementById('amount').value = '';
+    document.getElementById('date').value = '';
+    
+    const cards = document.querySelectorAll('.withdrawal-card');
+    cards.forEach(card => {
+      card.style.display = 'block';
+    });
+  }
+
+  // Add some interactive animations
+  document.addEventListener('DOMContentLoaded', function() {
+    // Animate withdrawal cards on scroll
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, observerOptions);
+
+    // Observe all withdrawal cards
+    document.querySelectorAll('.withdrawal-card').forEach(card => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(20px)';
+      card.style.transition = 'all 0.6s ease';
+      observer.observe(card);
+    });
+
+    // Add hover effects
+    document.querySelectorAll('.withdrawal-card').forEach(card => {
+      card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-4px) scale(1.02)';
+      });
+      
+      card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0) scale(1)';
+      });
+    });
+  });
+</script>
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.admin', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH /Users/eunice/GITHUB COOP/Tendapoa2/resources/views/admin/withdrawals.blade.php ENDPATH**/ ?>

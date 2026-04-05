@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\{Job, Quote, User};
+use App\Services\EscrowService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -352,39 +353,51 @@ class WorkerController extends Controller
     }
     
     /**
-     * Reject job assignment (mfanyakazi rejects after being selected)
+     * Reject job assignment (quote-era flow). Hakuna route ya kawaida kwenye web.php;
+     * kazi zilizofundishwa (funded) zinapaswa kutumia CompletionController::workerDecline au WorkerActionsController::decline.
+     * Hapa tuna-refund escrow kama hali ni funded ili kuepuka pesa zilizokwama.
      */
     public function rejectAssignment(Request $request, Job $job)
     {
         $user = Auth::user();
-        
+
         if ($user->role !== 'mfanyakazi') {
             abort(403, 'Mfanyakazi tu.');
         }
-        
+
         if ($job->accepted_worker_id !== $user->id) {
             abort(403, 'Hii sio kazi yako.');
         }
-        
+
         $request->validate([
             'reason' => 'required|string|max:500',
         ]);
-        
-        // Revert job status
+
+        if ($job->status === Job::S_FUNDED) {
+            DB::transaction(function () use ($job, $user, $request) {
+                app(EscrowService::class)->refundToClient($job, 'Worker rejected assignment: '.$request->input('reason'));
+                $job->accepted_worker_id = null;
+                $job->selected_worker_id = null;
+                $job->funded_at = null;
+                $job->transitionStatus(Job::S_OPEN, $user->id, 'Worker rejected assignment (funded)');
+            });
+
+            return redirect()->route('dashboard')
+                ->with('success', 'Umekataa kazi. Malipo yamerudishwa kwa muhitaji.');
+        }
+
+        $selectedQuote = $job->selectedQuote;
+
         $job->update([
             'status' => 'receiving_quotes',
             'accepted_worker_id' => null,
             'selected_quote_id' => null,
         ]);
-        
-        // Mark quote as rejected
-        if ($job->selectedQuote) {
-            $job->selectedQuote->update(['status' => 'withdrawn']);
+
+        if ($selectedQuote) {
+            $selectedQuote->update(['status' => 'withdrawn']);
         }
-        
-        // TODO: Refund muhitaji escrow payment
-        // This should trigger a refund process
-        
+
         return redirect()->route('dashboard')
             ->with('success', 'Umekataa kazi. Muhitaji atapata taarifa.');
     }

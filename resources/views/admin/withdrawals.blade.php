@@ -670,16 +670,16 @@
 
               <div class="withdrawal-actions">
                 @if($w->status !== 'PAID')
-                  <form method="POST" action="{{ url('/admin/withdrawals/'.$w->id.'/paid') }}" style="display: inline;">
+                  <form method="POST" action="{{ route('admin.withdrawals.paid', $w) }}" style="display: inline;">
         @csrf
-                    <button class="btn btn-success" type="submit" onclick="return confirm('Are you sure you want to mark this withdrawal as PAID?')">
+                    <button class="btn btn-success" type="button" onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Thibitisha malipo yamekamilika (PAID)?'):Promise.resolve(confirm('Thibitisha PAID?'))).then(function(ok){ if(ok) f.submit(); });">
                       <span>✅</span>
                       Mark as Paid
                     </button>
       </form>
-                  <form method="POST" action="{{ url('/admin/withdrawals/'.$w->id.'/reject') }}" style="display: inline;">
+                  <form method="POST" action="{{ route('admin.withdrawals.reject', $w) }}" style="display: inline;">
         @csrf
-                    <button class="btn btn-danger" type="submit" onclick="return confirm('Are you sure you want to REJECT this withdrawal? This will refund the amount to the user.')">
+                    <button class="btn btn-danger" type="button" onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Kataa kutoa hili? Pesa zitarudi kwa mtumiaji.'):Promise.resolve(confirm('Reject withdrawal?'))).then(function(ok){ if(ok) f.submit(); });">
                       <span>❌</span>
                       Reject
                     </button>
@@ -690,7 +690,7 @@
                     Already Paid
                   </span>
                 @endif
-                <a class="btn btn-outline" href="{{ url('/admin/users/'.$w->user_id) }}">
+                <a class="btn btn-outline" href="{{ route('admin.user.details', $w->user_id) }}">
                   <span>👤</span>
                   View User
                 </a>

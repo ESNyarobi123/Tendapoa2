@@ -394,7 +394,7 @@ use Illuminate\Support\Facades\Storage;
               type="file" 
               id="image"
               name="image" 
-              accept="image/jpeg,image/jpg,image/png,image/webp"
+              accept="image/*"
               style="display: none;"
               onchange="handleImageSelect(event)"
             >

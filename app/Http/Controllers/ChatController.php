@@ -8,9 +8,43 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ChatController extends Controller
 {
+    /**
+     * Mfanyakazi anaweza gumzo ikiwa amecomment, amechaguliwa, ameomba (ombi halisi), n.k.
+     */
+    private function workerHasChatAccess(Job $job, int $userId): bool
+    {
+        if ((int) $job->accepted_worker_id === $userId) {
+            return true;
+        }
+        if ((int) $job->selected_worker_id === $userId) {
+            return true;
+        }
+        if ($job->comments()->where('user_id', $userId)->exists()) {
+            return true;
+        }
+
+        return $job->applications()
+            ->where('worker_id', $userId)
+            ->whereNotIn('status', ['withdrawn', 'rejected'])
+            ->exists();
+    }
+
+    /**
+     * API / muunganiko: muhitaji mmiliki au mfanyakazi aliye na haki ya gumzo.
+     */
+    public function userCanAccessJobChat(Job $job, User $user): bool
+    {
+        if ((int) $job->user_id === (int) $user->id) {
+            return true;
+        }
+
+        return $this->workerHasChatAccess($job, (int) $user->id);
+    }
+
     /**
      * Display chat interface for a specific job
      */
@@ -21,33 +55,31 @@ class ChatController extends Controller
         // Check if user is muhitaji (job owner)
         $isMuhitaji = $job->user_id === $user->id;
 
-        // Check if user is mfanyakazi who has commented on this job
-        $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-
-        // Check if user is accepted worker
-        $isAcceptedWorker = $job->accepted_worker_id === $user->id;
-
-        // Allow access if: muhitaji, commented mfanyakazi, or accepted worker
-        if (!$isMuhitaji && !$hasCommented && !$isAcceptedWorker) {
-            abort(403, 'Huna ruhusa ya kuona mazungumzo haya. Tuma comment kwanza.');
+        // Mfanyakazi: maoni ya zamani, ombi jipya, au amekabidhiwa kazi
+        if (! $isMuhitaji && ! $this->workerHasChatAccess($job, (int) $user->id)) {
+            abort(403, 'Huna ruhusa ya kuona mazungumzo haya. Omba kazi au tumia mfumo wa maoni kwanza.');
         }
 
         // Determine the other user for the conversation
         if ($isMuhitaji) {
-            // If muhitaji, check if there's a specific worker_id in request
-            $workerId = $request->get('worker_id');
+            $workerId = $request->query('worker_id');
             if ($workerId) {
-                $otherUser = User::find($workerId);
+                $otherUser = User::where('id', $workerId)->where('role', 'mfanyakazi')->first();
+                if (! $otherUser) {
+                    abort(404, 'Mfanyakazi hajapatikana.');
+                }
+                $workerAllowed = $this->workerHasChatAccess($job, (int) $otherUser->id);
+                if (! $workerAllowed) {
+                    abort(403, 'Huna mazungumzo na mfanyakazi huyu kwenye kazi hii.');
+                }
             } else {
-                // Default to accepted worker if exists
                 $otherUser = $job->acceptedWorker;
             }
         } else {
-            // If mfanyakazi, other user is muhitaji
             $otherUser = $job->muhitaji;
         }
 
-        if (!$otherUser) {
+        if (! $otherUser) {
             abort(404, 'Mtumiaji mwingine hajapatikana.');
         }
 
@@ -58,8 +90,9 @@ class ChatController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Mark messages as read
+        // Mark only this thread as read (muhitaji + worker_id = separate threads per worker)
         PrivateMessage::forJob($job->id)
+            ->betweenUsers($user->id, $otherUser->id)
             ->where('receiver_id', $user->id)
             ->where('is_read', false)
             ->update([
@@ -85,15 +118,8 @@ class ChatController extends Controller
         // Check if user is muhitaji (job owner)
         $isMuhitaji = $job->user_id === $user->id;
 
-        // Check if user is mfanyakazi who has commented on this job
-        $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-
-        // Check if user is accepted worker
-        $isAcceptedWorker = $job->accepted_worker_id === $user->id;
-
-        // Allow sending if: muhitaji, commented mfanyakazi, or accepted worker
-        if (!$isMuhitaji && !$hasCommented && !$isAcceptedWorker) {
-            abort(403, 'Huna ruhusa ya kutuma ujumbe. Tuma comment kwanza.');
+        if (! $isMuhitaji && ! $this->workerHasChatAccess($job, (int) $user->id)) {
+            abort(403, 'Huna ruhusa ya kutuma ujumbe. Omba kazi au tumia mfumo wa maoni kwanza.');
         }
 
         $request->validate([
@@ -110,8 +136,19 @@ class ChatController extends Controller
             $receiverId = $job->user_id;
         }
 
-        if (!$receiverId) {
+        if (! $receiverId) {
             return back()->with('error', 'Mpokeaji hajapatikana.');
+        }
+
+        if ($isMuhitaji) {
+            $recv = User::find($receiverId);
+            if (! $recv || $recv->role !== 'mfanyakazi') {
+                return back()->with('error', 'Mpokeaji si sahihi.');
+            }
+            $workerOk = $this->workerHasChatAccess($job, (int) $receiverId);
+            if (! $workerOk) {
+                return back()->with('error', 'Huwezi kutuma ujumbe kwa mfanyakazi huyu kwenye kazi hii.');
+            }
         }
 
         $message = PrivateMessage::create([
@@ -128,7 +165,12 @@ class ChatController extends Controller
             ]);
         }
 
-        return redirect()->route('chat.show', $job)->with('success', 'Ujumbe umetumwa.');
+        $redirectTo = ['job' => $job];
+        if ($isMuhitaji && $receiverId) {
+            $redirectTo['worker_id'] = $receiverId;
+        }
+
+        return redirect()->route('chat.show', $redirectTo)->with('success', 'Ujumbe umetumwa.');
     }
 
     /**
@@ -141,21 +183,14 @@ class ChatController extends Controller
         // Check if user is muhitaji (job owner)
         $isMuhitaji = $job->user_id === $user->id;
 
-        // Check if user is mfanyakazi who has commented on this job
-        $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-
-        // Check if user is accepted worker
-        $isAcceptedWorker = $job->accepted_worker_id === $user->id;
-
-        // Allow sending if: muhitaji, commented mfanyakazi, or accepted worker
-        if (!$isMuhitaji && !$hasCommented && !$isAcceptedWorker) {
+        if (! $isMuhitaji && ! $this->workerHasChatAccess($job, (int) $user->id)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Huna ruhusa ya kutuma ujumbe. Tuma comment kwanza.'
+                'message' => 'Huna ruhusa ya kutuma ujumbe. Omba kazi au tumia mfumo wa maoni kwanza.',
             ], 403);
         }
 
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'message' => 'required|string|max:5000',
             'receiver_id' => 'nullable|exists:users,id', // Allow specifying receiver
         ]);
@@ -164,7 +199,7 @@ class ChatController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Taarifa hazujakamilika',
-                'errors' => $validator->errors()
+                'errors' => $validator->errors(),
             ], 422);
         }
 
@@ -177,11 +212,27 @@ class ChatController extends Controller
             $receiverId = $job->user_id;
         }
 
-        if (!$receiverId) {
+        if (! $receiverId) {
             return response()->json([
                 'success' => false,
-                'message' => 'Mpokeaji hajapatikana in this context.'
+                'message' => 'Mpokeaji hajapatikana in this context.',
             ], 404);
+        }
+
+        if ($isMuhitaji) {
+            $recv = User::find($receiverId);
+            if (! $recv || $recv->role !== 'mfanyakazi') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mpokeaji si sahihi.',
+                ], 422);
+            }
+            if (! $this->workerHasChatAccess($job, (int) $receiverId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Huwezi kutuma ujumbe kwa mfanyakazi huyu kwenye kazi hii.',
+                ], 403);
+            }
         }
 
         $message = PrivateMessage::create([
@@ -241,8 +292,9 @@ class ChatController extends Controller
                 ? $job->acceptedWorker
                 : $job->muhitaji;
 
-            if (!$otherUser)
+            if (! $otherUser) {
                 continue;
+            }
 
             $conversations->push((object) [
                 'job' => $job,
@@ -265,22 +317,33 @@ class ChatController extends Controller
     {
         $user = Auth::user();
 
-        // Check if user is muhitaji or has commented
         $isMuhitaji = $job->user_id === $user->id;
-        $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-        $isAcceptedWorker = $job->accepted_worker_id === $user->id;
 
-        if (!$isMuhitaji && !$hasCommented && !$isAcceptedWorker) {
+        if (! $isMuhitaji && ! $this->workerHasChatAccess($job, (int) $user->id)) {
             abort(403);
         }
 
         $lastId = $request->get('last_id', 0);
         $otherUserId = $request->get('other_user_id');
 
-        if (!$otherUserId) {
+        if (! $otherUserId) {
             $otherUserId = $user->id === $job->user_id
                 ? $job->accepted_worker_id
                 : $job->user_id;
+        }
+        $otherUserId = (int) $otherUserId;
+
+        if ($isMuhitaji) {
+            $ou = User::find($otherUserId);
+            if (! $ou || $ou->role !== 'mfanyakazi') {
+                abort(403);
+            }
+            $workerOk = $this->workerHasChatAccess($job, $otherUserId);
+            if (! $workerOk) {
+                abort(403);
+            }
+        } elseif ((int) $otherUserId !== (int) $job->user_id) {
+            abort(403);
         }
 
         $newMessages = PrivateMessage::forJob($job->id)
@@ -290,8 +353,8 @@ class ChatController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-        // Mark as read
         PrivateMessage::forJob($job->id)
+            ->betweenUsers($user->id, $otherUserId)
             ->where('receiver_id', $user->id)
             ->where('is_read', false)
             ->update([
@@ -317,4 +380,3 @@ class ChatController extends Controller
         return response()->json(['count' => $count]);
     }
 }
-

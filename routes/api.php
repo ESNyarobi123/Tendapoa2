@@ -1,24 +1,39 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\{
-    AuthController,
-    HomeController,
-    DashboardController,
-    JobController,
-    PaymentController,
-    FeedController,
-    JobViewController,
-    MyJobsController,
-    WorkerActionsController,
-    ChatController,
-    WithdrawalController,
-    AdminController
-};
-use App\Http\Controllers\Admin\WithdrawalAdminController;
 use App\Http\Controllers\Api\DashboardController as ApiDashboardController;
+use App\Http\Controllers\Api\OtpPasswordResetApiController;
+use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CompletionController;
+use App\Http\Controllers\FeedController;
+use App\Http\Controllers\FundingController;
+use App\Http\Controllers\JobController;
+use App\Http\Controllers\JobViewController;
+use App\Http\Controllers\MyJobsController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\WalletController;
+use App\Http\Controllers\WorkerActionsController;
+use App\Http\Controllers\WorkerApplicationsController;
+use App\Models\Category;
+use App\Models\Job;
+use App\Models\JobApplication;
+use App\Models\JobComment;
+use App\Models\Payment;
+use App\Models\PrivateMessage;
 use App\Models\Setting;
+use App\Models\User;
+use App\Models\WalletTransaction;
+use App\Models\Withdrawal;
+use App\Services\ClickPesaService;
+use App\Services\TranslationService;
+use App\Services\WalletService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,7 +56,6 @@ Route::prefix('auth')->group(function () {
     // Register new user
     Route::post('/register', [AuthController::class, 'apiRegister']);
 
-
     // Login user
     Route::post('/login', [AuthController::class, 'apiLogin']);
 
@@ -51,20 +65,26 @@ Route::prefix('auth')->group(function () {
     // Get current authenticated user
     Route::get('/user', function (Request $request) {
         $user = $request->user();
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'success' => false,
-                'message' => 'Not authenticated'
+                'message' => 'Not authenticated',
             ], 401);
         }
+
         return response()->json([
             'success' => true,
-            'data' => $user
+            'data' => $user,
         ]);
     })->middleware('auth:sanctum');
 
     // Get user profile details
     Route::get('/getuser', [AuthController::class, 'getuser'])->middleware('auth:sanctum');
+
+    // OTP Password Reset
+    Route::post('/password/send-otp', [OtpPasswordResetApiController::class, 'sendOtp']);
+    Route::post('/password/verify-otp', [OtpPasswordResetApiController::class, 'verifyOtp']);
+    Route::post('/password/reset', [OtpPasswordResetApiController::class, 'resetPassword']);
 });
 
 Route::middleware('auth:sanctum')->group(function () {
@@ -81,27 +101,29 @@ Route::middleware('auth:sanctum')->group(function () {
 
 // Get categories list
 Route::get('/categories', function () {
-    $categories = \App\Models\Category::orderBy('name')->get();
+    $categories = Category::orderBy('name')->get();
+
     return response()->json([
         'success' => true,
-        'data' => $categories
+        'data' => $categories,
     ]);
 });
 
 // Get home page data
 Route::get('/home', function () {
-    $categories = \App\Models\Category::orderBy('name')->get();
+    $categories = Category::orderBy('name')->get();
     $stats = [
-        'total_workers' => \App\Models\User::where('role', 'mfanyakazi')->count(),
-        'completed_jobs' => \App\Models\Job::where('status', 'completed')->count(),
-        'active_users' => \App\Models\User::count(),
+        'total_workers' => User::where('role', 'mfanyakazi')->count(),
+        'completed_jobs' => Job::where('status', 'completed')->count(),
+        'active_users' => User::count(),
     ];
+
     return response()->json([
         'success' => true,
         'data' => [
             'categories' => $categories,
-            'stats' => $stats
-        ]
+            'stats' => $stats,
+        ],
     ]);
 });
 
@@ -119,17 +141,17 @@ Route::get('/workers/nearby', function (Request $request) {
 
     // Haversine formula to calculate distance in km
     // Earth radius = 6371 km
-    $workers = \App\Models\User::where('role', 'mfanyakazi')
+    $workers = User::where('role', 'mfanyakazi')
         ->where('is_active', true)
         ->whereNotNull('lat')
         ->whereNotNull('lng')
-        ->selectRaw("
+        ->selectRaw('
             *,
             (6371 * acos(
                 cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) +
                 sin(radians(?)) * sin(radians(lat))
             )) AS distance_km
-        ", [$lat, $lng, $lat])
+        ', [$lat, $lng, $lat])
         ->having('distance_km', '<=', $radiusKm)
         ->orderBy('distance_km')
         ->get();
@@ -160,8 +182,8 @@ Route::get('/workers/nearby', function (Request $request) {
                 'within_1km' => $workers->where('distance_km', '<=', 1)->count(),
                 'within_3km' => $workers->where('distance_km', '<=', 3)->count(),
                 'within_5km' => $workers->where('distance_km', '<=', 5)->count(),
-            ]
-        ]
+            ],
+        ],
     ]);
 });
 
@@ -170,8 +192,10 @@ Route::get('/settings', function () {
     $settings = Setting::pluck('value', 'key')->toArray();
     $publicKeys = ['platform_name', 'platform_version', 'system_currency', 'commission_rate', 'min_withdrawal', 'withdrawal_fee', 'job_posting_fee', 'payments_enabled', 'platform_logo'];
     $filtered = [];
-    foreach ($publicKeys as $k)
+    foreach ($publicKeys as $k) {
         $filtered[$k] = $settings[$k] ?? null;
+    }
+
     return response()->json(['success' => true, 'data' => $filtered]);
 });
 
@@ -193,65 +217,108 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             $user = $request->user();
 
             if ($user->role === 'admin') {
+                $terminal = [Job::S_COMPLETED, Job::S_CANCELLED, Job::S_EXPIRED, Job::S_REFUNDED, 'completed', 'cancelled'];
                 $data = [
                     'role' => 'admin',
-                    'jobsCount' => \App\Models\Job::count(),
-                    'paidTotal' => \App\Models\Payment::where('status', 'COMPLETED')->sum('amount'),
-                    'usersWorkers' => \App\Models\User::where('role', 'mfanyakazi')->count(),
-                    'usersClients' => \App\Models\User::where('role', 'muhitaji')->count(),
+                    'jobsCount' => Job::count(),
+                    'jobs_total' => Job::count(),
+                    'jobs_active' => Job::whereNotIn('status', $terminal)->count(),
+                    'paidTotal' => Payment::where('status', 'COMPLETED')->sum('amount'),
+                    'payments_completed_total' => Payment::where('status', 'COMPLETED')->sum('amount'),
+                    'usersWorkers' => User::where('role', 'mfanyakazi')->count(),
+                    'usersClients' => User::where('role', 'muhitaji')->count(),
+                    'withdrawals_pending' => Withdrawal::where('status', 'PROCESSING')->count(),
                 ];
             } elseif ($user->role === 'muhitaji') {
+                $wallet = $user->ensureWallet();
+                $attentionJobs = Job::where('user_id', $user->id)
+                    ->whereIn('status', [Job::S_AWAITING_PAYMENT, Job::S_SUBMITTED])
+                    ->with('acceptedWorker', 'category')
+                    ->latest()
+                    ->limit(5)
+                    ->get();
+                $pendingAppsCount = JobApplication::query()
+                    ->whereHas('job', fn ($q) => $q->where('user_id', $user->id))
+                    ->whereIn('status', [
+                        JobApplication::STATUS_APPLIED,
+                        JobApplication::STATUS_SHORTLISTED,
+                        JobApplication::STATUS_ACCEPTED_COUNTER,
+                    ])
+                    ->count();
+
                 $data = [
                     'role' => 'muhitaji',
-                    'posted' => \App\Models\Job::where('user_id', $user->id)->count(),
-                    'completed' => \App\Models\Job::where('user_id', $user->id)->where('status', 'completed')->count(),
-                    'totalPaid' => \App\Models\Payment::whereHas('job', fn($q) => $q->where('user_id', $user->id))
+                    'posted' => Job::where('user_id', $user->id)->count(),
+                    'completed' => Job::where('user_id', $user->id)->where('status', 'completed')->count(),
+                    'totalPaid' => Payment::whereHas('job', fn ($q) => $q->where('user_id', $user->id))
                         ->where('status', 'COMPLETED')
                         ->sum('amount'),
-                    'paymentHistory' => \App\Models\Payment::whereHas('job', fn($q) => $q->where('user_id', $user->id))
+                    'paymentHistory' => Payment::whereHas('job', fn ($q) => $q->where('user_id', $user->id))
                         ->with('job')
                         ->latest()
                         ->limit(10)
                         ->get(),
-                    'allJobs' => \App\Models\Job::where('user_id', $user->id)
+                    'allJobs' => Job::where('user_id', $user->id)
                         ->with('acceptedWorker', 'category', 'payment')
                         ->latest()
                         ->limit(10)
                         ->get(),
+                    'wallet_balance' => (int) $wallet->balance,
+                    'available' => (int) $wallet->available_balance,
+                    'attention_jobs' => $attentionJobs,
+                    'pending_applications_count' => $pendingAppsCount,
                 ];
             } else {
-                // Mfanyakazi
+                // Mfanyakazi — lingana na DashboardController (web)
                 $wallet = $user->ensureWallet();
+                $attentionJobs = Job::where('accepted_worker_id', $user->id)
+                    ->whereIn('status', [Job::S_FUNDED, Job::S_IN_PROGRESS])
+                    ->with('muhitaji', 'category')
+                    ->latest()
+                    ->limit(5)
+                    ->get();
+                $currentJobs = Job::with('muhitaji', 'category')
+                    ->where('accepted_worker_id', $user->id)
+                    ->whereIn('status', [
+                        Job::S_FUNDED,
+                        Job::S_IN_PROGRESS,
+                        Job::S_SUBMITTED,
+                        'assigned',
+                        'in_progress',
+                        'ready_for_confirmation',
+                    ])
+                    ->latest()
+                    ->limit(5)
+                    ->get();
+
                 $data = [
                     'role' => 'mfanyakazi',
-                    'done' => \App\Models\Job::where('accepted_worker_id', $user->id)->where('status', 'completed')->count(),
-                    'earnTotal' => \App\Models\WalletTransaction::where('user_id', $user->id)
+                    'done' => Job::where('accepted_worker_id', $user->id)->where('status', 'completed')->count(),
+                    'earnTotal' => WalletTransaction::where('user_id', $user->id)
                         ->where('type', 'EARN')
                         ->where('amount', '>', 0)
                         ->sum('amount'),
-                    'withdrawn' => \App\Models\Withdrawal::where('user_id', $user->id)->whereIn('status', ['PAID', 'PROCESSING'])->sum('amount'),
-                    'available' => $wallet->balance,
-                    'currentJobs' => \App\Models\Job::with('muhitaji', 'category')
-                        ->where('accepted_worker_id', $user->id)
-                        ->whereIn('status', ['assigned', 'in_progress', 'ready_for_confirmation'])
-                        ->latest()
-                        ->limit(5)
-                        ->get(),
-                    'thisMonthEarnings' => \App\Models\Job::where('accepted_worker_id', $user->id)
+                    'withdrawn' => Withdrawal::where('user_id', $user->id)->whereIn('status', ['PAID', 'PROCESSING'])->sum('amount'),
+                    'balance' => (int) $wallet->balance,
+                    'held_balance' => (int) $wallet->held_balance,
+                    'available' => (int) $wallet->available_balance,
+                    'attention_jobs' => $attentionJobs,
+                    'currentJobs' => $currentJobs,
+                    'thisMonthEarnings' => Job::where('accepted_worker_id', $user->id)
                         ->where('status', 'completed')
                         ->where('completed_at', '>=', now()->startOfMonth())
                         ->sum('price'),
-                    'earningsHistory' => \App\Models\WalletTransaction::where('user_id', $user->id)
+                    'earningsHistory' => WalletTransaction::where('user_id', $user->id)
                         ->where('type', 'EARN')
                         ->where('amount', '>', 0)
                         ->latest()
                         ->limit(10)
                         ->get(),
-                    'withdrawalsHistory' => \App\Models\Withdrawal::where('user_id', $user->id)
+                    'withdrawalsHistory' => Withdrawal::where('user_id', $user->id)
                         ->latest()
                         ->limit(10)
                         ->get(),
-                    'completedJobs' => \App\Models\Job::where('accepted_worker_id', $user->id)
+                    'completedJobs' => Job::where('accepted_worker_id', $user->id)
                         ->where('status', 'completed')
                         ->with('muhitaji', 'category')
                         ->latest()
@@ -262,7 +329,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
 
             return response()->json([
                 'success' => true,
-                'data' => $data
+                'data' => $data,
             ]);
         });
 
@@ -277,10 +344,17 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
     Route::prefix('notifications')->group(function () {
         Route::get('/', function (Request $request) {
             $user = $request->user();
+            $paginator = $user->notifications()->latest()->paginate(20);
+            $unread = $user->unreadNotifications()->count();
+
             return response()->json([
                 'success' => true,
-                'notifications' => $user->notifications()->latest()->paginate(20),
-                'unread_count' => $user->unreadNotifications()->count()
+                'data' => [
+                    'notifications' => $paginator,
+                    'unread_count' => $unread,
+                ],
+                'notifications' => $paginator,
+                'unread_count' => $unread,
             ]);
         });
 
@@ -289,14 +363,24 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             $notification = $user->notifications()->findOrFail($id);
             $notification->markAsRead();
 
-            return response()->json(['success' => true]);
+            return response()->json([
+                'success' => true,
+                'data' => ['unread_count' => $user->unreadNotifications()->count()],
+            ]);
         });
 
         Route::post('/read-all', function (Request $request) {
             $request->user()->unreadNotifications->markAsRead();
-            return response()->json(['success' => true]);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['unread_count' => 0],
+            ]);
         });
     });
+
+    // Muhitaji: maombi yote (sawa na /my/applications kwenye web)
+    Route::get('/my/applications', [MyJobsController::class, 'apiApplications']);
 
     // ========================================================================
     // JOB MANAGEMENT APIs - MUHITAJI
@@ -306,59 +390,63 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         // Create job (Muhitaji)
         Route::post('/', function (Request $request) {
             $user = $request->user();
-            if (!in_array($user->role, ['muhitaji', 'admin'])) {
+            if (! in_array($user->role, ['muhitaji', 'admin'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Huna ruhusa (muhitaji/admin tu).'
+                    'message' => 'Huna ruhusa (muhitaji/admin tu).',
                 ], 403);
             }
 
             $validated = $request->validate([
                 'title' => ['required', 'max:120'],
                 'category_id' => ['required', 'exists:categories,id'],
-                'price' => ['required', 'integer', 'min:500'],
+                'price' => ['required', 'integer', 'min:1000'],
                 'lat' => ['required', 'numeric', 'between:-90,90'],
                 'lng' => ['required', 'numeric', 'between:-180,180'],
                 'phone' => ['required', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
                 'description' => ['nullable'],
                 'address_text' => ['nullable'],
-                'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'], // 5MB max
+                'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
+                    if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
+                        $fail('Faili lazima iwe picha.');
+                    }
+                }],
             ]);
 
             // Handle image upload
             $imagePath = null;
             if ($request->hasFile('image')) {
-                $controller = app(\App\Http\Controllers\JobController::class);
-                $reflection = new \ReflectionClass($controller);
+                $controller = app(JobController::class);
+                $reflection = new ReflectionClass($controller);
                 $method = $reflection->getMethod('handleImageUpload');
                 $method->setAccessible(true);
                 $imagePath = $method->invoke($controller, $request->file('image'));
 
                 // Verify file exists before saving to database
                 if ($imagePath) {
-                    $imageFullPath = storage_path('app/public/' . $imagePath);
-                    if (!file_exists($imageFullPath)) {
-                        \Log::error('API: Image path provided but file does not exist', [
+                    $imageFullPath = storage_path('app/public/'.$imagePath);
+                    if (! file_exists($imageFullPath)) {
+                        Log::error('API: Image path provided but file does not exist', [
                             'imagePath' => $imagePath,
-                            'fullPath' => $imageFullPath
+                            'fullPath' => $imageFullPath,
                         ]);
                         $imagePath = null;
                     } else {
-                        \Log::info('API: Image verified before saving', [
+                        Log::info('API: Image verified before saving', [
                             'imagePath' => $imagePath,
-                            'fileSize' => filesize($imageFullPath)
+                            'fileSize' => filesize($imageFullPath),
                         ]);
                     }
                 }
             }
 
-            $localized = \App\Services\TranslationService::ensureBothLanguages(
+            $localized = TranslationService::ensureBothLanguages(
                 $validated['title'],
                 $validated['description'] ?? null
             );
 
             $paymentsEnabled = Setting::get('payments_enabled', '1') == '1';
-            $job = \App\Models\Job::create([
+            $job = Job::create([
                 'user_id' => $user->id,
                 'category_id' => $validated['category_id'],
                 'title' => $validated['title'],
@@ -376,14 +464,14 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'published_at' => $paymentsEnabled ? null : now(),
             ]);
 
-            if (!$paymentsEnabled) {
+            if (! $paymentsEnabled) {
                 $jobData = $job->load('category')->toArray();
                 if ($job->image) {
-                    $imageUrl = asset('storage/' . $job->image);
+                    $imageUrl = asset('storage/'.$job->image);
                     // Add cache busting
-                    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($job->image)) {
-                        $timestamp = filemtime(storage_path('app/public/' . $job->image));
-                        $imageUrl = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                    if (Storage::disk('public')->exists($job->image)) {
+                        $timestamp = filemtime(storage_path('app/public/'.$job->image));
+                        $imageUrl = asset('storage/'.$job->image).'?v='.$timestamp;
                     }
                     $jobData['image_url'] = $imageUrl;
                 }
@@ -392,40 +480,35 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'success' => true,
                     'data' => [
                         'job' => $jobData,
-                        'payment_required' => false
+                        'payment_required' => false,
                     ],
-                    'message' => 'Kazi imechapishwa kwa mafanikio!'
+                    'message' => 'Kazi imechapishwa kwa mafanikio!',
                 ], 201);
             }
 
             // Create payment record
-            $orderId = (string) \Illuminate\Support\Str::ulid();
+            $orderId = strtoupper(Str::random(16));
             $payment = $job->payment()->create([
                 'order_id' => $orderId,
                 'amount' => $job->price,
                 'status' => 'PENDING',
             ]);
 
-            // Initialize ZenoPay payment
-            $zenoService = app(\App\Services\ZenoPayService::class);
-            $payload = [
-                'order_id' => $orderId,
-                'buyer_email' => $user->email ?? 'client@tendapoa.local',
-                'buyer_name' => $user->name ?? 'Client',
-                'buyer_phone' => $validated['phone'],
+            // Initialize ClickPesa payment
+            $clickpesaService = app(ClickPesaService::class);
+            $res = $clickpesaService->startPayment([
+                'orderReference' => $orderId,
+                'phoneNumber' => $validated['phone'],
                 'amount' => $job->price,
-                // 'webhook_url' => route('zeno.webhook'), // User requested polling only
-            ];
-
-            $res = $zenoService->startPayment($payload);
+            ]);
 
             $jobData = $job->load('category', 'payment')->toArray();
             if ($job->image) {
-                $imageUrl = asset('storage/' . $job->image);
+                $imageUrl = asset('storage/'.$job->image);
                 // Add cache busting
-                if (\Illuminate\Support\Facades\Storage::disk('public')->exists($job->image)) {
-                    $timestamp = filemtime(storage_path('app/public/' . $job->image));
-                    $imageUrl = asset('storage/' . $job->image) . '?v=' . $timestamp;
+                if (Storage::disk('public')->exists($job->image)) {
+                    $timestamp = filemtime(storage_path('app/public/'.$job->image));
+                    $imageUrl = asset('storage/'.$job->image).'?v='.$timestamp;
                 }
                 $jobData['image_url'] = $imageUrl;
             }
@@ -435,27 +518,25 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'data' => [
                     'job' => $jobData,
                     'payment' => $payment,
-                    'zenopay_response' => $res
+                    'clickpesa_response' => $res,
                 ],
-                'message' => $res['ok'] ? 'Kazi imeundwa. Fanya malipo.' : 'Imeshindikana kuanzisha malipo.'
+                'message' => $res['ok'] ? 'Kazi imeundwa. Fanya malipo.' : 'Imeshindikana kuanzisha malipo.',
             ], $res['ok'] ? 201 : 400);
         });
 
         // Get my jobs (Muhitaji) - using controller method
         Route::get('/my', [MyJobsController::class, 'apiIndex']);
 
-
-
         // Get job details - using controller method
         Route::get('/{job}', [JobViewController::class, 'apiShow']);
 
         // Post comment/application on job
-        Route::post('/{job}/comment', function (Request $request, \App\Models\Job $job) {
+        Route::post('/{job}/comment', function (Request $request, Job $job) {
             $user = $request->user();
-            if (!in_array($user->role, ['mfanyakazi', 'admin'])) {
+            if (! in_array($user->role, ['mfanyakazi', 'admin'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
+                    'message' => 'Huna ruhusa (mfanyakazi/admin tu).',
                 ], 403);
             }
 
@@ -465,7 +546,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'is_application' => ['nullable', 'boolean'],
             ]);
 
-            $comment = \App\Models\JobComment::create([
+            $comment = JobComment::create([
                 'work_order_id' => $job->id,
                 'user_id' => $user->id,
                 'message' => $validated['message'],
@@ -476,29 +557,29 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             return response()->json([
                 'success' => true,
                 'data' => $comment->load('user'),
-                'message' => 'Maoni yamewekwa.'
+                'message' => 'Maoni yamewekwa.',
             ], 201);
         });
 
         // Accept worker application (Muhitaji)
-        Route::post('/{job}/accept/{comment}', function (\App\Models\Job $job, \App\Models\JobComment $comment, Request $request) {
+        Route::post('/{job}/accept/{comment}', function (Job $job, JobComment $comment, Request $request) {
             $user = $request->user();
-            if (!in_array($user->role, ['muhitaji', 'admin'])) {
+            if (! in_array($user->role, ['muhitaji', 'admin'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Huna ruhusa (muhitaji/admin tu).'
+                    'message' => 'Huna ruhusa (muhitaji/admin tu).',
                 ], 403);
             }
 
             if ($job->user_id !== $user->id && $user->role !== 'admin') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hii sio kazi yako.'
+                    'message' => 'Hii sio kazi yako.',
                 ], 403);
             }
 
             // Generate completion code if missing
-            if (!$job->completion_code) {
+            if (! $job->completion_code) {
                 $job->completion_code = (string) random_int(100000, 999999);
             }
 
@@ -509,11 +590,11 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             ]);
 
             // Create automatic welcome message
-            \App\Models\PrivateMessage::create([
+            PrivateMessage::create([
                 'work_order_id' => $job->id,
                 'sender_id' => $user->id,
                 'receiver_id' => $comment->user_id,
-                'message' => '🎉 Hongera! Umechaguliwa kufanya kazi hii: "' . $job->title . '". Tafadhali wasiliana nami kuzungumza maelezo zaidi.',
+                'message' => '🎉 Hongera! Umechaguliwa kufanya kazi hii: "'.$job->title.'". Tafadhali wasiliana nami kuzungumza maelezo zaidi.',
             ]);
 
             // Notify worker (Optional: Notifications table)
@@ -523,7 +604,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             return response()->json([
                 'success' => true,
                 'data' => $job->load('acceptedWorker'),
-                'message' => 'Umemchagua mfanyakazi na ujumbe umetumwa.'
+                'message' => 'Umemchagua mfanyakazi na ujumbe umetumwa.',
             ]);
         });
 
@@ -534,12 +615,12 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         Route::put('/{job}', [JobController::class, 'apiUpdate']);
 
         // Poll payment status
-        Route::get('/{job}/poll', function (\App\Models\Job $job) {
+        Route::get('/{job}/poll', function (Job $job) {
             $payment = $job->payment;
-            if (!$payment) {
+            if (! $payment) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Payment not found'
+                    'message' => 'Payment not found',
                 ], 404);
             }
 
@@ -547,46 +628,47 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 return response()->json([
                     'success' => true,
                     'done' => true,
-                    'status' => 'COMPLETED'
+                    'status' => 'COMPLETED',
                 ]);
             }
 
-            // Check ZenoPay
-            $zenoService = app(\App\Services\ZenoPayService::class);
-            $resp = $zenoService->checkOrder($payment->order_id);
+            // Check ClickPesa
+            $clickpesaService = app(ClickPesaService::class);
+            $resp = $clickpesaService->queryPayment($payment->order_id);
 
             if ($resp['ok']) {
-                $isCompleted = false;
-                if (($resp['json']['payment_status'] ?? '') === 'COMPLETED') {
-                    $isCompleted = true;
-                } elseif (($resp['json']['data'][0]['payment_status'] ?? '') === 'COMPLETED') {
-                    $isCompleted = true;
-                } elseif (($resp['json']['status'] ?? '') === 'COMPLETED') {
-                    $isCompleted = true;
-                }
+                $records = $resp['json'];
+                $record = is_array($records) && isset($records[0]) ? $records[0] : $records;
+                $cpStatus = $record['status'] ?? '';
+                $finalStatus = ClickPesaService::resolvePaymentStatus($cpStatus);
 
-                if ($isCompleted) {
+                if ($finalStatus === 'COMPLETED') {
                     $payment->update([
                         'status' => 'COMPLETED',
-                        'resultcode' => $resp['json']['resultcode'] ?? null,
-                        'reference' => $resp['json']['reference'] ?? null,
+                        'reference' => $record['paymentReference'] ?? null,
+                        'channel' => $record['channel'] ?? null,
+                        'msisdn' => $record['paymentPhoneNumber'] ?? null,
+                        'transid' => $record['id'] ?? null,
                         'meta' => $resp['json'],
                     ]);
+                } elseif ($finalStatus === 'FAILED') {
+                    $payment->update(['status' => 'FAILED', 'meta' => $resp['json']]);
                 }
             }
 
-            // Activate the job if payment completed
-            if ($payment->status === 'COMPLETED' && $job->status === 'pending_payment') {
+            // Activate the job if payment completed (ada ya chapisho / malipo ya zamani)
+            if ($payment->status === 'COMPLETED' && in_array($job->status, ['pending_payment', 'awaiting_payment'], true)) {
                 $job->update([
                     'status' => 'posted',
-                    'published_at' => now(),
+                    'published_at' => $job->published_at ?? now(),
                 ]);
             }
 
             return response()->json([
                 'success' => true,
                 'done' => $payment->status === 'COMPLETED',
-                'status' => $payment->status
+                'status' => $payment->status,
+                'job_status' => $job->fresh()->status,
             ]);
         });
 
@@ -599,9 +681,31 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         // Cancel job (API method)
         Route::post('/{job}/cancel', [JobController::class, 'apiCancel']);
 
+        Route::post('/{job}/send', [ChatController::class, 'apiSend']);
 
+        // ============================================================
+        // NEW WORKFLOW: Applications
+        // ============================================================
+        Route::post('/{job}/apply', [ApplicationController::class, 'apiStore']);
+        Route::post('/{job}/applications/{application}/select', [ApplicationController::class, 'apiSelect']);
 
-        Route::post('/{job}/send', [\App\Http\Controllers\ChatController::class, 'apiSend']);
+        // ============================================================
+        // NEW WORKFLOW: Funding (escrow)
+        // ============================================================
+        Route::post('/{job}/fund/wallet', [FundingController::class, 'apiFundFromWallet']);
+        Route::post('/{job}/fund/external', [FundingController::class, 'apiFundExternal']);
+        Route::get('/{job}/fund/poll', [FundingController::class, 'apiPoll']);
+
+        // ============================================================
+        // NEW WORKFLOW: Completion
+        // ============================================================
+        Route::post('/{job}/worker-accept', [CompletionController::class, 'apiWorkerAccept']);
+        Route::post('/{job}/worker-decline', [CompletionController::class, 'apiWorkerDecline']);
+        Route::post('/{job}/worker-submit', [CompletionController::class, 'apiWorkerSubmit']);
+        Route::post('/{job}/client-confirm', [CompletionController::class, 'apiClientConfirm']);
+        Route::post('/{job}/client-revision', [CompletionController::class, 'apiClientRevision']);
+        Route::post('/{job}/dispute', [CompletionController::class, 'apiOpenDispute']);
+        Route::post('/{job}/review', [CompletionController::class, 'apiSubmitReview']);
     });
 
     // ========================================================================
@@ -615,7 +719,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             if ($user->role !== 'mfanyakazi') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Huna ruhusa. Mfanyakazi tu.'
+                    'message' => 'Huna ruhusa. Mfanyakazi tu.',
                 ], 403);
             }
 
@@ -630,7 +734,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'address_text' => ['nullable'],
             ]);
 
-            $localized = \App\Services\TranslationService::ensureBothLanguages(
+            $localized = TranslationService::ensureBothLanguages(
                 $validated['title'],
                 $validated['description']
             );
@@ -640,7 +744,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             $wallet = $user->ensureWallet();
 
             if ($postingFee <= 0) {
-                $job = \App\Models\Job::create([
+                $job = Job::create([
                     'user_id' => $user->id,
                     'category_id' => $validated['category_id'],
                     'title' => $validated['title'],
@@ -658,12 +762,18 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'poster_type' => 'mfanyakazi',
                     'posting_fee' => 0,
                 ]);
-                return response()->json(['success' => true, 'message' => 'Kazi imechapishwa kwa mafanikio!', 'payment_method' => 'free'], 201);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Kazi imechapishwa kwa mafanikio!',
+                    'payment_method' => 'free',
+                    'data' => ['job' => $job->load('category')],
+                ], 201);
             }
 
             if ($wallet->balance >= $postingFee) {
-                \Illuminate\Support\Facades\DB::transaction(function () use ($user, $validated, $localized, $postingFee, $wallet) {
-                    $job = \App\Models\Job::create([
+                $job = DB::transaction(function () use ($user, $validated, $localized, $postingFee, $wallet) {
+                    $job = Job::create([
                         'user_id' => $user->id,
                         'category_id' => $validated['category_id'],
                         'title' => $validated['title'],
@@ -684,22 +794,25 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
 
                     $wallet->decrement('balance', $postingFee);
 
-                    \App\Models\WalletTransaction::create([
+                    WalletTransaction::create([
                         'user_id' => $user->id,
                         'type' => 'debit',
                         'amount' => $postingFee,
                         'description' => "Job posting fee for: {$job->title}",
                         'reference' => "JOB_POST_{$job->id}",
                     ]);
+
+                    return $job;
                 });
 
                 return response()->json([
                     'success' => true,
                     'message' => 'Kazi imechapishwa kwa mafanikio!',
-                    'payment_method' => 'wallet'
+                    'payment_method' => 'wallet',
+                    'data' => ['job' => $job->load('category')],
                 ], 201);
             } else {
-                $job = \App\Models\Job::create([
+                $job = Job::create([
                     'user_id' => $user->id,
                     'category_id' => $validated['category_id'],
                     'title' => $validated['title'],
@@ -717,38 +830,35 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'posting_fee' => $postingFee,
                 ]);
 
-                $orderId = (string) \Illuminate\Support\Str::ulid();
+                $orderId = strtoupper(Str::random(16));
                 $payment = $job->payment()->create([
                     'order_id' => $orderId,
                     'amount' => $postingFee,
                     'status' => 'PENDING',
                 ]);
 
-                $zenoService = app(\App\Services\ZenoPayService::class);
-                $payload = [
-                    'order_id' => $orderId,
-                    'buyer_email' => $user->email ?? 'worker@tendapoa.local',
-                    'buyer_name' => $user->name ?? 'Worker',
-                    'buyer_phone' => $validated['phone'],
+                $clickpesaService = app(ClickPesaService::class);
+                $res = $clickpesaService->startPayment([
+                    'orderReference' => $orderId,
+                    'phoneNumber' => $validated['phone'],
                     'amount' => $postingFee,
-
-                    // 'webhook_url' => route('zeno.webhook'), // User requested polling only
-                ];
-
-                $res = $zenoService->startPayment($payload);
+                ]);
 
                 return response()->json([
                     'success' => $res['ok'],
                     'data' => [
                         'job' => $job->load('category', 'payment'),
                         'payment' => $payment,
-                        'zenopay_response' => $res
+                        'clickpesa_response' => $res,
                     ],
                     'message' => $res['ok'] ? 'Fanya malipo ya ada ya kuchapisha.' : 'Imeshindikana kuanzisha malipo.',
-                    'payment_method' => 'zenopay'
+                    'payment_method' => 'clickpesa',
                 ], $res['ok'] ? 201 : 400);
             }
         });
+
+        // Maombi yangu (job_applications)
+        Route::get('/applications', [WorkerApplicationsController::class, 'apiIndex']);
 
         // Get assigned jobs - using controller method
         Route::get('/assigned', [WorkerActionsController::class, 'apiAssigned']);
@@ -784,11 +894,11 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         Route::get('/', function (Request $request) {
             $user = $request->user();
 
-            $conversations = \Illuminate\Support\Facades\DB::table('private_messages')
+            $conversations = DB::table('private_messages')
                 ->select(
                     'work_order_id',
-                    \Illuminate\Support\Facades\DB::raw('MAX(created_at) as last_message_at'),
-                    \Illuminate\Support\Facades\DB::raw("COUNT(CASE WHEN receiver_id = {$user->id} AND is_read = 0 THEN 1 END) as unread_count")
+                    DB::raw('MAX(created_at) as last_message_at'),
+                    DB::raw("COUNT(CASE WHEN receiver_id = {$user->id} AND is_read = 0 THEN 1 END) as unread_count")
                 )
                 ->where(function ($query) use ($user) {
                     $query->where('sender_id', $user->id)
@@ -799,15 +909,16 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 ->get();
 
             $jobIds = $conversations->pluck('work_order_id');
-            $jobs = \App\Models\Job::with(['muhitaji', 'acceptedWorker', 'category'])
+            $jobs = Job::with(['muhitaji', 'acceptedWorker', 'category'])
                 ->whereIn('id', $jobIds)
                 ->get()
                 ->keyBy('id');
 
             $conversations = $conversations->map(function ($conv) use ($jobs, $user) {
                 $job = $jobs->get($conv->work_order_id);
-                if (!$job)
+                if (! $job) {
                     return null;
+                }
 
                 $otherUser = $user->id === $job->user_id
                     ? $job->acceptedWorker
@@ -823,49 +934,48 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
 
             return response()->json([
                 'success' => true,
-                'data' => $conversations
+                'data' => $conversations,
             ]);
         });
 
         // Get messages for specific job
-        Route::get('/{job}', function (\App\Models\Job $job, Request $request) {
+        Route::get('/{job}', function (Job $job, Request $request) {
             $user = $request->user();
+            $chatController = app(ChatController::class);
 
-            $isMuhitaji = $job->user_id === $user->id;
-            $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-            $isAcceptedWorker = $job->accepted_worker_id === $user->id;
-
-            if (!$isMuhitaji && !$hasCommented && !$isAcceptedWorker) {
+            if (! $chatController->userCanAccessJobChat($job, $user)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Huna ruhusa ya kuona mazungumzo haya. Tuma comment kwanza.'
+                    'message' => 'Huna ruhusa ya kuona mazungumzo haya. Omba kazi au tumia mfumo wa maombi.',
                 ], 403);
             }
 
+            $isMuhitaji = $job->user_id === $user->id;
+
             $workerId = $request->get('worker_id');
             if ($isMuhitaji && $workerId) {
-                $otherUser = \App\Models\User::find($workerId);
+                $otherUser = User::find($workerId);
             } elseif ($isMuhitaji) {
                 $otherUser = $job->acceptedWorker;
             } else {
                 $otherUser = $job->muhitaji;
             }
 
-            if (!$otherUser) {
+            if (! $otherUser) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Mtumiaji mwingine hajapatikana.'
+                    'message' => 'Mtumiaji mwingine hajapatikana.',
                 ], 404);
             }
 
-            $messages = \App\Models\PrivateMessage::forJob($job->id)
+            $messages = PrivateMessage::forJob($job->id)
                 ->betweenUsers($user->id, $otherUser->id)
                 ->with(['sender', 'receiver'])
                 ->orderBy('created_at', 'asc')
                 ->get();
 
             // Mark as read
-            \App\Models\PrivateMessage::forJob($job->id)
+            PrivateMessage::forJob($job->id)
                 ->where('receiver_id', $user->id)
                 ->where('is_read', false)
                 ->update([
@@ -873,7 +983,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'read_at' => now(),
                 ]);
 
-            $unreadCount = \App\Models\PrivateMessage::where('receiver_id', $user->id)
+            $unreadCount = PrivateMessage::where('receiver_id', $user->id)
                 ->where('is_read', false)
                 ->count();
 
@@ -883,25 +993,24 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'job' => $job->load('muhitaji', 'acceptedWorker', 'category'),
                     'other_user' => $otherUser,
                     'messages' => $messages,
-                    'unread_count' => $unreadCount
-                ]
+                    'unread_count' => $unreadCount,
+                ],
             ]);
         });
 
         // Send message
-        Route::post('/{job}/send', function (\App\Models\Job $job, Request $request) {
+        Route::post('/{job}/send', function (Job $job, Request $request) {
             $user = $request->user();
+            $chatController = app(ChatController::class);
 
-            $isMuhitaji = $job->user_id === $user->id;
-            $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-            $isAcceptedWorker = $job->accepted_worker_id === $user->id;
-
-            if (!$isMuhitaji && !$hasCommented && !$isAcceptedWorker) {
+            if (! $chatController->userCanAccessJobChat($job, $user)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Huna ruhusa ya kutuma ujumbe. Tuma comment kwanza.'
+                    'message' => 'Huna ruhusa ya kutuma ujumbe. Omba kazi au tumia mfumo wa maombi.',
                 ], 403);
             }
+
+            $isMuhitaji = $job->user_id === $user->id;
 
             $validated = $request->validate([
                 'message' => 'required|string|max:5000',
@@ -914,14 +1023,14 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 $receiverId = $job->user_id;
             }
 
-            if (!$receiverId) {
+            if (! $receiverId) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Mpokeaji hajapatikana.'
+                    'message' => 'Mpokeaji hajapatikana.',
                 ], 400);
             }
 
-            $message = \App\Models\PrivateMessage::create([
+            $message = PrivateMessage::create([
                 'work_order_id' => $job->id,
                 'sender_id' => $user->id,
                 'receiver_id' => $receiverId,
@@ -931,35 +1040,34 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             return response()->json([
                 'success' => true,
                 'data' => $message->load('sender', 'receiver'),
-                'message' => 'Ujumbe umetumwa.'
+                'message' => 'Ujumbe umetumwa.',
             ], 201);
         });
 
         // Poll for new messages
-        Route::get('/{job}/poll', function (\App\Models\Job $job, Request $request) {
+        Route::get('/{job}/poll', function (Job $job, Request $request) {
             $user = $request->user();
+            $chatController = app(ChatController::class);
 
-            $isMuhitaji = $job->user_id === $user->id;
-            $hasCommented = $job->comments()->where('user_id', $user->id)->exists();
-            $isAcceptedWorker = $job->accepted_worker_id === $user->id;
-
-            if (!$isMuhitaji && !$hasCommented && !$isAcceptedWorker) {
+            if (! $chatController->userCanAccessJobChat($job, $user)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Huna ruhusa.'
+                    'message' => 'Huna ruhusa.',
                 ], 403);
             }
+
+            $isMuhitaji = $job->user_id === $user->id;
 
             $lastId = $request->get('last_id', 0);
             $otherUserId = $request->get('other_user_id');
 
-            if (!$otherUserId) {
+            if (! $otherUserId) {
                 $otherUserId = $user->id === $job->user_id
                     ? $job->accepted_worker_id
                     : $job->user_id;
             }
 
-            $newMessages = \App\Models\PrivateMessage::forJob($job->id)
+            $newMessages = PrivateMessage::forJob($job->id)
                 ->betweenUsers($user->id, $otherUserId)
                 ->where('id', '>', $lastId)
                 ->with('sender')
@@ -967,7 +1075,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 ->get();
 
             // Mark as read
-            \App\Models\PrivateMessage::forJob($job->id)
+            PrivateMessage::forJob($job->id)
                 ->where('receiver_id', $user->id)
                 ->where('is_read', false)
                 ->update([
@@ -979,106 +1087,82 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'success' => true,
                 'data' => [
                     'messages' => $newMessages,
-                    'count' => $newMessages->count()
-                ]
+                    'count' => $newMessages->count(),
+                ],
             ]);
         });
 
         // Get unread count
         Route::get('/unread-count', function (Request $request) {
-            $count = \App\Models\PrivateMessage::where('receiver_id', $request->user()->id)
+            $count = PrivateMessage::where('receiver_id', $request->user()->id)
                 ->where('is_read', false)
                 ->count();
 
             return response()->json([
                 'success' => true,
-                'count' => $count
+                'count' => $count,
             ]);
         })->name('api.chat.unread');
     });
 
     // ========================================================================
-    // WITHDRAWAL APIs
+    // WALLET APIs (Deposit, Withdraw, Balance)
+    // ========================================================================
+
+    Route::prefix('wallet')->group(function () {
+        // Get wallet info + recent transactions
+        Route::get('/', [WalletController::class, 'apiWalletInfo']);
+
+        // Deposit (ClickPesa collection)
+        Route::post('/deposit', [WalletController::class, 'apiDeposit']);
+        Route::get('/deposit/{transaction}/poll', [WalletController::class, 'apiDepositPoll']);
+
+        // Withdraw (ClickPesa payout)
+        Route::post('/withdraw', [WalletController::class, 'apiWithdraw']);
+    });
+
+    // ========================================================================
+    // WITHDRAWAL APIs (legacy + history)
     // ========================================================================
 
     Route::prefix('withdrawal')->group(function () {
-        // Get wallet balance
+        // Get wallet balance (legacy)
         Route::get('/wallet', function (Request $request) {
             $user = $request->user();
-            // Allow all authenticated users to check their wallet
-
             $wallet = $user->ensureWallet();
+
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'balance' => $wallet->balance,
+                    'balance' => (int) $wallet->balance,
+                    'held_balance' => (int) $wallet->held_balance,
+                    'available_balance' => (int) $wallet->available_balance,
                     'user_id' => $user->id,
-                    'created_at' => $wallet->created_at
-                ]
+                    'created_at' => $wallet->created_at,
+                ],
             ]);
         });
 
-        // Submit withdrawal request
-        Route::post('/submit', function (Request $request) {
-            $user = $request->user();
-            // Allow all authenticated users except restricted roles if any (for now allow all)
-
-            $validated = $request->validate([
-                'amount' => ['required', 'integer', 'min:' . (Setting::get('min_withdrawal', 5000))],
-                'phone_number' => ['required', 'string', 'min:10'],
-                'registered_name' => ['required', 'string', 'min:2'],
-                'network_type' => ['required', 'string', 'in:vodacom,tigo,airtel,halotel,ttcl'],
-                'method' => ['required', 'string'],
-            ]);
-
-            $wallet = $user->ensureWallet();
-            $withdrawalFee = (int) Setting::get('withdrawal_fee', 0);
-            $totalToDebit = $validated['amount'] + $withdrawalFee;
-            if ($wallet->balance < $totalToDebit) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Salio lako halitoshi kulipia kiasi unachotoa pamoja na makato ya TZS ' . number_format($withdrawalFee)
-                ], 422);
-            }
-
-            // Debit wallet
-            $walletService = app(\App\Services\WalletService::class);
-            $walletService->debit($user, $totalToDebit, 'WITHDRAW', 'Withdrawal request (inc. fee: TZS ' . $withdrawalFee . ')');
-
-            $withdrawal = \App\Models\Withdrawal::create([
-                'user_id' => $user->id,
-                'amount' => $validated['amount'],
-                'status' => 'PROCESSING',
-                'method' => $validated['method'],
-                'account' => $validated['phone_number'],
-                'registered_name' => $validated['registered_name'],
-                'network_type' => $validated['network_type'],
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'data' => $withdrawal,
-                'message' => 'Withdrawal imewasilishwa. Subiri uthibitisho wa Admin.'
-            ], 201);
-        });
+        // Submit withdrawal via ClickPesa payout
+        Route::post('/submit', [WalletController::class, 'apiWithdraw']);
 
         // Get withdrawal history
         Route::get('/history', function (Request $request) {
             $user = $request->user();
-            if (!in_array($user->role, ['mfanyakazi', 'admin'])) {
+            if (! in_array($user->role, ['mfanyakazi', 'admin'])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Huna ruhusa (mfanyakazi/admin tu).'
+                    'message' => 'Huna ruhusa (mfanyakazi/admin tu).',
                 ], 403);
             }
 
-            $withdrawals = \App\Models\Withdrawal::where('user_id', $user->id)
+            $withdrawals = Withdrawal::where('user_id', $user->id)
                 ->latest()
                 ->paginate(20);
 
             return response()->json([
                 'success' => true,
-                'data' => $withdrawals
+                'data' => $withdrawals,
             ]);
         });
     });
@@ -1093,7 +1177,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             $search = $request->get('search');
             $role = $request->get('role');
 
-            $query = \App\Models\User::with('wallet');
+            $query = User::with('wallet');
 
             if ($search) {
                 $query->where(function ($q) use ($search) {
@@ -1111,24 +1195,29 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
 
             return response()->json([
                 'success' => true,
-                'data' => $users
+                'data' => $users,
             ]);
         });
 
         // Get user details
-        Route::get('/users/{user}', function (\App\Models\User $user) {
+        Route::get('/users/{user}', function (User $user) {
             $user->load('wallet', 'jobs', 'assignedJobs', 'withdrawals');
+            $wallet = $user->wallet;
+            $earnTypes = ['EARN', 'credit', 'CREDIT'];
 
             $stats = [
                 'jobs_posted' => $user->jobs()->count(),
                 'jobs_assigned' => $user->assignedJobs()->count(),
                 'jobs_completed' => $user->assignedJobs()->where('status', 'completed')->count(),
-                'wallet_balance' => $user->wallet->balance ?? 0,
-                'total_earned' => \App\Models\WalletTransaction::where('user_id', $user->id)
-                    ->where('type', 'credit')
+                'wallet_balance' => $wallet->balance ?? 0,
+                'wallet_held' => $wallet->held_balance ?? 0,
+                'wallet_available' => $wallet ? (int) $wallet->available_balance : 0,
+                'total_earned' => WalletTransaction::where('user_id', $user->id)
+                    ->whereIn('type', $earnTypes)
+                    ->where('amount', '>', 0)
                     ->sum('amount'),
-                'total_withdrawn' => \App\Models\Withdrawal::where('user_id', $user->id)
-                    ->where('status', 'paid')
+                'total_withdrawn' => Withdrawal::where('user_id', $user->id)
+                    ->where('status', 'PAID')
                     ->sum('amount'),
             ];
 
@@ -1136,8 +1225,8 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'success' => true,
                 'data' => [
                     'user' => $user,
-                    'stats' => $stats
-                ]
+                    'stats' => $stats,
+                ],
             ]);
         });
 
@@ -1145,8 +1234,9 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         Route::get('/jobs', function (Request $request) {
             $status = $request->get('status');
             $search = $request->get('search');
+            $userId = $request->get('user');
 
-            $query = \App\Models\Job::with(['muhitaji', 'acceptedWorker', 'category']);
+            $query = Job::with(['muhitaji', 'acceptedWorker', 'category']);
 
             if ($status) {
                 $query->where('status', $status);
@@ -1156,59 +1246,66 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 $query->where('title', 'like', "%{$search}%");
             }
 
-            $jobs = $query->latest()->paginate(20);
+            if ($userId && $filterUser = User::find($userId)) {
+                $query->where(function ($q) use ($filterUser) {
+                    $q->where('user_id', $filterUser->id)
+                        ->orWhere('accepted_worker_id', $filterUser->id);
+                });
+            }
+
+            $jobs = $query->latest()->paginate(20)->withQueryString();
 
             return response()->json([
                 'success' => true,
-                'data' => $jobs
+                'data' => $jobs,
             ]);
         });
 
         // Get all withdrawals
         Route::get('/withdrawals', function () {
-            $withdrawals = \App\Models\Withdrawal::with('user')
+            $withdrawals = Withdrawal::with('user')
                 ->latest()
                 ->paginate(20);
 
             return response()->json([
                 'success' => true,
-                'data' => $withdrawals
+                'data' => $withdrawals,
             ]);
         });
 
         // Mark withdrawal as paid
-        Route::post('/withdrawals/{withdrawal}/paid', function (\App\Models\Withdrawal $withdrawal) {
+        Route::post('/withdrawals/{withdrawal}/paid', function (Withdrawal $withdrawal) {
             $withdrawal->update(['status' => 'PAID']);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Withdrawal marked as PAID.'
+                'message' => 'Withdrawal marked as PAID.',
             ]);
         });
 
         // Reject withdrawal
-        Route::post('/withdrawals/{withdrawal}/reject', function (\App\Models\Withdrawal $withdrawal) {
+        Route::post('/withdrawals/{withdrawal}/reject', function (Withdrawal $withdrawal) {
             if ($withdrawal->status === 'PAID') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Already paid; cannot reject.'
+                    'message' => 'Already paid; cannot reject.',
                 ], 422);
             }
 
             // Refund to wallet
-            $walletService = app(\App\Services\WalletService::class);
+            $walletService = app(WalletService::class);
             $walletService->credit($withdrawal->user, $withdrawal->amount, 'ADJUST', 'Withdrawal rejected refund');
 
             $withdrawal->update(['status' => 'REJECTED']);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Withdrawal rejected & refunded.'
+                'message' => 'Withdrawal rejected & refunded.',
             ]);
         });
 
         // Force complete job
-        Route::post('/jobs/{job}/force-complete', function (\App\Models\Job $job) {
+        Route::post('/jobs/{job}/force-complete', function (Job $job) {
             $job->update([
                 'status' => 'completed',
                 'completed_at' => now(),
@@ -1216,17 +1313,17 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
 
             return response()->json([
                 'success' => true,
-                'message' => "Job '{$job->title}' has been force completed!"
+                'message' => "Job '{$job->title}' has been force completed!",
             ]);
         });
 
         // Force cancel job
-        Route::post('/jobs/{job}/force-cancel', function (\App\Models\Job $job) {
+        Route::post('/jobs/{job}/force-cancel', function (Job $job) {
             $job->update(['status' => 'cancelled']);
 
             return response()->json([
                 'success' => true,
-                'message' => "Job '{$job->title}' has been force cancelled!"
+                'message' => "Job '{$job->title}' has been force cancelled!",
             ]);
         });
 
@@ -1234,27 +1331,27 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         Route::get('/analytics', function (Request $request) {
             $period = $request->get('period', 30);
 
-            $userGrowth = \App\Models\User::select(
-                \Illuminate\Support\Facades\DB::raw('DATE(created_at) as date'),
-                \Illuminate\Support\Facades\DB::raw('COUNT(*) as count')
+            $userGrowth = User::select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as count')
             )
                 ->where('created_at', '>=', now()->subDays($period))
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
 
-            $jobStats = \App\Models\Job::select(
-                \Illuminate\Support\Facades\DB::raw('DATE(created_at) as date'),
-                \Illuminate\Support\Facades\DB::raw('COUNT(*) as count')
+            $jobStats = Job::select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('COUNT(*) as count')
             )
                 ->where('created_at', '>=', now()->subDays($period))
                 ->groupBy('date')
                 ->orderBy('date')
                 ->get();
 
-            $revenue = \App\Models\Payment::select(
-                \Illuminate\Support\Facades\DB::raw('DATE(created_at) as date'),
-                \Illuminate\Support\Facades\DB::raw('SUM(amount) as total')
+            $revenue = Payment::select(
+                DB::raw('DATE(created_at) as date'),
+                DB::raw('SUM(amount) as total')
             )
                 ->where('status', 'COMPLETED')
                 ->where('created_at', '>=', now()->subDays($period))
@@ -1268,34 +1365,9 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'period' => $period,
                     'user_growth' => $userGrowth,
                     'job_stats' => $jobStats,
-                    'revenue' => $revenue
-                ]
+                    'revenue' => $revenue,
+                ],
             ]);
-        });
-    });
-
-    // Notifications Routes
-    Route::prefix('notifications')->group(function () {
-        Route::get('/', function (Request $request) {
-            $user = $request->user();
-            return response()->json([
-                'success' => true,
-                'notifications' => $user->notifications()->latest()->paginate(20),
-                'unread_count' => $user->unreadNotifications()->count()
-            ]);
-        });
-
-        Route::post('/{id}/read', function (Request $request, $id) {
-            $user = $request->user();
-            $notification = $user->notifications()->findOrFail($id);
-            $notification->markAsRead();
-
-            return response()->json(['success' => true]);
-        });
-
-        Route::post('/read-all', function (Request $request) {
-            $request->user()->unreadNotifications->markAsRead();
-            return response()->json(['success' => true]);
         });
     });
 
@@ -1311,7 +1383,7 @@ Route::get('/health', function () {
         'status' => 'ok',
         'timestamp' => now(),
         'version' => '1.0.0',
-        'message' => 'Tendapoa API is running'
+        'message' => 'Tendapoa API is running',
     ]);
 });
 
@@ -1319,5 +1391,5 @@ Route::get('/health', function () {
 // WEBHOOK (No Authentication)
 // ============================================================================
 
-// ZenoPay webhook
-Route::post('/payment/zeno/webhook', [PaymentController::class, 'webhook']);
+// ClickPesa webhook
+Route::post('/payment/clickpesa/webhook', [PaymentController::class, 'webhook']);
