@@ -100,11 +100,12 @@
     .tp-mobile-btn {
         @apply fixed left-3 top-3 z-[1001] hidden h-10 w-10 items-center justify-center rounded-lg border-0 bg-slate-900 text-white shadow-md;
     }
+    /* Overlay: when invisible, must not capture clicks (opacity alone still blocks hits). */
     .tp-overlay {
-        @apply fixed inset-0 z-[999] hidden bg-black/40 opacity-0 transition-opacity duration-200;
+        @apply pointer-events-none fixed inset-0 z-[999] hidden bg-black/40 opacity-0 transition-opacity duration-200;
     }
     .tp-overlay.active {
-        @apply opacity-100;
+        @apply pointer-events-auto opacity-100;
     }
     .tp-main {
         @apply ml-0 min-h-screen bg-slate-50 transition-[margin] duration-200 ease-out;
@@ -128,7 +129,7 @@
             @apply flex;
         }
         .tp-overlay {
-            @apply block;
+            @apply block pointer-events-none;
         }
     }
 
