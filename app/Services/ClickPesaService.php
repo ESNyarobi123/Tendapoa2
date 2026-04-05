@@ -198,11 +198,12 @@ class ClickPesaService
      */
     public function previewPayout(array $data): array
     {
+        // API expects phoneNumber as string with country code (e.g. 255712345678).
         $payload = [
             'amount' => (int) $data['amount'],
-            'phoneNumber' => $this->formatPhone($data['phoneNumber']),
+            'phoneNumber' => (string) $this->formatPhone($data['phoneNumber']),
             'currency' => $data['currency'] ?? 'TZS',
-            'orderReference' => $data['orderReference'],
+            'orderReference' => (string) $data['orderReference'],
         ];
 
         if ($this->checksumKey) {
@@ -219,9 +220,9 @@ class ClickPesaService
     {
         $payload = [
             'amount' => (int) $data['amount'],
-            'phoneNumber' => $this->formatPhone($data['phoneNumber']),
+            'phoneNumber' => (string) $this->formatPhone($data['phoneNumber']),
             'currency' => $data['currency'] ?? 'TZS',
-            'orderReference' => $data['orderReference'],
+            'orderReference' => (string) $data['orderReference'],
         ];
 
         if ($this->checksumKey) {
@@ -305,6 +306,43 @@ class ClickPesaService
         }
 
         return 'PENDING';
+    }
+
+    /**
+     * Human-readable error from a failed post()/get() result (validation, 4xx, etc.).
+     */
+    public static function apiErrorMessage(array $result, string $fallback = 'Ombi imeshindikana.'): string
+    {
+        $json = $result['json'] ?? null;
+        if (! is_array($json)) {
+            return $fallback;
+        }
+        $msg = $json['message'] ?? null;
+        if (is_string($msg) && $msg !== '') {
+            return $msg;
+        }
+        if (isset($json['error']) && is_string($json['error']) && $json['error'] !== '') {
+            return $json['error'];
+        }
+        if (isset($json['errors']) && is_array($json['errors'])) {
+            $flat = [];
+            foreach ($json['errors'] as $v) {
+                if (is_string($v)) {
+                    $flat[] = $v;
+                } elseif (is_array($v)) {
+                    foreach ($v as $vv) {
+                        if (is_string($vv)) {
+                            $flat[] = $vv;
+                        }
+                    }
+                }
+            }
+            if ($flat !== []) {
+                return implode(' ', $flat);
+            }
+        }
+
+        return $fallback;
     }
 
     /**

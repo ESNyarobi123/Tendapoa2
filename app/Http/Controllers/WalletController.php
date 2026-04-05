@@ -190,9 +190,14 @@ class WalletController extends Controller
         ]);
 
         if (! $preview['ok']) {
-            Log::error('ClickPesa payout preview failed', ['resp' => $preview]);
+            $msg = ClickPesaService::apiErrorMessage($preview, 'Imeshindikana kuthibitisha payout. Jaribu tena.');
+            Log::warning('ClickPesa payout preview failed', [
+                'user_id' => $user->id,
+                'http_status' => $preview['status'] ?? null,
+                'clickpesa' => $preview['json'] ?? null,
+            ]);
 
-            return back()->withErrors(['withdraw' => 'Imeshindikana kuthibitisha payout. Jaribu tena.']);
+            return back()->withErrors(['withdraw' => $msg]);
         }
 
         // Debit wallet immediately
@@ -220,8 +225,9 @@ class WalletController extends Controller
             // Refund wallet since payout failed
             $walletService->credit($user, $totalToDebit, 'ADJUST', 'Refund – payout failed for WDR '.$orderId);
             $withdrawal->update(['status' => 'FAILED']);
+            $failMsg = ClickPesaService::apiErrorMessage($res, 'Imeshindikana kutuma payout. Pesa imerudishwa kwenye wallet yako.');
 
-            return back()->withErrors(['withdraw' => 'Imeshindikana kutuma payout. Pesa imerudishwa kwenye wallet yako.']);
+            return back()->withErrors(['withdraw' => $failMsg]);
         }
 
         return redirect()->route('dashboard')->with('status', 'Withdrawal imewasilishwa kupitia ClickPesa. Subiri uthibitisho.');
@@ -383,7 +389,14 @@ class WalletController extends Controller
         ]);
 
         if (! $preview['ok']) {
-            return response()->json(['success' => false, 'message' => 'Payout preview imeshindikana.'], 400);
+            $msg = ClickPesaService::apiErrorMessage($preview, 'Payout preview imeshindikana.');
+            Log::warning('ClickPesa payout preview failed (API)', [
+                'user_id' => $user->id,
+                'http_status' => $preview['status'] ?? null,
+                'clickpesa' => $preview['json'] ?? null,
+            ]);
+
+            return response()->json(['success' => false, 'message' => $msg], 400);
         }
 
         // Debit
@@ -410,8 +423,9 @@ class WalletController extends Controller
         if (! $res['ok']) {
             $walletService->credit($user, $totalToDebit, 'ADJUST', 'Refund – payout failed '.$orderId);
             $withdrawal->update(['status' => 'FAILED']);
+            $failMsg = ClickPesaService::apiErrorMessage($res, 'Payout imeshindikana. Pesa imerudishwa.');
 
-            return response()->json(['success' => false, 'message' => 'Payout imeshindikana. Pesa imerudishwa.'], 400);
+            return response()->json(['success' => false, 'message' => $failMsg], 400);
         }
 
         return response()->json([
