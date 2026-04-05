@@ -67,10 +67,19 @@ return [
     |--------------------------------------------------------------------------
     */
     'clickpesa' => [
-        'base_url' => env('CLICKPESA_BASE_URL', 'https://api.clickpesa.com/third-parties'),
-        'client_id' => env('CLICKPESA_CLIENT_ID', ''),
-        'api_key' => env('CLICKPESA_API_KEY', ''),
-        'checksum_key' => env('CLICKPESA_CHECKSUM_KEY', ''),
+        /*
+         * Production: https://api.clickpesa.com/third-parties
+         * Sandbox (majirani ya majaribio): https://api-sandbox.clickpesa.com/third-parties
+         * Funga CLICKPESA_USE_SANDBOX=true ukitumia funguo za sandbox — vinginevyo token itarudi Unauthorized.
+         */
+        'base_url' => rtrim((string) (env('CLICKPESA_BASE_URL') ?: (
+            filter_var(env('CLICKPESA_USE_SANDBOX', false), FILTER_VALIDATE_BOOLEAN)
+                ? env('CLICKPESA_SANDBOX_URL', 'https://api-sandbox.clickpesa.com/third-parties')
+                : 'https://api.clickpesa.com/third-parties'
+        )), '/'),
+        'client_id' => trim((string) env('CLICKPESA_CLIENT_ID', env('CLICKPESA_CLIENTID', ''))),
+        'api_key' => trim((string) env('CLICKPESA_API_KEY', env('CLICKPESA_APIKEY', ''))),
+        'checksum_key' => env('CLICKPESA_CHECKSUM_KEY') ? trim((string) env('CLICKPESA_CHECKSUM_KEY')) : '',
     ],
 
 ];

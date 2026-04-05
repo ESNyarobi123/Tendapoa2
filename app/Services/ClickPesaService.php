@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ClickPesaService
 {
@@ -29,57 +30,96 @@ class ClickPesaService
 
     /**
      * Generate or retrieve a cached Bearer token (valid ~1 hour).
+     * Cache read/write failures are ignored so HTTP still works when CACHE_DRIVER=database but DB is down (e.g. local artisan).
      */
     public function getToken(): string
     {
-        return Cache::remember('clickpesa_token', 3500, function () {
-            if ($this->clientId === '' || $this->apiKey === '') {
-                Log::error('ClickPesa: CLICKPESA_CLIENT_ID / CLICKPESA_API_KEY are empty');
+        $cacheKey = 'clickpesa_token.'.hash('sha256', $this->clientId.'|'.$this->apiKey.'|'.$this->baseUrl);
 
-                throw new \RuntimeException(
-                    'Malipo ya ClickPesa hayajapangwa kwenye seva: weka CLICKPESA_CLIENT_ID na CLICKPESA_API_KEY kwenye .env, kisha endesha `php artisan config:clear` (na uwe usiache nafasi za ziada mbele/yuma ya thamani).'
-                );
+        try {
+            $cached = Cache::get($cacheKey);
+            if (is_string($cached) && $cached !== '') {
+                return $cached;
             }
+        } catch (Throwable $e) {
+            Log::warning('ClickPesa: cache read skipped', ['error' => $e->getMessage()]);
+        }
 
-            $resp = Http::withHeaders([
-                'client-id' => $this->clientId,
-                'api-key' => $this->apiKey,
-                'Accept' => 'application/json',
-            ])->acceptJson()->post($this->baseUrl.'/generate-token');
+        $token = $this->requestNewAccessToken();
 
-            $token = $resp->json('token');
-            if ($resp->successful() && is_string($token) && $token !== '') {
-                $raw = $token;
+        try {
+            Cache::put($cacheKey, $token, now()->addSeconds(3500));
+        } catch (Throwable $e) {
+            Log::warning('ClickPesa: could not store token in cache', ['error' => $e->getMessage()]);
+        }
 
-                return str_starts_with($raw, 'Bearer ')
-                    ? substr($raw, 7)
-                    : $raw;
-            }
+        return $token;
+    }
 
-            $apiMessage = $resp->json('message');
-            $apiMessage = is_string($apiMessage) ? $apiMessage : null;
-
-            Log::error('ClickPesa token generation failed', [
-                'status' => $resp->status(),
-                'body' => $resp->body(),
-            ]);
-
-            if ($resp->status() === 401 || ($apiMessage !== null && strcasecmp($apiMessage, 'Unauthorized') === 0)) {
-                throw new \RuntimeException(
-                    'ClickPesa: haikuweza kuingia (Unauthorized). Hakikisha CLICKPESA_CLIENT_ID na CLICKPESA_API_KEY ni sahihi (Dashboard → Developers), URL ni `https://api.clickpesa.com/third-parties` isipokuwa ClickPesa wamekupa nyingine, kisha `php artisan config:clear` na jaribu tena.'
-                );
-            }
-
-            if ($resp->status() === 403) {
-                throw new \RuntimeException(
-                    'ClickPesa: '.($apiMessage ?? 'API key si sahihi au imekwisha muda. Tengeneza API key mpya kwenye dashboard ya ClickPesa na usasishe .env.')
-                );
-            }
+    /**
+     * POST /generate-token (no cache).
+     */
+    private function requestNewAccessToken(): string
+    {
+        if ($this->clientId === '' || $this->apiKey === '') {
+            Log::error('ClickPesa: CLICKPESA_CLIENT_ID / CLICKPESA_API_KEY are empty');
 
             throw new \RuntimeException(
-                'ClickPesa: imeshindikana kupata token — '.($apiMessage ?: $resp->body())
+                'Malipo ya ClickPesa hayajapangwa kwenye seva: weka CLICKPESA_CLIENT_ID na CLICKPESA_API_KEY kwenye .env, kisha endesha `php artisan config:clear` (na uwe usiache nafasi za ziada mbele/yuma ya thamani).'
             );
-        });
+        }
+
+        $url = $this->baseUrl.'/generate-token';
+        $resp = Http::withHeaders([
+            'client-id' => $this->clientId,
+            'api-key' => $this->apiKey,
+            'Accept' => 'application/json',
+        ])->acceptJson()->post($url);
+
+        $body = $resp->json();
+        $body = is_array($body) ? $body : [];
+
+        $token = $body['token'] ?? null;
+        $successFlag = $body['success'] ?? null;
+
+        if ($resp->successful() && $successFlag !== false && is_string($token) && $token !== '') {
+            $raw = $token;
+
+            return str_starts_with($raw, 'Bearer ')
+                ? substr($raw, 7)
+                : $raw;
+        }
+
+        $apiMessage = isset($body['message']) && is_string($body['message']) ? $body['message'] : null;
+        $rawBody = $resp->body();
+        $looksUnauthorized = $apiMessage !== null && strcasecmp(trim($apiMessage), 'Unauthorized') === 0;
+        $bodyUnauthorized = $rawBody !== '' && stripos($rawBody, 'Unauthorized') !== false;
+
+        Log::error('ClickPesa token generation failed', [
+            'url' => $url,
+            'status' => $resp->status(),
+            'body' => strlen($rawBody) > 500 ? substr($rawBody, 0, 500).'…' : $rawBody,
+        ]);
+
+        $sandboxHint = str_contains($this->baseUrl, 'sandbox')
+            ? ''
+            : ' Ikiwa funguo zako ni za majaribio (sandbox), weka CLICKPESA_USE_SANDBOX=true au CLICKPESA_BASE_URL=https://api-sandbox.clickpesa.com/third-parties kwenye .env.';
+
+        if ($resp->status() === 401 || $looksUnauthorized || ($resp->failed() && $bodyUnauthorized)) {
+            throw new \RuntimeException(
+                'ClickPesa: haikuweza kuingia (Unauthorized). Hakikisha CLIENT_ID na API_KEY zinafanana na mazingira (sandbox vs production), `php artisan config:clear`, kisha jaribu `php artisan clickpesa:test-token` kwenye seva.'.$sandboxHint
+            );
+        }
+
+        if ($resp->status() === 403) {
+            throw new \RuntimeException(
+                'ClickPesa: '.($apiMessage ?? 'API key si sahihi au imekwisha muda. Tengeneza API key mpya kwenye dashboard ya ClickPesa na usasishe .env.')
+            );
+        }
+
+        throw new \RuntimeException(
+            'ClickPesa: imeshindikana kupata token — '.($apiMessage ?: (strlen($rawBody) > 200 ? 'HTTP '.$resp->status() : $rawBody))
+        );
     }
 
     /**
@@ -87,9 +127,23 @@ class ClickPesaService
      */
     public function refreshToken(): string
     {
-        Cache::forget('clickpesa_token');
+        $this->forgetTokenCache();
 
         return $this->getToken();
+    }
+
+    /**
+     * Clear cached JWT for current configured credentials (e.g. after key rotation).
+     */
+    public function forgetTokenCache(): void
+    {
+        $cacheKey = 'clickpesa_token.'.hash('sha256', $this->clientId.'|'.$this->apiKey.'|'.$this->baseUrl);
+        try {
+            Cache::forget($cacheKey);
+            Cache::forget('clickpesa_token');
+        } catch (Throwable $e) {
+            Log::warning('ClickPesa: could not clear token cache', ['error' => $e->getMessage()]);
+        }
     }
 
     // ─── CHECKSUM ────────────────────────────────────────────────────────
