@@ -47,6 +47,24 @@ class AdminMessageNotification extends Notification
     }
 
     /**
+     * FCM push payload (preferred by FcmChannel over toArray).
+     */
+    public function toFcm(object $notifiable): array
+    {
+        return [
+            'type' => 'admin_message',
+            'title' => $this->title,
+            'body' => $this->message,
+            'data' => [
+                'type' => 'admin_message',
+                'title' => $this->title,
+                'message' => $this->message,
+                'action_url' => $this->actionUrl,
+            ],
+        ];
+    }
+
+    /**
      * Get the array representation of the notification.
      *
      * @return array<string, mixed>

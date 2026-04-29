@@ -31,33 +31,39 @@ class WorkerController extends Controller
 
         $radiusKm = $request->query('radius', 10);
 
-        // Get nearby jobs accepting quotes
-        $jobs = Job::with(['category', 'muhitaji'])
-            ->select([
-                'work_orders.*',
-                DB::raw("
+        // Get nearby jobs accepting quotes (subquery wrapper for MySQL + SQLite compat)
+        $jobs = collect(DB::select("
+            SELECT * FROM (
+                SELECT work_orders.*,
                     (6371 * acos(
-                        cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) 
+                        cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?))
                         + sin(radians(?)) * sin(radians(lat))
                     )) AS distance_km
-                ")
-            ])
-            ->setBindings([$user->lat, $user->lng, $user->lat])
-            ->whereIn('status', ['pending_quotes', 'receiving_quotes'])
-            ->where('quote_window_closes_at', '>', now())
-            ->having('distance_km', '<=', $radiusKm)
-            ->orderBy('distance_km', 'asc')
-            ->limit(20)
-            ->get()
-            ->map(function($job) use ($user) {
-                $job->already_quoted = Quote::where('job_id', $job->id)
-                    ->where('worker_id', $user->id)
-                    ->exists();
-                $job->time_remaining_minutes = $job->quote_window_closes_at 
-                    ? max(0, now()->diffInMinutes($job->quote_window_closes_at, false)) 
-                    : null;
-                return $job;
-            });
+                FROM work_orders
+                WHERE status IN ('pending_quotes', 'receiving_quotes')
+                  AND quote_window_closes_at > ?
+            ) AS nearby
+            WHERE distance_km <= ?
+            ORDER BY distance_km ASC
+            LIMIT 20
+        ", [$user->lat, $user->lng, $user->lat, now(), $radiusKm]));
+
+        // Eager-load relations & attach meta
+        $jobIds = $jobs->pluck('id')->toArray();
+        $loaded = Job::with(['category', 'muhitaji'])->whereIn('id', $jobIds)->get()->keyBy('id');
+
+        $jobs = $jobs->map(function($row) use ($user, $loaded) {
+            $job = $loaded->get($row->id);
+            if (!$job) return null;
+            $job->distance_km = $row->distance_km;
+            $job->already_quoted = Quote::where('job_id', $job->id)
+                ->where('worker_id', $user->id)
+                ->exists();
+            $job->time_remaining_minutes = $job->quote_window_closes_at
+                ? max(0, now()->diffInMinutes($job->quote_window_closes_at, false))
+                : null;
+            return $job;
+        })->filter();
 
         return view('mfanyakazi.nearby-jobs', [
             'jobs' => $jobs,
@@ -419,33 +425,38 @@ class WorkerController extends Controller
         }
         
         $radiusKm = 50; // 50km radius
-        
-        // Get nearby jobs with distance calculation
-        $jobs = Job::with(['category', 'muhitaji'])
-            ->select([
-                'work_orders.*',
-                DB::raw("
+
+        // Get nearby jobs with distance calculation (subquery for MySQL + SQLite)
+        $rows = collect(DB::select("
+            SELECT * FROM (
+                SELECT work_orders.*,
                     (6371 * acos(
-                        cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?)) 
+                        cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?))
                         + sin(radians(?)) * sin(radians(lat))
                     )) AS distance_km
-                ")
-            ])
-            ->setBindings([$user->lat, $user->lng, $user->lat])
-            ->whereIn('status', ['pending_quotes', 'receiving_quotes'])
-            ->where('quote_window_closes_at', '>', now())
-            ->having('distance_km', '<=', $radiusKm)
-            ->orderBy('distance_km', 'asc')
-            ->get()
-            ->map(function($job) use ($user) {
-                $job->already_quoted = Quote::where('job_id', $job->id)
-                    ->where('worker_id', $user->id)
-                    ->exists();
-                $job->time_remaining_minutes = $job->quote_window_closes_at 
-                    ? max(0, now()->diffInMinutes($job->quote_window_closes_at, false)) 
-                    : null;
-                return $job;
-            });
+                FROM work_orders
+                WHERE status IN ('pending_quotes', 'receiving_quotes')
+                  AND quote_window_closes_at > ?
+            ) AS nearby
+            WHERE distance_km <= ?
+            ORDER BY distance_km ASC
+        ", [$user->lat, $user->lng, $user->lat, now(), $radiusKm]));
+
+        $jobIds = $rows->pluck('id')->toArray();
+        $loaded = Job::with(['category', 'muhitaji'])->whereIn('id', $jobIds)->get()->keyBy('id');
+
+        $jobs = $rows->map(function($row) use ($user, $loaded) {
+            $job = $loaded->get($row->id);
+            if (!$job) return null;
+            $job->distance_km = $row->distance_km;
+            $job->already_quoted = Quote::where('job_id', $job->id)
+                ->where('worker_id', $user->id)
+                ->exists();
+            $job->time_remaining_minutes = $job->quote_window_closes_at
+                ? max(0, now()->diffInMinutes($job->quote_window_closes_at, false))
+                : null;
+            return $job;
+        })->filter();
         
         // Count by distance categories
         $nearJobsCount = $jobs->filter(fn($j) => $j->distance_km < 5)->count();

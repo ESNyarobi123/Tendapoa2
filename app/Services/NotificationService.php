@@ -22,26 +22,29 @@ class NotificationService
 
         $lat = $job->lat;
         $lng = $job->lng;
+        $radiusKmVal = $radiusKm;
 
-        $workers = User::select([
-            'users.*',
-            DB::raw('
-                (6371 * acos(
-                    cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?))
-                    + sin(radians(?)) * sin(radians(lat))
-                )) AS distance_km
-            '),
-        ])
-            ->setBindings([$lat, $lng, $lat])
-            ->where('role', 'mfanyakazi')
-            ->where('is_active', true)
-            ->whereNotNull('lat')
-            ->whereNotNull('lng')
-            ->where('id', '!=', $job->user_id)
-            ->having('distance_km', '<=', $radiusKm)
-            ->orderBy('distance_km', 'asc')
-            ->limit(50)
-            ->get();
+        // Use a subquery wrapper so the Haversine distance filter works on
+        // both MySQL and SQLite (SQLite rejects HAVING without GROUP BY).
+        $workers = User::fromQuery(
+            'SELECT * FROM (
+                SELECT users.*,
+                    (6371 * acos(
+                        cos(radians(?)) * cos(radians(lat)) * cos(radians(lng) - radians(?))
+                        + sin(radians(?)) * sin(radians(lat))
+                    )) AS distance_km
+                FROM users
+                WHERE role = ?
+                  AND is_active = 1
+                  AND lat IS NOT NULL
+                  AND lng IS NOT NULL
+                  AND id != ?
+            ) AS nearby
+            WHERE distance_km <= ?
+            ORDER BY distance_km ASC
+            LIMIT 50',
+            [$lat, $lng, $lat, 'mfanyakazi', $job->user_id, $radiusKmVal]
+        );
 
         $notified = 0;
         foreach ($workers as $worker) {

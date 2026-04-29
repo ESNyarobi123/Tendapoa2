@@ -29,3 +29,11 @@ Thumbs.db
 /tendapoa-*-firebase-adminsdk-*.json
 /storage/app/firebase/*.json
 firebase-credentials.json
+**/firebase-adminsdk-*.json
+**/service-account*.json
+
+# Mobile Firebase config files (these contain API keys; commit only if app
+# uses SHA-256 fingerprint restriction in Firebase Console).
+tendapoa-back/android/app/google-services.json
+tendapoa-back/ios/Runner/GoogleService-Info.plist
+tendapoa-back/lib/firebase_options.dart

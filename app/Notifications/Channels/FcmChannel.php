@@ -22,6 +22,8 @@ class FcmChannel
     public function send(object $notifiable, Notification $notification): void
     {
         if (! $this->fcm->isConfigured()) {
+            Log::info('FcmChannel: skipped — Firebase not configured');
+
             return;
         }
 
@@ -35,6 +37,8 @@ class FcmChannel
         }
 
         if (empty($tokens)) {
+            Log::info('FcmChannel: no tokens for notifiable', ['notifiable_id' => $notifiable->id ?? null]);
+
             return;
         }
 
@@ -49,6 +53,8 @@ class FcmChannel
                 'data' => $arr,
             ];
         } else {
+            Log::info('FcmChannel: no toFcm/toArray on notification', ['notification' => get_class($notification)]);
+
             return;
         }
 
@@ -59,8 +65,22 @@ class FcmChannel
         // Include standard fields for mobile app routing
         $data['notification_type'] = $payload['type'] ?? ($data['type'] ?? 'general');
 
+        Log::info('FcmChannel: sending', [
+            'notifiable_id' => $notifiable->id ?? null,
+            'token_count' => count($tokens),
+            'title' => $title,
+            'body' => mb_substr($body, 0, 80),
+            'type' => $data['notification_type'] ?? 'general',
+        ]);
+
         try {
             $result = $this->fcm->sendToTokens($tokens, $title, $body, $data);
+
+            Log::info('FcmChannel: result', [
+                'sent' => $result['sent'],
+                'failed' => $result['failed'],
+                'invalid_tokens' => count($result['invalidTokens'] ?? []),
+            ]);
 
             // Clean up invalid tokens
             if (! empty($result['invalidTokens'])) {
