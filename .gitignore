@@ -24,3 +24,8 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 /tendapoa-back
+
+# Firebase service account credentials (NEVER commit!)
+/tendapoa-*-firebase-adminsdk-*.json
+/storage/app/firebase/*.json
+firebase-credentials.json

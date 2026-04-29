@@ -66,7 +66,7 @@
               </div>
             <?php endif; ?>
 
-            <form id="mfanyakazi-create-form" method="post" action="<?php echo e(route('jobs.store-mfanyakazi')); ?>" class="space-y-0" novalidate>
+            <form id="mfanyakazi-create-form" method="post" action="<?php echo e(route('jobs.store-mfanyakazi')); ?>" enctype="multipart/form-data" class="space-y-0" novalidate>
               <?php echo csrf_field(); ?>
 
               
@@ -109,6 +109,35 @@
                     placeholder="Eleza huduma, uzoefu, na mteja anapaswa kukutarajia nini…"
                     class="min-h-[140px] w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] leading-relaxed text-slate-900 shadow-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                   ><?php echo e(old('description')); ?></textarea>
+                </div>
+                <div>
+                  <label class="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-slate-600">Picha ya huduma <span class="font-normal normal-case text-slate-400">(hiari)</span></label>
+                  <div class="cursor-pointer rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/80 px-4 py-6 text-center transition hover:border-brand-300 hover:bg-brand-50/30" id="image-upload-area" onclick="document.getElementById('image').click()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                    <input type="file" id="image" name="image" accept="image/*" class="hidden" onchange="handleImageSelect(event)">
+                    <div id="image-upload-placeholder">
+                      <div class="text-3xl">📷</div>
+                      <p class="mt-2 text-[12px] font-semibold text-slate-700">Bofya au vuta picha hapa</p>
+                      <p class="mt-1 text-[11px] text-slate-500">PNG, JPG, WEBP · max 5MB</p>
+                      <button type="button" onclick="event.stopPropagation(); document.getElementById('image').click();" class="mt-3 inline-flex rounded-lg border border-brand-200 bg-white px-3 py-1.5 text-[11px] font-bold text-brand-800 shadow-sm hover:bg-brand-50">Chagua picha</button>
+                    </div>
+                    <div id="image-preview" class="hidden">
+                      <img id="image-preview-img" src="" alt="" class="mx-auto max-h-48 rounded-xl object-contain shadow-md">
+                      <div class="mt-3 flex flex-wrap justify-center gap-2">
+                        <button type="button" onclick="event.stopPropagation(); document.getElementById('image').click();" class="rounded-lg border border-slate-200 px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">Badilisha</button>
+                        <button type="button" onclick="event.stopPropagation(); removeImage();" class="rounded-lg border border-red-200 px-3 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50">Ondoa</button>
+                      </div>
+                    </div>
+                  </div>
+                  <?php $__errorArgs = ['image'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                    <p class="mt-2 text-[12px] font-medium text-red-600"><?php echo e($message); ?></p>
+                  <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
                 </div>
               </div>
 
@@ -533,6 +562,70 @@
       if (!isNaN(la) && !isNaN(ln)) isLocationSet = true;
     }
   })();
+
+  // Image upload handlers (global)
+  window.handleImageSelect = function (event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Picha ni kubwa sana (max 5MB).');
+      event.target.value = '';
+      return;
+    }
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Chagua picha JPEG, PNG, au WEBP.');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      document.getElementById('image-preview-img').src = e.target.result;
+      document.getElementById('image-upload-placeholder').classList.add('hidden');
+      document.getElementById('image-preview').classList.remove('hidden');
+      const area = document.getElementById('image-upload-area');
+      area.classList.add('border-emerald-300', 'bg-emerald-50/50');
+      area.classList.remove('border-slate-200', 'bg-slate-50/80');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  window.removeImage = function () {
+    document.getElementById('image').value = '';
+    document.getElementById('image-upload-placeholder').classList.remove('hidden');
+    document.getElementById('image-preview').classList.add('hidden');
+    const area = document.getElementById('image-upload-area');
+    area.classList.remove('border-emerald-300', 'bg-emerald-50/50');
+    area.classList.add('border-slate-200', 'bg-slate-50/80');
+  };
+
+  window.handleDragOver = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const area = document.getElementById('image-upload-area');
+    area.classList.add('border-brand-400', 'bg-brand-50/40');
+  };
+
+  window.handleDragLeave = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const area = document.getElementById('image-upload-area');
+    if (!document.getElementById('image').files.length) {
+      area.classList.remove('border-brand-400', 'bg-brand-50/40');
+    }
+  };
+
+  window.handleDrop = function (event) {
+    event.preventDefault();
+    event.stopPropagation();
+    const area = document.getElementById('image-upload-area');
+    area.classList.remove('border-brand-400', 'bg-brand-50/40');
+    const files = event.dataTransfer.files;
+    if (files.length) {
+      document.getElementById('image').files = files;
+      window.handleImageSelect({ target: { files: files } });
+    }
+  };
 </script>
 <?php $__env->stopPush(); ?>
 <?php $__env->stopSection(); ?>

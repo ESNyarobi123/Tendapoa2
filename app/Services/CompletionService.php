@@ -82,6 +82,21 @@ class CompletionService
             // Release escrow to worker
             $releaseResult = $this->escrowService->releaseToWorker($job);
 
+            // Notify both parties (DB + FCM)
+            try {
+                $worker = $job->acceptedWorker ?? $job->selectedWorker;
+                $earnings = (int) ($releaseResult['worker_amount'] ?? $job->release_amount ?? 0);
+
+                if ($worker) {
+                    $worker->notify(new \App\Notifications\JobCompletedNotification($job, $earnings));
+                }
+                if ($poster = $job->user ?? $job->muhitaji) {
+                    $poster->notify(new \App\Notifications\JobCompletedForClientNotification($job, $worker));
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('JobCompleted notify failed: '.$e->getMessage());
+            }
+
             return [
                 'job' => $job->fresh(),
                 'release' => $releaseResult,

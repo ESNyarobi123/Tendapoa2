@@ -29,4 +29,17 @@ return [
         'paid' => 'Imelipwa',
         'rejected' => 'Imekataliwa',
     ],
+    'errors' => [
+        'generic' => 'Hitilafu imetokea. Tafadhali jaribu tena baadaye.',
+        'database' => 'Hitilafu ya mfumo wa data. Tafadhali wasiliana na msaada.',
+        'validation' => 'Tafadhali angalia taarifa ulizoweka.',
+        'unauthorized' => 'Tafadhali ingia kwanza ili kuendelea.',
+        'forbidden' => 'Huna ruhusa ya kufanya kitendo hiki.',
+        'not_found' => 'Kipengee hakikupatikana.',
+        'rate_limited' => 'Umetuma maombi mengi. Tafadhali subiri kidogo.',
+        'network' => 'Tatizo la mtandao. Tafadhali angalia muunganisho wako.',
+        'server' => 'Hitilafu ya server. Timu yetu imejulishwa, tafadhali jaribu tena baadaye.',
+        'method_not_allowed' => 'Kitendo hiki hakiruhusiwi.',
+        'service_unavailable' => 'Huduma haipatikani kwa muda. Tafadhali jaribu tena baadaye.',
+    ],
 ];

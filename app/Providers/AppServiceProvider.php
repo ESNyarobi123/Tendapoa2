@@ -7,6 +7,8 @@ use App\Models\Job;
 use App\Models\JobApplication;
 use App\Models\Setting;
 use App\Models\Withdrawal;
+use App\Notifications\Channels\FcmChannel;
+use Illuminate\Notifications\ChannelManager;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -27,6 +29,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->commands([TranslateLegacyJobsCommand::class]);
+
+        // Register custom 'fcm' notification channel for Firebase Cloud Messaging push.
+        $this->app->make(ChannelManager::class)->extend('fcm', function ($app) {
+            return $app->make(FcmChannel::class);
+        });
         // Share system settings with all views
         try {
             if (\Schema::hasTable('settings')) {

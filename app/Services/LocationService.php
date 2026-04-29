@@ -63,7 +63,7 @@ class LocationService
                 'color' => '#f59e0b',
                 'bg_color' => '#fef3c7',
                 'text_color' => '#92400e',
-                'label' => __('distance.no_user_location'),
+                'label' => __('messages.distance.no_user_location'),
             ];
         }
 
@@ -75,7 +75,7 @@ class LocationService
                 'color' => '#ef4444',
                 'bg_color' => '#fecaca',
                 'text_color' => '#dc2626',
-                'label' => __('distance.no_job_location'),
+                'label' => __('messages.distance.no_job_location'),
             ];
         }
 
@@ -88,7 +88,7 @@ class LocationService
                 'color' => '#6b7280',
                 'bg_color' => '#f3f4f6',
                 'text_color' => '#6b7280',
-                'label' => __('distance.unknown'),
+                'label' => __('messages.distance.unknown'),
             ];
         }
 
@@ -99,7 +99,7 @@ class LocationService
                 'color' => '#10b981',
                 'bg_color' => '#d1fae5',
                 'text_color' => '#065f46',
-                'label' => __('distance.near'),
+                'label' => __('messages.distance.near'),
             ];
         }
         if ($distance <= 10) {
@@ -109,7 +109,7 @@ class LocationService
                 'color' => '#f59e0b',
                 'bg_color' => '#fef3c7',
                 'text_color' => '#92400e',
-                'label' => __('distance.moderate'),
+                'label' => __('messages.distance.moderate'),
             ];
         }
 
@@ -119,7 +119,7 @@ class LocationService
             'color' => '#ef4444',
             'bg_color' => '#fecaca',
             'text_color' => '#dc2626',
-            'label' => __('distance.far'),
+            'label' => __('messages.distance.far'),
         ];
     }
 

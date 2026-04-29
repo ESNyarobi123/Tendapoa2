@@ -13,10 +13,9 @@ class MyJobsController extends Controller
     public function index()
     {
         $u = Auth::user();
-        if (! $u || ! in_array($u->role, ['muhitaji', 'admin'])) {
-            abort(403);
-        }
+        abort_unless($u, 403);
 
+        // Ownership-based: any user (muhitaji or mfanyakazi) can see jobs they posted.
         $query = Job::withCount(['comments', 'applications'])
             ->with(['acceptedWorker', 'selectedWorker', 'category'])
             ->where('user_id', $u->id);
@@ -36,8 +35,9 @@ class MyJobsController extends Controller
     public function applications()
     {
         $u = Auth::user();
-        abort_unless($u && in_array($u->role, ['muhitaji', 'admin'], true), 403);
+        abort_unless($u, 403);
 
+        // Ownership-based: any user (muhitaji or mfanyakazi) can see applications on their own jobs.
         $filter = request('filter');
         $query = JobApplication::query()
             ->whereHas('job', fn ($q) => $q->where('user_id', $u->id))
@@ -60,13 +60,14 @@ class MyJobsController extends Controller
     public function apiIndex()
     {
         $u = Auth::user();
-        if (! $u || ! in_array($u->role, ['muhitaji', 'admin'])) {
+        if (! $u) {
             return response()->json([
                 'error' => 'Huna ruhusa ya kupata kazi hizi.',
                 'status' => 'forbidden',
             ], 403);
         }
 
+        // Ownership-based: any user can fetch jobs they posted.
         $query = Job::withCount(['comments', 'applications'])
             ->with(['acceptedWorker', 'selectedWorker', 'category', 'payment'])
             ->where('user_id', $u->id);
@@ -109,12 +110,13 @@ class MyJobsController extends Controller
     public function apiApplications(Request $request)
     {
         $u = $request->user();
-        if (! $u || ! in_array($u->role, ['muhitaji', 'admin'], true)) {
+        if (! $u) {
             return response()->json([
                 'success' => false,
                 'message' => 'Huna ruhusa.',
             ], 403);
         }
+        // Ownership-based: any user can see applications on their own jobs.
 
         $filter = $request->get('filter');
         $query = JobApplication::query()

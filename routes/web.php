@@ -376,6 +376,8 @@ Route::middleware(['auth'])->group(function () {
         // Broadcast Notifications
         Route::get('/broadcast', [AdminController::class, 'showBroadcast'])->name('admin.broadcast');
         Route::post('/broadcast', [AdminController::class, 'sendBroadcast'])->name('admin.broadcast.send');
+        Route::get('/broadcast/audience', [AdminController::class, 'broadcastAudience'])->name('admin.broadcast.audience');
+        Route::get('/broadcast/users/search', [AdminController::class, 'broadcastUserSearch'])->name('admin.broadcast.users.search');
 
         // Withdrawals
         Route::get('/withdrawals', [WithdrawalAdminController::class, 'index'])->name('admin.withdrawals');

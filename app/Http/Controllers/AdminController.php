@@ -1364,57 +1364,135 @@ class AdminController extends Controller
         return back()->with('success', "Category '{$categoryName}' deleted successfully!");
     }
     /**
-     * Show broadcast form
+     * Show broadcast form with audience stats.
      */
     public function showBroadcast()
     {
-        return view('admin.broadcast');
+        $stats = [
+            'all' => User::count(),
+            'muhitaji' => User::where('role', 'muhitaji')->count(),
+            'mfanyakazi' => User::where('role', 'mfanyakazi')->count(),
+            'with_fcm' => User::whereHas('deviceTokens')->orWhereNotNull('fcm_token')->count(),
+        ];
+        $recent = \App\Models\SystemNotification::with('sender')->latest()->limit(10)->get();
+
+        return view('admin.broadcast', compact('stats', 'recent'));
     }
 
     /**
-     * Send broadcast notification
+     * Live audience-count endpoint used by the broadcast form (AJAX).
+     */
+    public function broadcastAudience(Request $request)
+    {
+        $target = $request->get('target', 'all');
+        $userIds = (array) $request->get('user_ids', []);
+
+        $q = User::query();
+        if (! empty($userIds)) {
+            $q->whereIn('id', $userIds);
+        } elseif ($target !== 'all') {
+            $q->where('role', $target);
+        }
+
+        $total = (clone $q)->count();
+        $withFcm = (clone $q)->where(function ($w) {
+            $w->whereHas('deviceTokens')->orWhereNotNull('fcm_token');
+        })->count();
+
+        return response()->json([
+            'total' => $total,
+            'with_fcm' => $withFcm,
+            'without_fcm' => $total - $withFcm,
+        ]);
+    }
+
+    /**
+     * AJAX user search for selecting specific users to push to.
+     */
+    public function broadcastUserSearch(Request $request)
+    {
+        $q = trim((string) $request->get('q', ''));
+        $users = User::query()
+            ->when($q !== '', function ($qb) use ($q) {
+                $qb->where(function ($w) use ($q) {
+                    $w->where('name', 'like', "%{$q}%")
+                      ->orWhere('email', 'like', "%{$q}%")
+                      ->orWhere('phone', 'like', "%{$q}%");
+                });
+            })
+            ->select('id', 'name', 'email', 'phone', 'role')
+            ->limit(20)
+            ->get();
+
+        return response()->json(['users' => $users]);
+    }
+
+    /**
+     * Send broadcast notification — DB + FCM push via AdminMessageNotification.
+     * Supports targeting by role (all/muhitaji/mfanyakazi) OR specific user_ids.
      */
     public function sendBroadcast(Request $request)
     {
         $request->validate([
             'title' => 'required|string|max:255',
-            'message' => 'required|string',
-            'target' => 'required|in:all,muhitaji,mfanyakazi',
+            'message' => 'required|string|max:2000',
+            'target' => 'required|in:all,muhitaji,mfanyakazi,specific',
+            'user_ids' => 'nullable|array',
+            'user_ids.*' => 'integer|exists:users,id',
+            'action_url' => 'nullable|string|max:500',
         ]);
 
-        $target = $request->target;
-        $users = User::query();
+        $target = $request->input('target');
+        $title = $request->input('title');
+        $message = $request->input('message');
+        $actionUrl = $request->input('action_url');
+        $userIds = (array) $request->input('user_ids', []);
 
-        if ($target !== 'all') {
-            $users->where('role', $target);
+        $usersQuery = User::query();
+        if ($target === 'specific') {
+            if (empty($userIds)) {
+                return back()->withErrors(['user_ids' => 'Tafadhali chagua angalau mtumiaji mmoja.'])->withInput();
+            }
+            $usersQuery->whereIn('id', $userIds);
+        } elseif ($target !== 'all') {
+            $usersQuery->where('role', $target);
         }
 
-        // Count users to notify
-        $count = $users->count();
+        $totalCount = (clone $usersQuery)->count();
+        $sent = 0;
+        $failed = 0;
 
-        // Chunking for performance if many users
-        $users->chunk(100, function ($chunk) use ($request) {
+        $usersQuery->chunk(100, function ($chunk) use ($title, $message, $actionUrl, &$sent, &$failed) {
             foreach ($chunk as $user) {
                 try {
-                    $user->notify(new \App\Notifications\AdminMessageNotification(
-                        $request->title,
-                        $request->message
-                    ));
-                } catch (\Exception $e) {
-                    \Log::error('Broadcast error for user ' . $user->id . ': ' . $e->getMessage());
+                    $user->notify(new \App\Notifications\AdminMessageNotification($title, $message, $actionUrl));
+                    $sent++;
+                } catch (\Throwable $e) {
+                    $failed++;
+                    \Log::error('Broadcast error for user '.$user->id.': '.$e->getMessage());
                 }
             }
         });
 
-        // Also save to SystemNotification table for history
+        // Save to SystemNotification table for history
         \App\Models\SystemNotification::create([
-            'title' => $request->title,
-            'message' => $request->message,
-            'target' => $target,
+            'title' => $title,
+            'message' => $message,
+            'target' => $target === 'specific' ? 'specific:'.count($userIds) : $target,
+            'action_url' => $actionUrl,
             'sent_by' => Auth::id(),
         ]);
 
-        return back()->with('success', "Taarifa imetumwa kwa watumiaji {$count} (" . ($target == 'all' ? 'Wote' : ucfirst($target)) . ').');
+        $label = match ($target) {
+            'all' => 'Watumiaji wote',
+            'muhitaji' => 'Wahitaji',
+            'mfanyakazi' => 'Wafanyakazi',
+            'specific' => 'Watumiaji '.count($userIds).' waliochaguliwa',
+        };
+
+        $note = $failed > 0 ? " ({$failed} zimeshindwa)" : '';
+
+        return back()->with('success', "Taarifa imetumwa kwa {$label}: {$sent}/{$totalCount}{$note}. FCM push imetumwa kwa walio na devices zilizosajiliwa.");
     }
 }
 

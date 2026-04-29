@@ -61,6 +61,19 @@ class User extends Authenticatable
         return $this->hasMany(PrivateMessage::class, 'receiver_id');
     }
 
+    public function deviceTokens()
+    {
+        return $this->hasMany(\App\Models\DeviceToken::class);
+    }
+
+    /**
+     * Route notifications for the FCM channel.
+     */
+    public function routeNotificationForFcm($notification)
+    {
+        return $this->deviceTokens()->pluck('token')->all() ?: ($this->fcm_token ? [$this->fcm_token] : []);
+    }
+
     // Additional relationships for admin
     public function muhitaji()
     {

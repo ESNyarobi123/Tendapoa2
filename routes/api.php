@@ -81,15 +81,23 @@ Route::prefix('auth')->group(function () {
     // Get user profile details
     Route::get('/getuser', [AuthController::class, 'getuser'])->middleware('auth:sanctum');
 
-    // OTP Password Reset
-    Route::post('/password/send-otp', [OtpPasswordResetApiController::class, 'sendOtp']);
-    Route::post('/password/verify-otp', [OtpPasswordResetApiController::class, 'verifyOtp']);
-    Route::post('/password/reset', [OtpPasswordResetApiController::class, 'resetPassword']);
+    // OTP Password Reset (throttled to prevent abuse / email bombing)
+    Route::post('/password/send-otp', [OtpPasswordResetApiController::class, 'sendOtp'])
+        ->middleware('throttle:3,1'); // 3 requests per minute per IP+route
+    Route::post('/password/verify-otp', [OtpPasswordResetApiController::class, 'verifyOtp'])
+        ->middleware('throttle:10,1');
+    Route::post('/password/reset', [OtpPasswordResetApiController::class, 'resetPassword'])
+        ->middleware('throttle:5,1');
 });
 
 Route::middleware('auth:sanctum')->group(function () {
-    // Njia ya kusajili FCM Token
+    // Legacy single-device FCM token (kept for backward compat with old app builds)
     Route::post('/fcm-token', [AuthController::class, 'updateToken']);
+
+    // Multi-device FCM token management (preferred for new mobile builds)
+    Route::post('/fcm/register', [\App\Http\Controllers\FcmTokenController::class, 'register']);
+    Route::post('/fcm/unregister', [\App\Http\Controllers\FcmTokenController::class, 'unregister']);
+    Route::get('/fcm/devices', [\App\Http\Controllers\FcmTokenController::class, 'list']);
 
     // Update Profile (Photo & Details)
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
@@ -732,7 +740,30 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'lng' => ['required', 'numeric', 'between:-180,180'],
                 'phone' => ['required', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
                 'address_text' => ['nullable'],
+                'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
+                    if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
+                        $fail('Faili lazima iwe picha.');
+                    }
+                }],
             ]);
+
+            // Handle image upload via reflection (same pattern as muhitaji)
+            $imagePath = null;
+            if ($request->hasFile('image')) {
+                $controller = app(JobController::class);
+                $reflection = new ReflectionClass($controller);
+                $method = $reflection->getMethod('handleImageUpload');
+                $method->setAccessible(true);
+                $imagePath = $method->invoke($controller, $request->file('image'));
+
+                if ($imagePath) {
+                    $imageFullPath = storage_path('app/public/'.$imagePath);
+                    if (! file_exists($imageFullPath)) {
+                        Log::error('API mfanyakazi image upload: file not found', ['imagePath' => $imagePath]);
+                        $imagePath = null;
+                    }
+                }
+            }
 
             $localized = TranslationService::ensureBothLanguages(
                 $validated['title'],
@@ -753,6 +784,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'description' => $validated['description'],
                     'description_sw' => $localized['description_sw'],
                     'description_en' => $localized['description_en'],
+                    'image' => $imagePath,
                     'price' => $validated['price'],
                     'lat' => $validated['lat'],
                     'lng' => $validated['lng'],
@@ -772,7 +804,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             }
 
             if ($wallet->balance >= $postingFee) {
-                $job = DB::transaction(function () use ($user, $validated, $localized, $postingFee, $wallet) {
+                $job = DB::transaction(function () use ($user, $validated, $localized, $postingFee, $wallet, $imagePath) {
                     $job = Job::create([
                         'user_id' => $user->id,
                         'category_id' => $validated['category_id'],
@@ -782,6 +814,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                         'description' => $validated['description'],
                         'description_sw' => $localized['description_sw'],
                         'description_en' => $localized['description_en'],
+                        'image' => $imagePath,
                         'price' => $validated['price'],
                         'lat' => $validated['lat'],
                         'lng' => $validated['lng'],
@@ -821,6 +854,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'description' => $validated['description'],
                     'description_sw' => $localized['description_sw'],
                     'description_en' => $localized['description_en'],
+                    'image' => $imagePath,
                     'price' => $validated['price'],
                     'lat' => $validated['lat'],
                     'lng' => $validated['lng'],

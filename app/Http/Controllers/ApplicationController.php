@@ -6,6 +6,9 @@ use App\Models\Job;
 use App\Models\JobApplication;
 use App\Models\PrivateMessage;
 use App\Models\User;
+use App\Notifications\ApplicationAcceptedNotification;
+use App\Notifications\ApplicationRejectedNotification;
+use App\Notifications\JobApplicationReceivedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -91,6 +94,15 @@ class ApplicationController extends Controller
                 'receiver_id' => $job->user_id,
                 'message' => "✋ {$user->name} ameomba kufanya kazi yako \"{$job->title}\" kwa TZS ".number_format($request->input('proposed_amount')).($request->input('eta_text') ? " | ETA: {$request->input('eta_text')}" : ''),
             ]);
+
+            // Notify the job poster (DB + FCM push)
+            try {
+                if ($poster = $job->user) {
+                    $poster->notify(new JobApplicationReceivedNotification($job, $user, (int) $request->input('proposed_amount')));
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('JobApplicationReceived notify failed: '.$e->getMessage());
+            }
         });
 
         return redirect()
@@ -140,6 +152,15 @@ class ApplicationController extends Controller
                 'receiver_id' => $application->worker_id,
                 'message' => "❌ Pole, ombi lako la kazi \"{$job->title}\" limekataliwa.",
             ]);
+
+            // Notify worker (DB + FCM push)
+            try {
+                if ($worker = $application->worker) {
+                    $worker->notify(new ApplicationRejectedNotification($job));
+                }
+            } catch (\Throwable $e) {
+                \Log::warning('ApplicationRejected notify failed: '.$e->getMessage());
+            }
         });
 
         return back()->with('success', 'Ombi limekataliwa.');
@@ -260,7 +281,8 @@ class ApplicationController extends Controller
             return back()->withErrors(['error' => 'Ombi hili haliwezi kuchaguliwa.']);
         }
 
-        DB::transaction(function () use ($job, $application) {
+        $rejectedWorkerIds = [];
+        DB::transaction(function () use ($job, $application, &$rejectedWorkerIds) {
             $agreedAmount = $application->getAgreedAmount();
 
             // Mark application as selected
@@ -268,6 +290,12 @@ class ApplicationController extends Controller
                 'status' => JobApplication::STATUS_SELECTED,
                 'selected_at' => now(),
             ]);
+
+            // Capture losers before bulk-rejecting them so we can notify
+            $rejectedWorkerIds = JobApplication::where('work_order_id', $job->id)
+                ->where('id', '!=', $application->id)
+                ->whereNotIn('status', [JobApplication::STATUS_WITHDRAWN, JobApplication::STATUS_REJECTED])
+                ->pluck('worker_id')->all();
 
             // Reject all other active applications
             JobApplication::where('work_order_id', $job->id)
@@ -296,7 +324,24 @@ class ApplicationController extends Controller
                 'receiver_id' => $application->worker_id,
                 'message' => "🎉 Umechaguliwa kufanya kazi \"{$job->title}\"! Tunasubiri muhitaji afanye malipo, kisha utaarifu.",
             ]);
+
+            try {
+                $application->worker?->notify(new ApplicationAcceptedNotification($job, $agreedAmount));
+            } catch (\Throwable $e) {
+                \Log::warning('ApplicationAccepted notify failed: '.$e->getMessage());
+            }
         });
+
+        // Notify all losers (DB + FCM) outside the transaction
+        if (! empty($rejectedWorkerIds)) {
+            try {
+                User::whereIn('id', $rejectedWorkerIds)->each(function ($w) use ($job) {
+                    $w->notify(new ApplicationRejectedNotification($job, 'Mfanyakazi mwingine amechaguliwa.'));
+                });
+            } catch (\Throwable $e) {
+                \Log::warning('Bulk ApplicationRejected notify failed: '.$e->getMessage());
+            }
+        }
 
         // Redirect to funding page
         return redirect()->route('jobs.fund', $job)->with('success', 'Umemchagua mfanyakazi! Sasa fanya malipo.');
@@ -355,6 +400,12 @@ class ApplicationController extends Controller
                 'message' => "✋ {$user->name} ameomba kufanya kazi yako kwa TZS ".number_format($validated['proposed_amount']),
             ]);
 
+            try {
+                $job->user?->notify(new JobApplicationReceivedNotification($job, $user, (int) $validated['proposed_amount']));
+            } catch (\Throwable $e) {
+                \Log::warning('apiStore JobApplicationReceived notify failed: '.$e->getMessage());
+            }
+
             return $app;
         });
 
@@ -403,6 +454,18 @@ class ApplicationController extends Controller
                 'receiver_id' => $application->worker_id,
                 'message' => '🎉 Umechaguliwa! Tunasubiri malipo.',
             ]);
+
+            try {
+                $application->worker?->notify(new ApplicationAcceptedNotification($job, $agreedAmount));
+                // Notify losers
+                User::whereIn('id', JobApplication::where('work_order_id', $job->id)
+                    ->where('id', '!=', $application->id)
+                    ->where('status', JobApplication::STATUS_REJECTED)
+                    ->pluck('worker_id'))
+                    ->each(fn ($w) => $w->notify(new ApplicationRejectedNotification($job, 'Mfanyakazi mwingine amechaguliwa.')));
+            } catch (\Throwable $e) {
+                \Log::warning('apiSelect notify failed: '.$e->getMessage());
+            }
         });
 
         return response()->json([

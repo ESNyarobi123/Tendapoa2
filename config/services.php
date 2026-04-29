@@ -63,6 +63,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Firebase Cloud Messaging (FCM) — Push Notifications
+    |--------------------------------------------------------------------------
+    | Credentials JSON is stored in storage/app/firebase/credentials.json (gitignored).
+    | Override path via FIREBASE_CREDENTIALS env if needed.
+    */
+    'firebase' => [
+        'credentials_path' => env('FIREBASE_CREDENTIALS', storage_path('app/firebase/credentials.json')),
+        'project_id' => env('FIREBASE_PROJECT_ID'),
+        'enabled' => filter_var(env('FIREBASE_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | ClickPesa Payment Gateway
     |--------------------------------------------------------------------------
     */

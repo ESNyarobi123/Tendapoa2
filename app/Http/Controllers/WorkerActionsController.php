@@ -82,6 +82,8 @@ class WorkerActionsController extends Controller
             abort(403);
         }
 
+        $poster = $job->muhitaji ?? $job->user;
+
         if ($col = $this->responseColumn()) {
             $job->{$col} = 'no';
         }
@@ -97,6 +99,13 @@ class WorkerActionsController extends Controller
             } catch (\Exception $e) {
                 \Log::error('Refund failed on worker decline: '.$e->getMessage());
             }
+        }
+
+        // Notify the job poster that worker declined (DB + FCM push)
+        try {
+            $poster?->notify(new \App\Notifications\WorkerDeclinedJobNotification($job, $u));
+        } catch (\Throwable $e) {
+            \Log::warning('WorkerDeclinedJob notify failed: '.$e->getMessage());
         }
 
         return redirect()->route('mfanyakazi.assigned')->with('status', 'Umeikataa kazi.');

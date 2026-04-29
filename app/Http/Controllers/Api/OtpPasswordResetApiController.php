@@ -13,97 +13,148 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
+/**
+ * OTP-based password reset flow for the mobile app.
+ *
+ * Three steps:
+ *   1) POST /password/send-otp     — generate + email OTP (10-min lifetime)
+ *   2) POST /password/verify-otp   — verify OTP, return short-lived reset_token
+ *   3) POST /password/reset        — set new password using reset_token (15-min window)
+ *
+ * Security hardening:
+ * - No email enumeration: identical generic response whether email exists or not.
+ * - Brute-force protection: max 5 wrong OTP attempts per record before invalidation.
+ * - Throttle middleware (configured at route layer) prevents OTP-spamming.
+ * - reset_token stored in its own column (not stuffed into the otp column).
+ * - All sanctum tokens revoked after a successful password reset.
+ */
 class OtpPasswordResetApiController extends Controller
 {
+    private const OTP_LIFETIME_MINUTES = 10;
+
     public function sendOtp(Request $request): JsonResponse
     {
-        $request->validate(['email' => ['required', 'email']]);
-
-        $user = User::where('email', $request->email)->first();
-        if (! $user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Barua pepe hii haipo katika mfumo wetu.',
-            ], 404);
-        }
-
-        PasswordOtpReset::where('email', $request->email)->delete();
-
-        $otp = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        PasswordOtpReset::create([
-            'email' => $request->email,
-            'otp' => $otp,
-            'expires_at' => now()->addMinutes(10),
+        $request->validate([
+            'email' => ['required', 'email', 'max:255'],
         ]);
 
-        try {
-            Mail::to($user->email)->send(new OtpPasswordResetMail($otp, $user->name));
-            Log::info('API OTP mail sent', ['email' => $user->email]);
-        } catch (\Exception $e) {
-            Log::error('API OTP mail failed', ['email' => $user->email, 'error' => $e->getMessage()]);
-            PasswordOtpReset::where('email', $request->email)->delete();
+        $email = strtolower(trim($request->input('email')));
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Imeshindwa kutuma barua pepe. Jaribu tena baadaye.',
-            ], 500);
+        // Always return success to prevent email enumeration.
+        // Only do real work if the user exists.
+        if ($user) {
+            // Invalidate any previous OTP for this email
+            PasswordOtpReset::where('email', $user->email)->delete();
+
+            $otp = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+            PasswordOtpReset::create([
+                'email' => $user->email,
+                'otp' => $otp,
+                'expires_at' => now()->addMinutes(self::OTP_LIFETIME_MINUTES),
+            ]);
+
+            try {
+                Mail::to($user->email)->send(new OtpPasswordResetMail($otp, $user->name));
+                Log::info('Password OTP sent', ['email' => $user->email]);
+            } catch (\Throwable $e) {
+                Log::error('Password OTP mail failed', [
+                    'email' => $user->email,
+                    'error' => $e->getMessage(),
+                ]);
+                // Clean up so user can retry; still return generic success to caller.
+                PasswordOtpReset::where('email', $user->email)->delete();
+            }
+        } else {
+            Log::info('Password OTP requested for unknown email', ['email' => $email]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Msimbo wa OTP umetumwa kwa barua pepe yako.',
+            'message' => 'Ikiwa barua pepe imesajiliwa, msimbo wa OTP umetumwa. Angalia kwenye inbox yako.',
         ]);
     }
 
     public function verifyOtp(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['required', 'email', 'max:255'],
             'otp' => ['required', 'string', 'size:6'],
         ]);
 
-        $record = PasswordOtpReset::where('email', $request->email)
-            ->where('otp', $request->otp)
+        $email = strtolower(trim($request->input('email')));
+
+        // Find latest active OTP for this email (case-insensitive)
+        $record = PasswordOtpReset::whereRaw('LOWER(email) = ?', [$email])
+            ->whereNull('verified_at')
+            ->latest('id')
             ->first();
 
         if (! $record) {
             return response()->json([
                 'success' => false,
-                'message' => 'Msimbo wa OTP si sahihi.',
+                'message' => 'Hakuna ombi la OTP linalosubiri. Tafadhali omba msimbo mpya.',
             ], 422);
         }
 
         if ($record->isExpired()) {
             $record->delete();
-
             return response()->json([
                 'success' => false,
                 'message' => 'Msimbo wa OTP umeisha muda. Omba msimbo mpya.',
             ], 422);
         }
 
-        $resetToken = Str::random(64);
+        if ($record->hasExceededAttempts()) {
+            $record->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'Umejaribu mara nyingi. Omba msimbo mpya wa OTP.',
+            ], 429);
+        }
 
-        $record->update(['otp' => 'VERIFIED__'.$resetToken]);
+        // Constant-time comparison
+        if (! hash_equals($record->otp, (string) $request->input('otp'))) {
+            $record->increment('attempts');
+            $remaining = max(0, PasswordOtpReset::MAX_ATTEMPTS - $record->attempts);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Msimbo wa OTP si sahihi.',
+                'attempts_remaining' => $remaining,
+            ], 422);
+        }
+
+        // Success — issue reset token
+        $resetToken = Str::random(64);
+        $record->update([
+            'reset_token' => $resetToken,
+            'verified_at' => now(),
+            'attempts' => 0,
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'OTP imethibitishwa. Sasa weka neno siri jipya.',
+            'message' => 'OTP imethibitishwa. Weka neno siri jipya ndani ya dakika '.PasswordOtpReset::RESET_WINDOW_MINUTES.'.',
             'reset_token' => $resetToken,
+            'expires_in_minutes' => PasswordOtpReset::RESET_WINDOW_MINUTES,
         ]);
     }
 
     public function resetPassword(Request $request): JsonResponse
     {
         $request->validate([
-            'email' => ['required', 'email'],
-            'reset_token' => ['required', 'string'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'email' => ['required', 'email', 'max:255'],
+            'reset_token' => ['required', 'string', 'size:64'],
+            'password' => ['required', 'string', 'min:8', 'max:255', 'confirmed'],
         ]);
 
-        $record = PasswordOtpReset::where('email', $request->email)
-            ->where('otp', 'VERIFIED__'.$request->reset_token)
+        $email = strtolower(trim($request->input('email')));
+
+        $record = PasswordOtpReset::whereRaw('LOWER(email) = ?', [$email])
+            ->where('reset_token', $request->input('reset_token'))
+            ->whereNotNull('verified_at')
             ->first();
 
         if (! $record) {
@@ -113,19 +164,35 @@ class OtpPasswordResetApiController extends Controller
             ], 422);
         }
 
-        $user = User::where('email', $request->email)->first();
-        if (! $user) {
+        if (! $record->isResetWindowOpen()) {
+            $record->delete();
             return response()->json([
                 'success' => false,
-                'message' => 'Mtumiaji hapatikani.',
-            ], 404);
+                'message' => 'Muda wa kubadili neno siri umeisha. Anza upya kwa kuomba OTP.',
+            ], 422);
         }
 
-        $user->update(['password' => Hash::make($request->password)]);
+        $user = User::whereRaw('LOWER(email) = ?', [$email])->first();
+        if (! $user) {
+            $record->delete();
+            return response()->json([
+                'success' => false,
+                'message' => 'Ombi si halali.',
+            ], 422);
+        }
 
+        $user->update(['password' => Hash::make($request->input('password'))]);
+
+        // Cleanup: remove reset record + revoke all active sessions/tokens for safety
         $record->delete();
+        PasswordOtpReset::where('email', $user->email)->delete();
+        try {
+            $user->tokens()->delete();
+        } catch (\Throwable $e) {
+            Log::warning('Token revoke after password reset failed: '.$e->getMessage());
+        }
 
-        $user->tokens()->delete();
+        Log::info('Password reset via OTP succeeded', ['user_id' => $user->id]);
 
         return response()->json([
             'success' => true,

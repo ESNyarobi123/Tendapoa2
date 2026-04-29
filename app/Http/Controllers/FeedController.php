@@ -59,7 +59,7 @@ class FeedController extends Controller
                     'color' => '#6b7280',
                     'bg_color' => '#f3f4f6',
                     'text_color' => '#6b7280',
-                    'label' => __('distance.unknown'),
+                    'label' => __('messages.distance.unknown'),
                 ];
                 if ($job->image) {
                     $job->image_url = asset('storage/'.$job->image);
@@ -170,7 +170,7 @@ class FeedController extends Controller
                     'color' => '#6b7280',
                     'bg_color' => '#f3f4f6',
                     'text_color' => '#6b7280',
-                    'label' => __('distance.unknown'),
+                    'label' => __('messages.distance.unknown'),
                 ];
                 if ($job->image) {
                     $job->image_url = asset('storage/'.$job->image);
@@ -298,7 +298,7 @@ class FeedController extends Controller
                     'color' => '#6b7280',
                     'bg_color' => '#f3f4f6',
                     'text_color' => '#6b7280',
-                    'label' => __('distance.unknown'),
+                    'label' => __('messages.distance.unknown'),
                 ];
                 if ($job->image) {
                     $job->image_url = asset('storage/'.$job->image);

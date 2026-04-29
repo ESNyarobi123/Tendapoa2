@@ -375,6 +375,11 @@ class JobController extends Controller
 
     public function create()
     {
+        // Mfanyakazi has a separate posting flow (with posting fee). Redirect them there.
+        if (Auth::user()?->role === 'mfanyakazi') {
+            return redirect()->route('jobs.create-mfanyakazi');
+        }
+
         $this->ensureMuhitajiOrAdmin();
 
         $wallet = Auth::user()->ensureWallet();
@@ -497,16 +502,14 @@ class JobController extends Controller
 
     public function edit(Job $job)
     {
-        $this->ensureMuhitajiOrAdmin();
+        // Ownership-based: only job owner (muhitaji or mfanyakazi who posted) or admin can edit.
+        if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Huna ruhusa ya kubadilisha kazi hii.');
+        }
 
         // Only allow editing if job is open or awaiting_payment (not in progress or completed)
         if (! in_array($job->status, [Job::S_OPEN, Job::S_AWAITING_PAYMENT, 'posted', 'assigned'])) {
             return back()->withErrors(['edit' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.']);
-        }
-
-        // Only job owner can edit
-        if ($job->user_id !== Auth::id()) {
-            abort(403, 'Huna ruhusa ya kubadilisha kazi hii.');
         }
 
         return view('jobs.edit', [
@@ -517,16 +520,14 @@ class JobController extends Controller
 
     public function update(Request $r, Job $job, ClickPesaService $clickpesa)
     {
-        $this->ensureMuhitajiOrAdmin();
-
-        // Only allow editing if job is posted or assigned
-        if (! in_array($job->status, ['posted', 'assigned'])) {
-            return back()->withErrors(['edit' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.']);
+        // Ownership-based: only job owner or admin can update.
+        if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Huna ruhusa ya kubadilisha kazi hii.');
         }
 
-        // Only job owner can edit
-        if ($job->user_id !== Auth::id()) {
-            abort(403, 'Huna ruhusa ya kubadilisha kazi hii.');
+        // Only allow editing if job is open/awaiting_payment/posted/assigned
+        if (! in_array($job->status, [Job::S_OPEN, Job::S_AWAITING_PAYMENT, 'posted', 'assigned'])) {
+            return back()->withErrors(['edit' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.']);
         }
 
         $r->validate([
@@ -614,10 +615,13 @@ class JobController extends Controller
     // API Methods for Job Editing
     public function apiEdit(Job $job)
     {
-        $this->ensureMuhitajiOrAdmin();
+        // Ownership-based: only job owner or admin can edit.
+        if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Huna ruhusa ya kubadilisha kazi hii.'], 403);
+        }
 
-        // Only allow editing if job is posted or assigned
-        if (! in_array($job->status, ['posted', 'assigned'])) {
+        // Only allow editing if job is open/awaiting_payment/posted/assigned
+        if (! in_array($job->status, [Job::S_OPEN, Job::S_AWAITING_PAYMENT, 'posted', 'assigned'])) {
             return response()->json([
                 'error' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.',
                 'status' => 'error',
@@ -654,10 +658,13 @@ class JobController extends Controller
 
     public function apiUpdate(Request $r, Job $job, ClickPesaService $clickpesa)
     {
-        $this->ensureMuhitajiOrAdmin();
+        // Ownership-based: only job owner or admin can update.
+        if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Huna ruhusa ya kubadilisha kazi hii.'], 403);
+        }
 
-        // Only allow editing if job is posted or assigned
-        if (! in_array($job->status, ['posted', 'assigned'])) {
+        // Only allow editing if job is open/awaiting_payment/posted/assigned
+        if (! in_array($job->status, [Job::S_OPEN, Job::S_AWAITING_PAYMENT, 'posted', 'assigned'])) {
             return response()->json([
                 'error' => 'Huwezi kubadilisha kazi ambayo imeanza au imekamilika.',
                 'status' => 'error',
@@ -873,7 +880,10 @@ class JobController extends Controller
 
     public function wait(Job $job)
     {
-        $this->ensureMuhitajiOrAdmin();
+        // Ownership-based: only job owner or admin can view payment wait page.
+        if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
+            abort(403, 'Huna ruhusa.');
+        }
         $job->load('payment');
 
         return view('jobs.wait', ['job' => $job]);
@@ -881,8 +891,7 @@ class JobController extends Controller
 
     public function retryPayment(Job $job, ClickPesaService $clickpesa)
     {
-        $this->ensureMuhitajiOrAdmin();
-
+        // Ownership-based: only job owner or admin can retry payment.
         if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
             abort(403, 'Huna ruhusa.');
         }
@@ -941,10 +950,28 @@ class JobController extends Controller
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
             'phone' => ['required', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
+            'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
+                if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
+                    $fail('Faili lazima iwe picha.');
+                }
+            }],
         ], [
             'phone.regex' => 'Weka 06/07xxxxxxxx au 2556/2557xxxxxxxx.',
             'description.min' => 'Maelezo lazima yawe angalau herufi 20.',
+            'image.max' => 'Picha haipaswi kuwa kubwa zaidi ya 5MB.',
         ]);
+
+        // Handle image upload
+        $imagePath = $this->handleImageUpload($request->file('image'));
+
+        // Verify image file exists before saving to database
+        if ($imagePath) {
+            $imageFullPath = storage_path('app/public/'.$imagePath);
+            if (! file_exists($imageFullPath)) {
+                \Log::error('Mfanyakazi image upload: file not found after upload', ['imagePath' => $imagePath]);
+                $imagePath = null;
+            }
+        }
 
         $postingFee = 2000; // TZS 2,000 posting fee
         $userWallet = $user->ensureWallet();
@@ -952,22 +979,23 @@ class JobController extends Controller
         // Check if user has enough balance
         if ($userWallet->balance >= $postingFee) {
             // Deduct from wallet
-            return $this->processWalletPayment($request, $postingFee, $userWallet);
+            return $this->processWalletPayment($request, $postingFee, $userWallet, $imagePath);
         } else {
             // Use ClickPesa for payment
-            return $this->processClickPesaPayment($request, $postingFee, $clickpesa);
+            return $this->processClickPesaPayment($request, $postingFee, $clickpesa, $imagePath);
         }
     }
 
-    private function processWalletPayment(Request $request, $postingFee, $userWallet)
+    private function processWalletPayment(Request $request, $postingFee, $userWallet, $imagePath = null)
     {
-        return DB::transaction(function () use ($request, $postingFee, $userWallet) {
+        return DB::transaction(function () use ($request, $postingFee, $userWallet, $imagePath) {
             // Create the job
             $job = Job::create([
                 'user_id' => Auth::id(),
                 'category_id' => (int) $request->input('category_id'),
                 'title' => $request->input('title'),
                 'description' => $request->input('description'),
+                'image' => $imagePath,
                 'price' => (int) $request->input('price'),
                 'lat' => (float) $request->input('lat'),
                 'lng' => (float) $request->input('lng'),
@@ -994,7 +1022,7 @@ class JobController extends Controller
         });
     }
 
-    private function processClickPesaPayment(Request $request, $postingFee, ClickPesaService $clickpesa)
+    private function processClickPesaPayment(Request $request, $postingFee, ClickPesaService $clickpesa, $imagePath = null)
     {
         // Create job with pending payment
         $job = Job::create([
@@ -1002,6 +1030,7 @@ class JobController extends Controller
             'category_id' => (int) $request->input('category_id'),
             'title' => $request->input('title'),
             'description' => $request->input('description'),
+            'image' => $imagePath,
             'price' => (int) $request->input('price'),
             'lat' => (float) $request->input('lat'),
             'lng' => (float) $request->input('lng'),
@@ -1032,8 +1061,7 @@ class JobController extends Controller
 
     public function cancel(Job $job)
     {
-        $this->ensureMuhitajiOrAdmin();
-
+        // Ownership-based: only job owner or admin can cancel.
         if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
             abort(403, 'Huna ruhusa ya ku-cancel kazi hii.');
         }
@@ -1162,8 +1190,7 @@ class JobController extends Controller
 
     public function apiRetryPayment(Job $job, ClickPesaService $clickpesa)
     {
-        $this->ensureMuhitajiOrAdmin();
-
+        // Ownership-based: only job owner or admin can retry payment.
         if ($job->user_id !== Auth::id() && Auth::user()->role !== 'admin') {
             return response()->json(['success' => false, 'message' => 'Huna ruhusa.'], 403);
         }

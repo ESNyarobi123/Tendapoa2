@@ -240,16 +240,35 @@ class AuthController extends Controller
         ]);
     }
 
-    // Njia ya kusajili FCM Token
+    // Njia ya kusajili FCM Token (legacy + multi-device persist)
     public function updateToken(Request $request)
     {
         $request->validate([
-            'token' => 'required|string',
+            'token' => 'required|string|min:50|max:500',
+            'platform' => 'nullable|string|in:android,ios,web',
         ]);
         /** @var \App\Models\User $user */
         $user = Auth::user();
-        $user->fcm_token = $request->token; // Hakikisha una column 'fcm_token' kwenye users table
+        $token = $request->token;
+
+        // Backward compat: keep most recent token on users.fcm_token
+        $user->fcm_token = $token;
         $user->save();
+
+        // Multi-device support: upsert into device_tokens
+        try {
+            \App\Models\DeviceToken::updateOrCreate(
+                ['token' => $token],
+                [
+                    'user_id' => $user->id,
+                    'platform' => $request->input('platform'),
+                    'last_used_at' => now(),
+                ]
+            );
+        } catch (\Throwable $e) {
+            \Log::warning('updateToken device_tokens upsert failed: '.$e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'FCM token updated successfully'
