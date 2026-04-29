@@ -697,6 +697,29 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         Route::post('/{job}/apply', [ApplicationController::class, 'apiStore']);
         Route::post('/{job}/applications/{application}/select', [ApplicationController::class, 'apiSelect']);
 
+        // List applicants for a job (only the poster — muhitaji or mfanyakazi-poster — can view)
+        Route::get('/{job}/applications', function (Request $request, Job $job) {
+            $user = $request->user();
+            if ($job->user_id !== $user->id && $user->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Hii sio kazi yako.',
+                ], 403);
+            }
+
+            $applications = $job->applications()
+                ->with(['worker:id,name,phone,profile_photo_path,lat,lng'])
+                ->latest('id')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $applications,
+                'job_id' => $job->id,
+                'total' => $applications->count(),
+            ]);
+        });
+
         // ============================================================
         // NEW WORKFLOW: Funding (escrow)
         // ============================================================
@@ -893,6 +916,41 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
 
         // Maombi yangu (job_applications)
         Route::get('/applications', [WorkerApplicationsController::class, 'apiIndex']);
+
+        // Kazi nilizochapisha mwenyewe (mfanyakazi) + idadi ya waombaji wa kila moja
+        Route::get('/posted-jobs', function (Request $request) {
+            $user = $request->user();
+            if ($user->role !== 'mfanyakazi') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mfanyakazi tu.',
+                ], 403);
+            }
+
+            $jobs = Job::where('user_id', $user->id)
+                ->where('poster_type', 'mfanyakazi')
+                ->withCount(['applications as applications_count' => function ($q) {
+                    $q->whereIn('status', [
+                        JobApplication::STATUS_APPLIED,
+                        JobApplication::STATUS_SHORTLISTED,
+                        JobApplication::STATUS_ACCEPTED_COUNTER,
+                        JobApplication::STATUS_COUNTERED,
+                    ]);
+                }])
+                ->with(['category', 'selectedWorker', 'acceptedWorker'])
+                ->latest()
+                ->paginate(20);
+
+            return response()->json([
+                'success' => true,
+                'data' => $jobs->items(),
+                'pagination' => [
+                    'current_page' => $jobs->currentPage(),
+                    'last_page' => $jobs->lastPage(),
+                    'total' => $jobs->total(),
+                ],
+            ]);
+        });
 
         // Get assigned jobs - using controller method
         Route::get('/assigned', [WorkerActionsController::class, 'apiAssigned']);
