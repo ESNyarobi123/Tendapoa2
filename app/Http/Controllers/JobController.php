@@ -34,7 +34,7 @@ class JobController extends Controller
      * Handle image upload and resizing
      * Returns the stored image path or null
      */
-    private function handleImageUpload($file, $existingImage = null): ?string
+    public function handleImageUpload($file, $existingImage = null): ?string
     {
         if (! $file || ! $file->isValid()) {
             \Log::info('handleImageUpload: No file or invalid file', [

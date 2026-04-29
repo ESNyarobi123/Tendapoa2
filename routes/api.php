@@ -350,41 +350,12 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
     // ========================================================================
 
     Route::prefix('notifications')->group(function () {
-        Route::get('/', function (Request $request) {
-            $user = $request->user();
-            $paginator = $user->notifications()->latest()->paginate(20);
-            $unread = $user->unreadNotifications()->count();
-
-            return response()->json([
-                'success' => true,
-                'data' => [
-                    'notifications' => $paginator,
-                    'unread_count' => $unread,
-                ],
-                'notifications' => $paginator,
-                'unread_count' => $unread,
-            ]);
-        });
-
-        Route::post('/{id}/read', function (Request $request, $id) {
-            $user = $request->user();
-            $notification = $user->notifications()->findOrFail($id);
-            $notification->markAsRead();
-
-            return response()->json([
-                'success' => true,
-                'data' => ['unread_count' => $user->unreadNotifications()->count()],
-            ]);
-        });
-
-        Route::post('/read-all', function (Request $request) {
-            $request->user()->unreadNotifications->markAsRead();
-
-            return response()->json([
-                'success' => true,
-                'data' => ['unread_count' => 0],
-            ]);
-        });
+        Route::get('/', [\App\Http\Controllers\Api\NotificationController::class, 'index']);
+        Route::get('/unread-count', [\App\Http\Controllers\Api\NotificationController::class, 'unreadCount']);
+        Route::post('/{id}/read', [\App\Http\Controllers\Api\NotificationController::class, 'markRead']);
+        Route::post('/read-all', [\App\Http\Controllers\Api\NotificationController::class, 'markAllRead']);
+        Route::delete('/{id}', [\App\Http\Controllers\Api\NotificationController::class, 'destroy']);
+        Route::delete('/', [\App\Http\Controllers\Api\NotificationController::class, 'clear']);
     });
 
     // Muhitaji: maombi yote (sawa na /my/applications kwenye web)
@@ -721,175 +692,18 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
     // ========================================================================
 
     Route::prefix('worker')->group(function () {
-        // Create job as Mfanyakazi
-        Route::post('/jobs', function (Request $request) {
-            $user = $request->user();
-            if ($user->role !== 'mfanyakazi') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Huna ruhusa. Mfanyakazi tu.',
-                ], 403);
-            }
+        // === Worker as JOB POSTER (clean controller, replaces 170-line inline closure) ===
+        Route::post('/jobs', [\App\Http\Controllers\Api\MfanyakaziJobController::class, 'store']);
+        Route::get('/my-posted-jobs', [\App\Http\Controllers\Api\MfanyakaziJobController::class, 'myPosted']);
+        Route::get('/jobs/{job}', [\App\Http\Controllers\Api\MfanyakaziJobController::class, 'show'])
+            ->whereNumber('job');
+        Route::get('/jobs/{job}/applications', [\App\Http\Controllers\Api\MfanyakaziJobController::class, 'applications'])
+            ->whereNumber('job');
+        Route::put('/jobs/{job}', [\App\Http\Controllers\Api\MfanyakaziJobController::class, 'update'])
+            ->whereNumber('job');
+        Route::delete('/jobs/{job}', [\App\Http\Controllers\Api\MfanyakaziJobController::class, 'destroy'])
+            ->whereNumber('job');
 
-            $validated = $request->validate([
-                'title' => ['required', 'max:120'],
-                'category_id' => ['required', 'exists:categories,id'],
-                'description' => ['required', 'min:20'],
-                'price' => ['required', 'integer', 'min:1000'],
-                'lat' => ['required', 'numeric', 'between:-90,90'],
-                'lng' => ['required', 'numeric', 'between:-180,180'],
-                'phone' => ['required', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
-                'address_text' => ['nullable'],
-                'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
-                    if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
-                        $fail('Faili lazima iwe picha.');
-                    }
-                }],
-            ]);
-
-            // Handle image upload via reflection (same pattern as muhitaji)
-            $imagePath = null;
-            if ($request->hasFile('image')) {
-                $controller = app(JobController::class);
-                $reflection = new ReflectionClass($controller);
-                $method = $reflection->getMethod('handleImageUpload');
-                $method->setAccessible(true);
-                $imagePath = $method->invoke($controller, $request->file('image'));
-
-                if ($imagePath) {
-                    $imageFullPath = storage_path('app/public/'.$imagePath);
-                    if (! file_exists($imageFullPath)) {
-                        Log::error('API mfanyakazi image upload: file not found', ['imagePath' => $imagePath]);
-                        $imagePath = null;
-                    }
-                }
-            }
-
-            $localized = TranslationService::ensureBothLanguages(
-                $validated['title'],
-                $validated['description']
-            );
-
-            $postingFee = (int) Setting::get('job_posting_fee', 0);
-            $paymentsEnabled = Setting::get('payments_enabled', '1') == '1';
-            $wallet = $user->ensureWallet();
-
-            if ($postingFee <= 0) {
-                $job = Job::create([
-                    'user_id' => $user->id,
-                    'category_id' => $validated['category_id'],
-                    'title' => $validated['title'],
-                    'title_sw' => $localized['title_sw'],
-                    'title_en' => $localized['title_en'],
-                    'description' => $validated['description'],
-                    'description_sw' => $localized['description_sw'],
-                    'description_en' => $localized['description_en'],
-                    'image' => $imagePath,
-                    'price' => $validated['price'],
-                    'lat' => $validated['lat'],
-                    'lng' => $validated['lng'],
-                    'address_text' => $validated['address_text'] ?? null,
-                    'status' => 'posted',
-                    'published_at' => now(),
-                    'poster_type' => 'mfanyakazi',
-                    'posting_fee' => 0,
-                ]);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Kazi imechapishwa kwa mafanikio!',
-                    'payment_method' => 'free',
-                    'data' => ['job' => $job->load('category')],
-                ], 201);
-            }
-
-            if ($wallet->balance >= $postingFee) {
-                $job = DB::transaction(function () use ($user, $validated, $localized, $postingFee, $wallet, $imagePath) {
-                    $job = Job::create([
-                        'user_id' => $user->id,
-                        'category_id' => $validated['category_id'],
-                        'title' => $validated['title'],
-                        'title_sw' => $localized['title_sw'],
-                        'title_en' => $localized['title_en'],
-                        'description' => $validated['description'],
-                        'description_sw' => $localized['description_sw'],
-                        'description_en' => $localized['description_en'],
-                        'image' => $imagePath,
-                        'price' => $validated['price'],
-                        'lat' => $validated['lat'],
-                        'lng' => $validated['lng'],
-                        'address_text' => $validated['address_text'] ?? null,
-                        'status' => 'posted',
-                        'published_at' => now(),
-                        'poster_type' => 'mfanyakazi',
-                        'posting_fee' => $postingFee,
-                    ]);
-
-                    $wallet->decrement('balance', $postingFee);
-
-                    WalletTransaction::create([
-                        'user_id' => $user->id,
-                        'type' => 'debit',
-                        'amount' => $postingFee,
-                        'description' => "Job posting fee for: {$job->title}",
-                        'reference' => "JOB_POST_{$job->id}",
-                    ]);
-
-                    return $job;
-                });
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Kazi imechapishwa kwa mafanikio!',
-                    'payment_method' => 'wallet',
-                    'data' => ['job' => $job->load('category')],
-                ], 201);
-            } else {
-                $job = Job::create([
-                    'user_id' => $user->id,
-                    'category_id' => $validated['category_id'],
-                    'title' => $validated['title'],
-                    'title_sw' => $localized['title_sw'],
-                    'title_en' => $localized['title_en'],
-                    'description' => $validated['description'],
-                    'description_sw' => $localized['description_sw'],
-                    'description_en' => $localized['description_en'],
-                    'image' => $imagePath,
-                    'price' => $validated['price'],
-                    'lat' => $validated['lat'],
-                    'lng' => $validated['lng'],
-                    'address_text' => $validated['address_text'] ?? null,
-                    'status' => 'pending_payment',
-                    'poster_type' => 'mfanyakazi',
-                    'posting_fee' => $postingFee,
-                ]);
-
-                $orderId = strtoupper(Str::random(16));
-                $payment = $job->payment()->create([
-                    'order_id' => $orderId,
-                    'amount' => $postingFee,
-                    'status' => 'PENDING',
-                ]);
-
-                $clickpesaService = app(ClickPesaService::class);
-                $res = $clickpesaService->startPayment([
-                    'orderReference' => $orderId,
-                    'phoneNumber' => $validated['phone'],
-                    'amount' => $postingFee,
-                ]);
-
-                return response()->json([
-                    'success' => $res['ok'],
-                    'data' => [
-                        'job' => $job->load('category', 'payment'),
-                        'payment' => $payment,
-                        'clickpesa_response' => $res,
-                    ],
-                    'message' => $res['ok'] ? 'Fanya malipo ya ada ya kuchapisha.' : 'Imeshindikana kuanzisha malipo.',
-                    'payment_method' => 'clickpesa',
-                ], $res['ok'] ? 201 : 400);
-            }
-        });
 
         // Maombi yangu (job_applications)
         Route::get('/applications', [WorkerApplicationsController::class, 'apiIndex']);
