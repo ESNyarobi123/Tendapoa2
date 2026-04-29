@@ -101,6 +101,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Update Profile (Photo & Details)
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
+
+    // Delete Account (requires password confirmation)
+    Route::delete('/account', [AuthController::class, 'deleteAccount']);
 });
 
 // ============================================================================

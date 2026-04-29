@@ -207,6 +207,14 @@ Route::get('/privacy-policy', function () {
     return view('policy.privacy');
 })->name('policy.privacy');
 
+// Account Deletion (Public page — required by Google Play Data Safety)
+Route::get('/account/delete', function () {
+    return view('policy.account-deletion');
+})->name('account.delete.page');
+
+// Account Deletion (Authenticated DELETE action)
+Route::delete('/account/delete', [ProfileController::class, 'destroyFromPage'])->name('account.delete')->middleware('auth');
+
 // APK Download (Public)
 Route::get('/download/app', [HomeController::class, 'downloadApp'])->name('app.download');
 

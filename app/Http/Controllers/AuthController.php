@@ -314,4 +314,36 @@ class AuthController extends Controller
             'photo_url' => $user->profile_photo_url
         ]);
     }
+
+    /**
+     * Delete the authenticated user's account (API).
+     * Requires current password for security.
+     */
+    public function deleteAccount(Request $request)
+    {
+        $request->validate([
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        // Revoke all Sanctum tokens
+        $user->tokens()->delete();
+
+        // Remove FCM device tokens
+        $user->deviceTokens()->delete();
+
+        // Delete profile photo if exists
+        if ($user->profile_photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
+        }
+
+        // Delete user (cascading handled by DB foreign keys or model events)
+        $user->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Akaunti yako imefutwa kikamilifu.',
+        ]);
+    }
 }

@@ -89,4 +89,34 @@ class ProfileController extends Controller
 
         return Redirect::to('/');
     }
+
+    /**
+     * Delete the user's account from the public account-deletion page.
+     * Redirects back to the same page with a success flash.
+     */
+    public function destroyFromPage(Request $request): RedirectResponse
+    {
+        $request->validateWithBag('accountDeletion', [
+            'password' => ['required', 'current_password'],
+        ]);
+
+        $user = $request->user();
+
+        // Delete profile photo if exists
+        if ($user->profile_photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($user->profile_photo_path);
+        }
+
+        // Remove FCM device tokens
+        $user->deviceTokens()->delete();
+
+        Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return Redirect::route('account.delete.page')->with('deleted', true);
+    }
 }
