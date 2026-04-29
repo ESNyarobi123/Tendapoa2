@@ -378,6 +378,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/broadcast', [AdminController::class, 'sendBroadcast'])->name('admin.broadcast.send');
         Route::get('/broadcast/audience', [AdminController::class, 'broadcastAudience'])->name('admin.broadcast.audience');
         Route::get('/broadcast/users/search', [AdminController::class, 'broadcastUserSearch'])->name('admin.broadcast.users.search');
+        Route::get('/broadcast/{id}/edit', [AdminController::class, 'editBroadcast'])->name('admin.broadcast.edit');
+        Route::put('/broadcast/{id}', [AdminController::class, 'updateBroadcast'])->name('admin.broadcast.update');
+        Route::delete('/broadcast/{id}', [AdminController::class, 'deleteBroadcast'])->name('admin.broadcast.delete');
 
         // Withdrawals
         Route::get('/withdrawals', [WithdrawalAdminController::class, 'index'])->name('admin.withdrawals');

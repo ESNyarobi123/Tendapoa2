@@ -1459,6 +1459,10 @@ class AdminController extends Controller
         }
 
         $totalCount = (clone $usersQuery)->count();
+        $withFcm = (clone $usersQuery)->where(function ($w) {
+            $w->whereHas('deviceTokens')->orWhereNotNull('fcm_token');
+        })->count();
+
         $sent = 0;
         $failed = 0;
 
@@ -1474,13 +1478,17 @@ class AdminController extends Controller
             }
         });
 
-        // Save to SystemNotification table for history
+        // Save to SystemNotification table for history with delivery stats
         \App\Models\SystemNotification::create([
             'title' => $title,
             'message' => $message,
             'target' => $target === 'specific' ? 'specific:'.count($userIds) : $target,
             'action_url' => $actionUrl,
             'sent_by' => Auth::id(),
+            'total_count' => $totalCount,
+            'sent_count' => $sent,
+            'failed_count' => $failed,
+            'fcm_sent_count' => $withFcm,
         ]);
 
         $label = match ($target) {
@@ -1492,7 +1500,56 @@ class AdminController extends Controller
 
         $note = $failed > 0 ? " ({$failed} zimeshindwa)" : '';
 
-        return back()->with('success', "Taarifa imetumwa kwa {$label}: {$sent}/{$totalCount}{$note}. FCM push imetumwa kwa walio na devices zilizosajiliwa.");
+        return back()->with('success', "Taarifa imetumwa kwa {$label}: {$sent}/{$totalCount}{$note}. FCM push imetumwa kwa {$withFcm} wenye devices.");
+    }
+
+    /**
+     * Edit a broadcast notification.
+     */
+    public function editBroadcast($id)
+    {
+        $notification = \App\Models\SystemNotification::findOrFail($id);
+        $stats = [
+            'all' => User::count(),
+            'muhitaji' => User::where('role', 'muhitaji')->count(),
+            'mfanyakazi' => User::where('role', 'mfanyakazi')->count(),
+            'with_fcm' => User::whereHas('deviceTokens')->orWhereNotNull('fcm_token')->count(),
+        ];
+
+        return view('admin.broadcast-edit', compact('notification', 'stats'));
+    }
+
+    /**
+     * Update a broadcast notification.
+     */
+    public function updateBroadcast(Request $request, $id)
+    {
+        $notification = \App\Models\SystemNotification::findOrFail($id);
+
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'message' => 'required|string|max:2000',
+            'action_url' => 'nullable|string|max:500',
+        ]);
+
+        $notification->update([
+            'title' => $request->input('title'),
+            'message' => $request->input('message'),
+            'action_url' => $request->input('action_url'),
+        ]);
+
+        return redirect()->route('admin.broadcast')->with('success', 'Taarifa imesasishwa kikamilifu.');
+    }
+
+    /**
+     * Delete a broadcast notification.
+     */
+    public function deleteBroadcast($id)
+    {
+        $notification = \App\Models\SystemNotification::findOrFail($id);
+        $notification->delete();
+
+        return back()->with('success', 'Taarifa imefutwa kikamilifu.');
     }
 }
 

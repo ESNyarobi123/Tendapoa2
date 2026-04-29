@@ -12,7 +12,11 @@ class SystemNotification extends Model
         'message',
         'target',
         'action_url',
-        'sent_by'
+        'sent_by',
+        'total_count',
+        'sent_count',
+        'failed_count',
+        'fcm_sent_count',
     ];
 
     public function sender()
