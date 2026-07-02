@@ -4,15 +4,23 @@
     "name": "tp-ui"
   },
   "resources/css/app.css": {
-    "file": "assets/app-CBntOliQ.css",
+    "file": "assets/app-siksU9kQ.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "names": [
       "app.css"
     ]
   },
+  "resources/css/landing.css": {
+    "file": "assets/landing-BvzUrMOU.css",
+    "src": "resources/css/landing.css",
+    "isEntry": true,
+    "names": [
+      "landing.css"
+    ]
+  },
   "resources/js/admin-entry.js": {
-    "file": "assets/admin-entry-B6wHhgAA.js",
+    "file": "assets/admin-entry-DU57v611.js",
     "name": "admin-entry",
     "src": "resources/js/admin-entry.js",
     "isEntry": true,
@@ -20,11 +28,11 @@
       "_tp-ui-hLfDouKJ.js"
     ],
     "css": [
-      "assets/admin-entry-BZsG6Vnn.css"
+      "assets/admin-entry-9TOVPFLf.css"
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-IJ_nIAhW.js",
+    "file": "assets/app-DrjxCqge.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,

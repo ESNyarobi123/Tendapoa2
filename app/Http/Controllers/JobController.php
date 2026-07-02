@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Wallet;
 use App\Models\WalletTransaction;
 use App\Notifications\JobStatusNotification;
+use App\Rules\NoPhoneNumberInText;
 use App\Services\ClickPesaService;
 use App\Services\EscrowService;
 use App\Services\NotificationService;
@@ -395,12 +396,12 @@ class JobController extends Controller
         $this->ensureMuhitajiOrAdmin();
 
         $r->validate([
-            'title' => ['required', 'max:120'],
+            'title' => ['required', 'max:120', new NoPhoneNumberInText()],
             'category_id' => ['required', 'exists:categories,id'],
             'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
-            'description' => ['nullable'],
+            'description' => ['nullable', 'string', new NoPhoneNumberInText()],
             'address_text' => ['nullable'],
             'urgency' => ['nullable', 'in:normal,urgent,flexible'],
             'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
@@ -531,11 +532,12 @@ class JobController extends Controller
         }
 
         $r->validate([
-            'title' => ['required', 'max:120'],
+            'title' => ['required', 'max:120', new NoPhoneNumberInText()],
             'category_id' => ['required', 'exists:categories,id'],
             'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
+            'description' => ['nullable', 'string', new NoPhoneNumberInText()],
             'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
                 if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
                     $fail('Faili lazima iwe picha.');
@@ -680,11 +682,12 @@ class JobController extends Controller
         }
 
         $r->validate([
-            'title' => ['required', 'max:120'],
+            'title' => ['required', 'max:120', new NoPhoneNumberInText()],
             'category_id' => ['required', 'exists:categories,id'],
             'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
+            'description' => ['nullable', 'string', new NoPhoneNumberInText()],
             'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
                 if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
                     $fail('Faili lazima iwe picha.');
@@ -797,12 +800,12 @@ class JobController extends Controller
         $this->ensureMuhitajiOrAdmin();
 
         $r->validate([
-            'title' => ['required', 'max:120'],
+            'title' => ['required', 'max:120', new NoPhoneNumberInText()],
             'category_id' => ['required', 'exists:categories,id'],
             'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
-            'description' => ['nullable'],
+            'description' => ['nullable', 'string', new NoPhoneNumberInText()],
             'address_text' => ['nullable'],
             'urgency' => ['nullable', 'in:normal,urgent,flexible'],
             'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,webp', 'max:5120'],
@@ -943,9 +946,9 @@ class JobController extends Controller
         }
 
         $request->validate([
-            'title' => ['required', 'max:120'],
+            'title' => ['required', 'max:120', new NoPhoneNumberInText()],
             'category_id' => ['required', 'exists:categories,id'],
-            'description' => ['required', 'min:20'],
+            'description' => ['required', 'min:20', new NoPhoneNumberInText()],
             'price' => ['required', 'integer', 'min:1000'],
             'lat' => ['required', 'numeric', 'between:-90,90'],
             'lng' => ['required', 'numeric', 'between:-180,180'],
@@ -1003,6 +1006,7 @@ class JobController extends Controller
                 'status' => 'posted',
                 'published_at' => now(),
                 'poster_type' => 'mfanyakazi',
+                'engagement_type' => Job::ENGAGEMENT_SERVICE_LISTING,
                 'posting_fee' => $postingFee,
             ]);
 
@@ -1037,6 +1041,7 @@ class JobController extends Controller
             'address_text' => $request->input('address_text'),
             'status' => 'pending_payment',
             'poster_type' => 'mfanyakazi',
+            'engagement_type' => Job::ENGAGEMENT_SERVICE_LISTING,
             'posting_fee' => $postingFee,
         ]);
 

@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Job;
 use App\Models\Payment;
 use App\Models\PrivateMessage;
+use App\Notifications\ServiceBookedNotification;
 use App\Services\ClickPesaService;
 use App\Services\EscrowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -311,17 +313,34 @@ class FundingController extends Controller
     protected function activateFundedJob(Job $job, $client): void
     {
         $job->funded_at = now();
-        $job->accepted_worker_id = $job->selected_worker_id;
+        if ($job->selected_worker_id && ! $job->accepted_worker_id) {
+            $job->accepted_worker_id = $job->selected_worker_id;
+        }
         $job->transitionStatus(Job::S_FUNDED, $client->id, 'Job funded, waiting for worker acceptance');
 
         $worker = $job->selectedWorker;
-        if ($worker) {
-            PrivateMessage::create([
-                'work_order_id' => $job->id,
-                'sender_id' => $client->id,
-                'receiver_id' => $worker->id,
-                'message' => '💰 Malipo ya TZS '.number_format($job->agreed_amount)." yamefanywa kwa kazi \"{$job->title}\". Tafadhali kubali au kataa kazi.",
-            ]);
+        if (! $worker) {
+            return;
+        }
+
+        $amount = (int) ($job->agreed_amount ?? $job->price);
+        $chatMessage = $job->isServiceBooking()
+            ? "🎉 Hongera! {$client->name} amekuajiri kwa huduma \"{$job->title}\". Malipo ya escrow TZS ".number_format($amount)." yamekamilika. Wasiliana na mteja hapa."
+            : '💰 Malipo ya TZS '.number_format($amount)." yamefanywa kwa kazi \"{$job->title}\". Tafadhali kubali au kataa kazi.";
+
+        PrivateMessage::create([
+            'work_order_id' => $job->id,
+            'sender_id' => $client->id,
+            'receiver_id' => $worker->id,
+            'message' => $chatMessage,
+        ]);
+
+        if ($job->isServiceBooking()) {
+            try {
+                $worker->notify(new ServiceBookedNotification($job->fresh(), $client));
+            } catch (\Throwable $e) {
+                Log::warning('ServiceBookedNotification failed: '.$e->getMessage());
+            }
         }
     }
 

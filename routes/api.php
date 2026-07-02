@@ -14,6 +14,7 @@ use App\Http\Controllers\MyJobsController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WorkerActionsController;
+use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\WorkerApplicationsController;
 use App\Models\Category;
 use App\Models\Job;
@@ -28,6 +29,7 @@ use App\Models\Withdrawal;
 use App\Services\ClickPesaService;
 use App\Services\TranslationService;
 use App\Services\WalletService;
+use App\Rules\NoPhoneNumberInText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -409,13 +411,13 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             }
 
             $validated = $request->validate([
-                'title' => ['required', 'max:120'],
+                'title' => ['required', 'max:120', new NoPhoneNumberInText()],
                 'category_id' => ['required', 'exists:categories,id'],
                 'price' => ['required', 'integer', 'min:1000'],
                 'lat' => ['required', 'numeric', 'between:-90,90'],
                 'lng' => ['required', 'numeric', 'between:-180,180'],
                 'phone' => ['required', 'regex:/^(0[6-7]\d{8}|255[6-7]\d{8})$/'],
-                'description' => ['nullable'],
+                'description' => ['nullable', 'string', new NoPhoneNumberInText()],
                 'address_text' => ['nullable'],
                 'image' => ['nullable', 'file', 'max:5120', function ($attribute, $value, $fail) {
                     if ($value && ! str_starts_with($value->getMimeType(), 'image/')) {
@@ -552,7 +554,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             }
 
             $validated = $request->validate([
-                'message' => ['required', 'max:1000'],
+                'message' => ['required', 'max:1000', new NoPhoneNumberInText()],
                 'bid_amount' => ['nullable', 'integer', 'min:0'],
                 'is_application' => ['nullable', 'boolean'],
             ]);
@@ -758,9 +760,9 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             }
 
             $validated = $request->validate([
-                'title' => ['required', 'max:120'],
+                'title' => ['required', 'max:120', new NoPhoneNumberInText()],
                 'category_id' => ['required', 'exists:categories,id'],
-                'description' => ['required', 'min:20'],
+                'description' => ['required', 'min:20', new NoPhoneNumberInText()],
                 'price' => ['required', 'integer', 'min:1000'],
                 'lat' => ['required', 'numeric', 'between:-90,90'],
                 'lng' => ['required', 'numeric', 'between:-180,180'],
@@ -818,6 +820,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'status' => 'posted',
                     'published_at' => now(),
                     'poster_type' => 'mfanyakazi',
+                    'engagement_type' => Job::ENGAGEMENT_SERVICE_LISTING,
                     'posting_fee' => 0,
                 ]);
 
@@ -848,6 +851,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                         'status' => 'posted',
                         'published_at' => now(),
                         'poster_type' => 'mfanyakazi',
+                    'engagement_type' => Job::ENGAGEMENT_SERVICE_LISTING,
                         'posting_fee' => $postingFee,
                     ]);
 
@@ -887,6 +891,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'address_text' => $validated['address_text'] ?? null,
                     'status' => 'pending_payment',
                     'poster_type' => 'mfanyakazi',
+                    'engagement_type' => Job::ENGAGEMENT_SERVICE_LISTING,
                     'posting_fee' => $postingFee,
                 ]);
 
@@ -978,6 +983,16 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
 
         // Get jobs for map view
         Route::match(['get', 'post'], '/map', [FeedController::class, 'apiMap']);
+    });
+
+    // ========================================================================
+    // SERVICES APIs (Client browses worker listings → book)
+    // ========================================================================
+
+    Route::prefix('services')->group(function () {
+        Route::get('/', [ServiceController::class, 'apiIndex']);
+        Route::get('/{listing}', [ServiceController::class, 'apiShow']);
+        Route::post('/{listing}/book', [ServiceController::class, 'apiBook']);
     });
 
     // ========================================================================
@@ -1089,55 +1104,16 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                     'other_user' => $otherUser,
                     'messages' => $messages,
                     'unread_count' => $unreadCount,
+                    'allows_phone_sharing' => $job->allowsPhoneSharingInChat(
+                        (int) $user->id,
+                        (int) $otherUser->id
+                    ),
                 ],
             ]);
         });
 
         // Send message
-        Route::post('/{job}/send', function (Job $job, Request $request) {
-            $user = $request->user();
-            $chatController = app(ChatController::class);
-
-            if (! $chatController->userCanAccessJobChat($job, $user)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Huna ruhusa ya kutuma ujumbe. Omba kazi au tumia mfumo wa maombi.',
-                ], 403);
-            }
-
-            $isMuhitaji = $job->user_id === $user->id;
-
-            $validated = $request->validate([
-                'message' => 'required|string|max:5000',
-                'receiver_id' => 'nullable|exists:users,id',
-            ]);
-
-            if ($isMuhitaji) {
-                $receiverId = $validated['receiver_id'] ?? $job->accepted_worker_id;
-            } else {
-                $receiverId = $job->user_id;
-            }
-
-            if (! $receiverId) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Mpokeaji hajapatikana.',
-                ], 400);
-            }
-
-            $message = PrivateMessage::create([
-                'work_order_id' => $job->id,
-                'sender_id' => $user->id,
-                'receiver_id' => $receiverId,
-                'message' => $validated['message'],
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'data' => $message->load('sender', 'receiver'),
-                'message' => 'Ujumbe umetumwa.',
-            ], 201);
-        });
+        Route::post('/{job}/send', [ChatController::class, 'apiSend']);
 
         // Poll for new messages
         Route::get('/{job}/poll', function (Job $job, Request $request) {

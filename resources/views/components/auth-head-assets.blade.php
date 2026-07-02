@@ -1,4 +1,3 @@
-{{-- Loads compiled Tailwind when build exists; otherwise Tailwind CDN + brand colors so login/register always render. --}}
 @php
     $manifestPath = public_path('build/manifest.json');
     $hasBuild = is_readable($manifestPath);
@@ -11,6 +10,7 @@
         $hasBuild = $cssFile !== null;
     }
 @endphp
+<x-brand-favicon />
 @if($hasBuild && $cssFile)
     <link rel="stylesheet" href="{{ asset('build/'.$cssFile) }}">
     @if($jsFile)

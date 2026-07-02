@@ -75,7 +75,7 @@
           </div>
         </div>
 
-        <form method="post" action="{{ route('jobs.store') }}" enctype="multipart/form-data" id="jobCreateForm" class="p-5 sm:p-8">
+        <form method="post" action="{{ route('jobs.store') }}" enctype="multipart/form-data" id="jobCreateForm" class="p-5 sm:p-8" data-tp-no-phone-fields="title,description">
           @csrf
 
           {{-- Step 1 --}}
@@ -104,8 +104,11 @@
             <div>
               <label class="mb-1.5 block text-[11px] font-bold uppercase tracking-wide text-slate-600" for="description">Maelezo ya ziada <span class="font-normal normal-case text-slate-400">(hiari)</span></label>
               <textarea name="description" id="description" rows="4"
-                class="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-[14px] text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                class="w-full resize-y rounded-xl border border-slate-200 bg-slate-50/50 px-4 py-3 text-[14px] text-slate-800 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 @error('description') !border-red-500 ring-2 ring-red-200 @enderror"
                 placeholder="Muda, ukubwa wa nyumba, vifaa mteja atatoa, n.k.">{{ old('description') }}</textarea>
+              @error('description')
+                <p class="mt-1.5 text-[12px] font-semibold text-red-600" role="alert">{{ $message }}</p>
+              @enderror
             </div>
           </div>
 

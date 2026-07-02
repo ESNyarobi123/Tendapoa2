@@ -5,18 +5,35 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Withdrawal;
 use App\Services\WalletService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class WithdrawalAdminController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $u = Auth::user();
-        if (!$u || $u->role !== 'admin') abort(403);
+        if (! $u || $u->role !== 'admin') {
+            abort(403);
+        }
 
-        $items = Withdrawal::with('user')->latest()->paginate(20);
-        return view('admin.withdrawals', compact('items'));
+        $query = Withdrawal::with('user')->latest();
+
+        if ($status = $request->get('status')) {
+            $query->where('status', strtoupper($status));
+        }
+
+        $items = $query->paginate(20)->withQueryString();
+
+        $stats = [
+            'total' => Withdrawal::count(),
+            'processing' => Withdrawal::where('status', 'PROCESSING')->count(),
+            'paid' => Withdrawal::where('status', 'PAID')->count(),
+            'rejected' => Withdrawal::where('status', 'REJECTED')->count(),
+        ];
+
+        return view('admin.withdrawals', compact('items', 'stats'));
     }
 
     public function markPaid(Withdrawal $withdrawal)

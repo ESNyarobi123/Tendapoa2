@@ -29,7 +29,58 @@ class JobFactory extends Factory
             'status' => Job::S_OPEN,
             'published_at' => now(),
             'poster_type' => 'muhitaji',
+            'engagement_type' => Job::ENGAGEMENT_JOB_REQUEST,
+            'source_listing_id' => null,
         ];
+    }
+
+    public function jobRequest(): static
+    {
+        return $this->state(fn () => [
+            'engagement_type' => Job::ENGAGEMENT_JOB_REQUEST,
+            'poster_type' => 'muhitaji',
+            'source_listing_id' => null,
+        ]);
+    }
+
+    public function serviceListing(): static
+    {
+        return $this->state(fn () => [
+            'engagement_type' => Job::ENGAGEMENT_SERVICE_LISTING,
+            'poster_type' => 'mfanyakazi',
+            'user_id' => User::factory()->mfanyakazi(),
+            'source_listing_id' => null,
+            'status' => 'posted',
+        ]);
+    }
+
+    public function serviceBooking(): static
+    {
+        return $this->state(fn () => [
+            'engagement_type' => Job::ENGAGEMENT_SERVICE_BOOKING,
+            'poster_type' => 'muhitaji',
+            'user_id' => User::factory()->muhitaji(),
+            'status' => Job::S_AWAITING_PAYMENT,
+        ]);
+    }
+
+    public function forListing(Job $listing): static
+    {
+        return $this->state(fn () => [
+            'engagement_type' => Job::ENGAGEMENT_SERVICE_BOOKING,
+            'poster_type' => 'muhitaji',
+            'user_id' => User::factory()->muhitaji(),
+            'source_listing_id' => $listing->id,
+            'selected_worker_id' => $listing->user_id,
+            'category_id' => $listing->category_id,
+            'title' => $listing->title,
+            'description' => $listing->description,
+            'price' => $listing->price,
+            'lat' => $listing->lat,
+            'lng' => $listing->lng,
+            'address_text' => $listing->address_text,
+            'status' => Job::S_AWAITING_PAYMENT,
+        ]);
     }
 
     public function open(): static

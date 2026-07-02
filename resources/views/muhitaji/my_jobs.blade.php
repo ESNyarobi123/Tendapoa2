@@ -76,6 +76,9 @@
                     <span class="mt-1 text-[10px] font-medium">Hakuna picha</span>
                   </div>
                 @endif
+                @if($job->isHidden())
+                  <span class="absolute left-2 top-2 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">Imefichwa</span>
+                @endif
                 <span class="absolute right-2 top-2 max-w-[85%] truncate rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ring-1 {{ $statusStyle }}">
                   @switch($job->status)
                     @case('open') Wazi @break

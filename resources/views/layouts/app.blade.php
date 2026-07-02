@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <title>TendaPoa — @yield('title', 'Jukwaa la Kazi')</title>
+<x-brand-favicon />
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700,800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
@@ -21,10 +22,7 @@
 @if(!$hasSidebar)
 <header class="sticky top-0 z-40 bg-white/80 backdrop-blur border-b border-gray-200">
   <div class="max-w-7xl mx-auto flex items-center justify-between h-14 px-4 sm:px-6">
-    <a href="{{ route('home') }}" class="flex items-center gap-2 font-extrabold text-brand-600 text-lg tracking-tight">
-      <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-      TendaPoa
-    </a>
+    <x-brand-logo href="{{ route('home') }}" size="sm" text-class="text-brand-600 text-lg tracking-tight" />
     <nav class="flex items-center gap-1">
       <a href="{{ route('home') }}" class="px-3 py-1.5 rounded-lg text-gray-600 hover:text-brand-700 hover:bg-brand-50 transition text-[13px] font-medium">Nyumbani</a>
       <a href="/feed" class="px-3 py-1.5 rounded-lg text-gray-600 hover:text-brand-700 hover:bg-brand-50 transition text-[13px] font-medium">Kazi Zote</a>

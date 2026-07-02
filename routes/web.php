@@ -26,6 +26,7 @@ use App\Http\Controllers\JobViewController;
 use App\Http\Controllers\MyJobsController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\WalletController;
 use App\Http\Controllers\WithdrawalController;
 use App\Http\Controllers\WorkerActionsController;
@@ -230,6 +231,11 @@ Route::middleware(['auth'])->group(function () {
     // DASHBOARD
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
+    // MUHITAJI: browse worker services (catalog — not /feed)
+    Route::get('/services', [ServiceController::class, 'index'])->name('services.index');
+    Route::get('/services/{listing}', [ServiceController::class, 'show'])->name('services.show');
+    Route::post('/services/{listing}/book', [ServiceController::class, 'book'])->name('services.book');
+
     // MUHITAJI: create + pay (role check tutafanya ndani ya controller)
     Route::get('/jobs/create', [JobController::class, 'create'])->name('jobs.create');
     Route::post('/jobs', [JobController::class, 'store'])->name('jobs.store');
@@ -362,8 +368,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/users/{user}/toggle-status', [AdminController::class, 'toggleUserStatus'])->name('admin.user.toggle-status');
 
         // ADMIN FULL CONTROL - Job Management
+        Route::post('/jobs/{job}/assign-worker', [AdminController::class, 'assignWorker'])->name('admin.job.assign-worker');
+        Route::post('/jobs/{job}/hide', [AdminController::class, 'hideJob'])->name('admin.job.hide');
+        Route::post('/jobs/{job}/unhide', [AdminController::class, 'unhideJob'])->name('admin.job.unhide');
+        Route::post('/jobs/{job}/change-status', [AdminController::class, 'changeJobStatus'])->name('admin.job.change-status');
         Route::post('/jobs/{job}/force-complete', [AdminController::class, 'forceCompleteJob'])->name('admin.job.force-complete');
         Route::post('/jobs/{job}/force-cancel', [AdminController::class, 'forceCancelJob'])->name('admin.job.force-cancel');
+        Route::delete('/jobs/{job}', [AdminController::class, 'deleteJob'])->name('admin.job.delete');
 
         // ADMIN FULL CONTROL - System Management
         Route::get('/system-logs', [AdminController::class, 'systemLogs'])->name('admin.system-logs');
@@ -395,23 +406,49 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/withdrawals/{withdrawal}/paid', [WithdrawalAdminController::class, 'markPaid'])->name('admin.withdrawals.paid');
         Route::post('/withdrawals/{withdrawal}/reject', [WithdrawalAdminController::class, 'reject'])->name('admin.withdrawals.reject');
 
-        // Completed Jobs by Workers (keeping legacy route)
         Route::get('/completed-jobs', function () {
             $workers = User::where('role', 'mfanyakazi')
                 ->with([
                     'assignedJobs' => function ($query) {
-                        $query->where('status', 'completed');
+                        $query->whereIn('status', [Job::S_COMPLETED, 'completed'])
+                            ->with(['muhitaji', 'category'])
+                            ->latest('completed_at');
                     },
                 ])
                 ->withCount([
                     'assignedJobs as completed_jobs' => function ($query) {
-                        $query->where('status', 'completed');
+                        $query->whereIn('status', [Job::S_COMPLETED, 'completed']);
                     },
                 ])
-                ->orderBy('completed_jobs', 'desc')
+                ->orderByDesc('completed_jobs')
                 ->paginate(20);
 
-            return view('admin.completed-jobs', compact('workers'));
+            $totalCompletedJobs = Job::whereIn('status', [Job::S_COMPLETED, 'completed'])->count();
+            $totalEarnings = Job::whereIn('status', [Job::S_COMPLETED, 'completed'])->sum('price');
+            $topWorker = User::where('role', 'mfanyakazi')
+                ->withCount([
+                    'assignedJobs as completed_jobs' => function ($query) {
+                        $query->whereIn('status', [Job::S_COMPLETED, 'completed']);
+                    },
+                ])
+                ->orderByDesc('completed_jobs')
+                ->first();
+            $workerCount = User::where('role', 'mfanyakazi')->count();
+            $activeWorkers = User::where('role', 'mfanyakazi')
+                ->whereHas('assignedJobs', function ($query) {
+                    $query->whereIn('status', [Job::S_COMPLETED, 'completed']);
+                })
+                ->count();
+            $averageJobsPerWorker = $activeWorkers > 0 ? round($totalCompletedJobs / $activeWorkers, 1) : 0;
+
+            return view('admin.completed-jobs', compact(
+                'workers',
+                'totalCompletedJobs',
+                'totalEarnings',
+                'topWorker',
+                'averageJobsPerWorker',
+                'activeWorkers'
+            ));
         })->name('admin.completed-jobs');
     });
 });

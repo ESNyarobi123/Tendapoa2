@@ -85,7 +85,21 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt(['email' => $cred['email'], 'password' => $cred['password']], $r->boolean('remember'))) {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+
+            if (! $user->is_active) {
+                Auth::logout();
+                $r->session()->invalidate();
+                $r->session()->regenerateToken();
+
+                return back()->withErrors([
+                    'email' => 'Akaunti yako imesitishwa. Wasiliana na msaada.',
+                ])->onlyInput('email');
+            }
+
             $r->session()->regenerate();
+
             return redirect()->intended(route('dashboard'));
         }
 
@@ -179,6 +193,16 @@ class AuthController extends Controller
         if (Auth::attempt(['email' => $cred['email'], 'password' => $cred['password']], $r->boolean('remember'))) {
             /** @var \App\Models\User $user */
             $user = Auth::user();
+
+            if (! $user->is_active) {
+                Auth::logout();
+
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Akaunti yako imesitishwa. Wasiliana na msaada.',
+                    'errors' => ['email' => 'Akaunti yako imesitishwa. Wasiliana na msaada.'],
+                ], 403);
+            }
 
             // HAPA NDIPO TUNAPOTENGENEZA TOKEN
             // Futa token za zamani (optional, kwa usalama)

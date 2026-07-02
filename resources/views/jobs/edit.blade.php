@@ -345,7 +345,7 @@ use Illuminate\Support\Facades\Storage;
 
     <!-- Form -->
     <div class="form-container">
-      <form method="POST" action="{{ route('jobs.update', $job) }}" id="editJobForm" enctype="multipart/form-data">
+      <form method="POST" action="{{ route('jobs.update', $job) }}" id="editJobForm" enctype="multipart/form-data" data-tp-no-phone-fields="title,description">
         @csrf
         @method('PUT')
 

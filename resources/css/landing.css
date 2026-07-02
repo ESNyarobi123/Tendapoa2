@@ -1,0 +1,442 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html {
+        scroll-behavior: smooth;
+    }
+}
+
+@layer components {
+    .tp-landing-body {
+        @apply bg-white font-sans text-slate-800 antialiased;
+    }
+
+    /* —— Nav (light) —— */
+    .tp-landing-nav {
+        @apply fixed inset-x-0 top-0 z-50 border-b border-transparent bg-white/80 backdrop-blur-lg transition;
+    }
+
+    .tp-landing-nav.is-scrolled {
+        @apply border-slate-200/80 bg-white/95 shadow-sm;
+    }
+
+    .tp-landing-nav-inner {
+        @apply mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6;
+    }
+
+    .tp-landing-logo {
+        @apply flex items-center gap-2.5 text-lg font-extrabold tracking-tight text-slate-900 no-underline;
+    }
+
+    .tp-landing-logo--light {
+        @apply text-white;
+    }
+
+
+    .tp-landing-nav-links {
+        @apply hidden items-center gap-1 md:flex;
+    }
+
+    .tp-landing-nav-link {
+        @apply rounded-lg px-3 py-2 text-[13px] font-semibold text-slate-600 no-underline transition hover:bg-slate-100 hover:text-slate-900;
+    }
+
+    .tp-landing-btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-[13px] font-bold no-underline transition;
+    }
+
+    .tp-landing-btn-primary {
+        @apply bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg shadow-orange-500/20 hover:-translate-y-0.5 hover:shadow-orange-500/35;
+    }
+
+    .tp-landing-btn-secondary {
+        @apply border-2 border-slate-200 bg-white text-slate-800 hover:border-brand-300 hover:bg-brand-50;
+    }
+
+    .tp-landing-btn-brand {
+        @apply bg-brand-600 text-white shadow-md hover:bg-brand-700;
+    }
+
+    .tp-landing-mobile-menu {
+        @apply hidden border-t border-slate-100 bg-white px-4 py-4 md:hidden;
+    }
+
+    .tp-landing-mobile-menu.is-open {
+        @apply block;
+    }
+
+    /* —— Hero split + photo —— */
+    .tp-landing-hero-split {
+        @apply relative pt-16 lg:grid lg:min-h-[88vh] lg:grid-cols-2 lg:pt-0;
+    }
+
+    .tp-landing-hero-copy {
+        @apply flex flex-col justify-center px-4 py-12 sm:px-8 lg:px-12 lg:py-20 xl:px-16;
+    }
+
+    .tp-landing-hero-photo-wrap {
+        @apply relative min-h-[320px] lg:min-h-full;
+    }
+
+    .tp-landing-hero-photo {
+        @apply absolute inset-0 h-full w-full object-cover;
+    }
+
+    .tp-landing-hero-photo-overlay {
+        @apply absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent lg:bg-gradient-to-l lg:from-white lg:via-white/20 lg:to-transparent;
+    }
+
+    .tp-landing-pill {
+        @apply inline-flex items-center gap-2 rounded-full bg-brand-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-800 ring-1 ring-brand-200/80;
+    }
+
+    .tp-landing-hero-title {
+        @apply mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl lg:text-[3.25rem];
+    }
+
+    .tp-landing-hero-title em {
+        @apply not-italic text-brand-600;
+    }
+
+    .tp-landing-hero-sub {
+        @apply mt-5 max-w-lg text-base leading-relaxed text-slate-600 sm:text-lg;
+    }
+
+    .tp-landing-hero-actions {
+        @apply mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap;
+    }
+
+    .tp-landing-trust-row {
+        @apply mt-8 flex flex-wrap gap-3;
+    }
+
+    .tp-landing-trust-item {
+        @apply inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-600;
+    }
+
+    .tp-landing-hero-badge-float {
+        @apply absolute bottom-6 left-4 right-4 flex gap-3 sm:left-6 sm:right-auto lg:bottom-10 lg:left-10;
+    }
+
+    .tp-landing-float-card {
+        @apply rounded-2xl border border-white/30 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-sm;
+    }
+
+    /* —— Photo gallery (usafi) —— */
+    .tp-landing-gallery {
+        @apply grid gap-4 sm:grid-cols-3;
+    }
+
+    .tp-landing-gallery-item {
+        @apply relative overflow-hidden rounded-3xl shadow-md;
+    }
+
+    .tp-landing-gallery-item img {
+        @apply h-64 w-full object-cover transition duration-500 sm:h-80;
+    }
+
+    .tp-landing-gallery-item:hover img {
+        @apply scale-105;
+    }
+
+    .tp-landing-gallery-cap {
+        @apply absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent p-5 pt-16 text-white;
+    }
+
+    .tp-landing-gallery-cap h3 {
+        @apply text-lg font-bold;
+    }
+
+    .tp-landing-gallery-cap p {
+        @apply mt-1 text-[13px] text-white/85;
+    }
+
+    /* —— App / iPhone section —— */
+    .tp-landing-app-section {
+        @apply relative overflow-hidden bg-gradient-to-b from-sky-50 via-white to-brand-50/40 py-16 sm:py-24;
+    }
+
+    .tp-landing-phones {
+        @apply mt-12 flex flex-col items-center justify-center gap-12 lg:flex-row lg:items-end lg:gap-10 xl:gap-16;
+    }
+
+    .tp-iphone-wrap {
+        @apply flex flex-col items-center;
+    }
+
+    .tp-iphone-label {
+        @apply mb-4 flex items-center gap-2 text-sm font-bold text-slate-700;
+    }
+
+    .tp-iphone-label-dot {
+        @apply h-2.5 w-2.5 rounded-full;
+    }
+
+    .tp-iphone-label-dot--client {
+        @apply bg-orange-500;
+    }
+
+    .tp-iphone-label-dot--worker {
+        @apply bg-brand-600;
+    }
+
+    .tp-iphone {
+        @apply relative w-[min(100%,280px)] rounded-[2.75rem] border-[3px] border-slate-800 bg-slate-900 p-2 shadow-2xl shadow-slate-400/40;
+    }
+
+    .tp-iphone:nth-child(2) {
+        @apply lg:-rotate-2;
+    }
+
+    .tp-landing-phones .tp-iphone-wrap:last-child .tp-iphone {
+        @apply lg:rotate-2;
+    }
+
+    .tp-iphone-island {
+        @apply absolute left-1/2 top-2 z-20 h-[22px] w-[90px] -translate-x-1/2 rounded-full bg-black;
+    }
+
+    .tp-iphone-screen {
+        @apply overflow-hidden rounded-[2.25rem] bg-slate-100;
+    }
+
+    /* Mock app UI inside phone */
+    .tp-mock {
+        @apply flex min-h-[520px] flex-col text-left text-[10px] leading-tight text-slate-800;
+    }
+
+    .tp-mock-status {
+        @apply flex items-center justify-between bg-slate-900 px-4 pb-1 pt-7 text-[9px] font-semibold text-white;
+    }
+
+    .tp-mock-signal {
+        @apply tracking-widest opacity-80;
+    }
+
+    .tp-mock-header {
+        @apply px-3 pb-3 pt-1 text-white;
+    }
+
+    .tp-mock-header--client {
+        background: linear-gradient(145deg, #1e3a8a 0%, #3b82f6 100%);
+    }
+
+    .tp-mock-header--worker {
+        background: linear-gradient(145deg, #047857 0%, #10b981 100%);
+    }
+
+    .tp-mock-header-top {
+        @apply mb-2 flex items-center justify-between;
+    }
+
+    .tp-mock-header-title {
+        @apply text-[11px] font-bold;
+    }
+
+    .tp-mock-icon-btn {
+        @apply flex h-6 w-6 items-center justify-center rounded-lg bg-white/15 text-[10px];
+    }
+
+    .tp-mock-greeting {
+        @apply text-[13px] font-extrabold;
+    }
+
+    .tp-mock-greeting-sub {
+        @apply mt-0.5 text-[9px] text-white/80;
+    }
+
+    .tp-mock-cta-post {
+        @apply mt-3 w-full rounded-xl bg-[#f97316] py-2.5 text-center text-[10px] font-extrabold tracking-wide text-white shadow-md;
+    }
+
+    .tp-mock-body {
+        @apply flex-1 bg-slate-50 px-2.5 py-2;
+    }
+
+    .tp-mock-body--feed {
+        @apply space-y-2;
+    }
+
+    .tp-mock-section-title {
+        @apply mb-1.5 text-[9px] font-bold uppercase tracking-wide text-slate-500;
+    }
+
+    .tp-mock-section-title.mt {
+        @apply mt-2;
+    }
+
+    .tp-mock-job-card {
+        @apply mb-2 flex gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm;
+    }
+
+    .tp-mock-job-thumb {
+        @apply h-11 w-11 shrink-0 rounded-lg bg-cover bg-center;
+    }
+
+    .tp-mock-job-thumb--alt {
+        background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    }
+
+    .tp-mock-job-title {
+        @apply text-[10px] font-bold text-slate-900;
+    }
+
+    .tp-mock-job-meta {
+        @apply text-[8px] text-slate-500;
+    }
+
+    .tp-mock-job-price {
+        @apply mt-0.5 text-[10px] font-extrabold text-brand-700;
+    }
+
+    .tp-mock-chips {
+        @apply flex flex-wrap gap-1;
+    }
+
+    .tp-mock-chips span {
+        @apply rounded-lg bg-white px-2 py-1 text-[8px] font-semibold ring-1 ring-slate-200;
+    }
+
+    .tp-mock-feed-card {
+        @apply overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm;
+    }
+
+    .tp-mock-feed-card--dim {
+        @apply opacity-90;
+    }
+
+    .tp-mock-feed-img {
+        @apply h-16 bg-cover bg-center;
+    }
+
+    .tp-mock-feed-img--2 {
+        background: linear-gradient(135deg, #fef3c7, #fde68a);
+    }
+
+    .tp-mock-feed-body {
+        @apply p-2;
+    }
+
+    .tp-mock-feed-body.only {
+        @apply p-2.5;
+    }
+
+    .tp-mock-badge {
+        @apply inline-block rounded-md bg-brand-100 px-1.5 py-0.5 text-[7px] font-bold uppercase text-brand-800;
+    }
+
+    .tp-mock-feed-foot {
+        @apply mt-1.5 flex items-center justify-between;
+    }
+
+    .tp-mock-apply {
+        @apply text-[8px] font-bold text-brand-600;
+    }
+
+    .tp-mock-tabbar {
+        @apply flex justify-around border-t border-slate-200 bg-white py-2 text-sm;
+    }
+
+    .tp-mock-tabbar span {
+        @apply opacity-40;
+    }
+
+    .tp-mock-tabbar span.is-active {
+        @apply opacity-100;
+    }
+
+    /* —— Sections —— */
+    .tp-landing-section {
+        @apply py-16 sm:py-20 lg:py-24;
+    }
+
+    .tp-landing-container {
+        @apply mx-auto max-w-7xl px-4 sm:px-6;
+    }
+
+    .tp-landing-section-head {
+        @apply mx-auto max-w-2xl text-center;
+    }
+
+    .tp-landing-kicker {
+        @apply text-[11px] font-bold uppercase tracking-[0.16em] text-brand-600;
+    }
+
+    .tp-landing-section-title {
+        @apply mt-2 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl;
+    }
+
+    .tp-landing-section-sub {
+        @apply mt-3 text-[15px] leading-relaxed text-slate-600;
+    }
+
+    .tp-landing-steps {
+        @apply mt-12 grid gap-5 md:grid-cols-3;
+    }
+
+    .tp-landing-step {
+        @apply rounded-3xl border border-slate-200 bg-white p-6 shadow-sm;
+    }
+
+    .tp-landing-step-num {
+        @apply flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-600 text-sm font-extrabold text-white;
+    }
+
+    .tp-landing-cat-grid {
+        @apply mt-12 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4;
+    }
+
+    .tp-landing-cat {
+        @apply flex flex-col items-center rounded-2xl border border-slate-200 bg-white p-4 text-center shadow-sm no-underline transition hover:border-brand-200 hover:shadow-md;
+    }
+
+    .tp-landing-cat-emoji {
+        @apply flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-2xl;
+    }
+
+    .tp-landing-stats {
+        @apply relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-brand-700 to-brand-900 px-6 py-12 text-white sm:px-10;
+    }
+
+    .tp-landing-stats-grid {
+        @apply relative mt-10 grid grid-cols-2 gap-6 lg:grid-cols-4;
+    }
+
+    .tp-landing-stat-val {
+        @apply text-3xl font-extrabold tabular-nums sm:text-4xl;
+    }
+
+    .tp-landing-stat-lbl {
+        @apply mt-1 text-sm text-brand-100;
+    }
+
+    .tp-landing-testimonial {
+        @apply rounded-3xl border border-slate-200 bg-white p-6 shadow-sm;
+    }
+
+    .tp-landing-dual-cta {
+        @apply grid gap-5 lg:grid-cols-2;
+    }
+
+    .tp-landing-cta-card {
+        @apply relative overflow-hidden rounded-3xl p-8 sm:p-10;
+    }
+
+    .tp-landing-cta-client {
+        @apply bg-gradient-to-br from-brand-600 to-brand-800 text-white;
+    }
+
+    .tp-landing-cta-worker {
+        @apply border border-slate-200 bg-white;
+    }
+
+    .tp-landing-footer {
+        @apply border-t border-slate-800 bg-slate-900 text-slate-400;
+    }
+
+    .tp-landing-wa {
+        @apply fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg transition hover:scale-105;
+    }
+}

@@ -342,6 +342,28 @@ class AdminController extends Controller
             $query->where('status', $status);
         }
 
+        if ($category = $request->get('category')) {
+            $query->whereHas('category', fn ($q) => $q->where('slug', $category));
+        }
+
+        if ($visibility = $request->get('visibility')) {
+            if ($visibility === 'hidden') {
+                $query->hiddenOnly();
+            } elseif ($visibility === 'visible') {
+                $query->publiclyVisible();
+            }
+        }
+
+        if ($engagement = $request->get('engagement')) {
+            if ($engagement === Job::ENGAGEMENT_JOB_REQUEST) {
+                $query->jobRequests();
+            } elseif ($engagement === Job::ENGAGEMENT_SERVICE_LISTING) {
+                $query->serviceListings();
+            } elseif ($engagement === Job::ENGAGEMENT_SERVICE_BOOKING) {
+                $query->serviceBookings();
+            }
+        }
+
         // Search
         if ($search = $request->get('search')) {
             $query->where('title', 'like', "%{$search}%");
@@ -360,7 +382,22 @@ class AdminController extends Controller
 
         $jobs = $query->latest()->paginate(20)->withQueryString();
 
-        return view('admin.jobs', compact('jobs', 'filterUser'));
+        $workers = User::where('role', 'mfanyakazi')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        $categories = Category::orderBy('name')->get(['id', 'name', 'slug']);
+
+        $jobStats = [
+            'total' => Job::count(),
+            'posted' => Job::where('status', 'posted')->count(),
+            'in_progress' => Job::where('status', 'in_progress')->count(),
+            'completed' => Job::where('status', 'completed')->count(),
+            'cancelled' => Job::where('status', 'cancelled')->count(),
+        ];
+
+        return view('admin.jobs', compact('jobs', 'filterUser', 'workers', 'categories', 'jobStats'));
     }
 
     /**
@@ -372,13 +409,35 @@ class AdminController extends Controller
             'muhitaji',
             'acceptedWorker',
             'category',
+            'sourceListing',
             'comments.user',
             'privateMessages.sender',
             'privateMessages.receiver',
             'payment',
+            'hiddenByAdmin',
         ]);
 
-        return view('admin.job-details', compact('job'));
+        $workers = User::where('role', 'mfanyakazi')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        $statusOptions = [
+            Job::S_OPEN,
+            Job::S_AWAITING_PAYMENT,
+            Job::S_FUNDED,
+            Job::S_IN_PROGRESS,
+            Job::S_SUBMITTED,
+            Job::S_COMPLETED,
+            Job::S_CANCELLED,
+            Job::S_EXPIRED,
+            Job::S_DISPUTED,
+            Job::S_REFUNDED,
+            'posted',
+            'assigned',
+        ];
+
+        return view('admin.job-details', compact('job', 'workers', 'statusOptions'));
     }
 
     /**
@@ -386,33 +445,36 @@ class AdminController extends Controller
      */
     public function allChats(Request $request)
     {
-        // Get all conversations
+        $search = trim((string) $request->get('search', ''));
+
         $conversations = DB::table('private_messages')
+            ->join('work_orders', 'private_messages.work_order_id', '=', 'work_orders.id')
             ->select(
-                'work_order_id',
-                DB::raw('MAX(created_at) as last_message_at'),
+                'private_messages.work_order_id',
+                DB::raw('MAX(private_messages.created_at) as last_message_at'),
                 DB::raw('COUNT(*) as message_count')
             )
-            ->groupBy('work_order_id')
-            ->orderBy('last_message_at', 'desc')
+            ->when($search !== '', fn ($q) => $q->where('work_orders.title', 'like', "%{$search}%"))
+            ->groupBy('private_messages.work_order_id')
+            ->orderByDesc('last_message_at')
             ->paginate(20)
             ->withQueryString();
 
-        // Load job details
         $jobIds = $conversations->pluck('work_order_id');
-        $jobs = Job::with(['muhitaji', 'acceptedWorker'])
+        $jobs = Job::with(['muhitaji', 'acceptedWorker', 'category'])
             ->whereIn('id', $jobIds)
             ->get()
             ->keyBy('id');
 
-        // Merge data
         $conversations->getCollection()->transform(function ($conv) use ($jobs) {
-            $job = $jobs->get($conv->work_order_id);
-            $conv->job = $job;
+            $conv->job = $jobs->get($conv->work_order_id);
+
             return $conv;
         });
 
-        return view('admin.chats', compact('conversations'));
+        $stats = $this->chatMonitorStats();
+
+        return view('admin.chats', compact('conversations', 'stats', 'search'));
     }
 
     /**
@@ -420,6 +482,8 @@ class AdminController extends Controller
      */
     public function userChats(User $user)
     {
+        $search = trim((string) request()->get('search', ''));
+
         $conversations = DB::table('private_messages')
             ->join('work_orders', 'private_messages.work_order_id', '=', 'work_orders.id')
             ->where(function ($q) use ($user) {
@@ -431,13 +495,14 @@ class AdminController extends Controller
                 DB::raw('MAX(private_messages.created_at) as last_message_at'),
                 DB::raw('COUNT(*) as message_count')
             )
+            ->when($search !== '', fn ($q) => $q->where('work_orders.title', 'like', "%{$search}%"))
             ->groupBy('private_messages.work_order_id')
-            ->orderBy('last_message_at', 'desc')
+            ->orderByDesc('last_message_at')
             ->paginate(20)
             ->withQueryString();
 
         $jobIds = $conversations->pluck('work_order_id');
-        $jobs = Job::with(['muhitaji', 'acceptedWorker'])
+        $jobs = Job::with(['muhitaji', 'acceptedWorker', 'category'])
             ->whereIn('id', $jobIds)
             ->get()
             ->keyBy('id');
@@ -449,8 +514,38 @@ class AdminController extends Controller
         });
 
         $chatsForUser = $user;
+        $stats = $this->chatMonitorStats($user);
 
-        return view('admin.chats', compact('conversations', 'chatsForUser'));
+        return view('admin.chats', compact('conversations', 'chatsForUser', 'stats', 'search'));
+    }
+
+    protected function chatMonitorStats(?User $user = null): array
+    {
+        $base = DB::table('private_messages');
+        if ($user) {
+            $base->join('work_orders', 'private_messages.work_order_id', '=', 'work_orders.id')
+                ->where(function ($q) use ($user) {
+                    $q->where('work_orders.user_id', $user->id)
+                        ->orWhere('work_orders.accepted_worker_id', $user->id);
+                });
+        }
+
+        $conversations = (clone $base)
+            ->distinct('private_messages.work_order_id')
+            ->count('private_messages.work_order_id');
+
+        $messages = (clone $base)->count();
+
+        $activeToday = (clone $base)
+            ->where('private_messages.created_at', '>=', now()->subDay())
+            ->distinct('private_messages.work_order_id')
+            ->count('private_messages.work_order_id');
+
+        return [
+            'conversations' => $conversations,
+            'messages' => $messages,
+            'active_today' => $activeToday,
+        ];
     }
 
     /**
@@ -794,14 +889,10 @@ class AdminController extends Controller
     /**
      * ADMIN FULL CONTROL - View all system logs
      */
-    public function systemLogs()
+    public function systemLogs(Request $request)
     {
-        $logs = [];
-
-        // Get recent activities
         $activities = collect();
 
-        // Recent jobs
         $recentJobs = Job::with(['muhitaji', 'acceptedWorker'])
             ->latest()
             ->limit(50)
@@ -813,11 +904,10 @@ class AdminController extends Controller
                 'user' => $job->muhitaji,
                 'description' => "Created job: {$job->title}",
                 'timestamp' => $job->created_at,
-                'data' => $job
+                'data' => $job,
             ]);
         }
 
-        // Recent messages
         $recentMessages = PrivateMessage::with(['sender', 'receiver', 'job'])
             ->latest()
             ->limit(50)
@@ -829,11 +919,10 @@ class AdminController extends Controller
                 'user' => $message->sender,
                 'description' => "Sent message to {$message->receiver->name}",
                 'timestamp' => $message->created_at,
-                'data' => $message
+                'data' => $message,
             ]);
         }
 
-        // Recent payments
         $recentPayments = Payment::with(['job.muhitaji'])
             ->latest()
             ->limit(50)
@@ -843,16 +932,41 @@ class AdminController extends Controller
             $activities->push([
                 'type' => 'payment_made',
                 'user' => $payment->job->muhitaji ?? null,
-                'description' => "Made payment: Tsh " . number_format($payment->amount) . " for job: " . ($payment->job->title ?? 'Unknown'),
+                'description' => 'Made payment: Tsh '.number_format($payment->amount).' for job: '.($payment->job->title ?? 'Unknown'),
                 'timestamp' => $payment->created_at,
-                'data' => $payment
+                'data' => $payment,
             ]);
         }
 
-        // Sort by timestamp
-        $activities = $activities->sortByDesc('timestamp')->values();
+        $all = $activities->sortByDesc('timestamp')->values();
 
-        return view('admin.system-logs', compact('activities'));
+        $stats = [
+            'total' => $all->count(),
+            'jobs' => $all->where('type', 'job_created')->count(),
+            'messages' => $all->where('type', 'message_sent')->count(),
+            'payments' => $all->where('type', 'payment_made')->count(),
+        ];
+
+        $type = $request->get('type');
+        $search = strtolower(trim((string) $request->get('search', '')));
+
+        $filtered = $all;
+        if ($type && in_array($type, ['job_created', 'message_sent', 'payment_made'], true)) {
+            $filtered = $filtered->where('type', $type)->values();
+        }
+        if ($search !== '') {
+            $filtered = $filtered->filter(function ($activity) use ($search) {
+                $userName = strtolower($activity['user']->name ?? '');
+                $desc = strtolower($activity['description'] ?? '');
+
+                return str_contains($userName, $search) || str_contains($desc, $search);
+            })->values();
+        }
+
+        $activities = $filtered->take(100);
+        $filter = $type ?: 'all';
+
+        return view('admin.system-logs', compact('activities', 'stats', 'filter', 'search'));
     }
 
     /**
@@ -1158,14 +1272,128 @@ class AdminController extends Controller
     }
 
     /**
+     * ADMIN FULL CONTROL - Assign worker to a job
+     */
+    public function assignWorker(Request $request, Job $job)
+    {
+        $request->validate([
+            'worker_id' => ['required', 'exists:users,id'],
+            'agreed_amount' => ['nullable', 'integer', 'min:1000'],
+        ]);
+
+        $worker = User::query()
+            ->where('id', $request->integer('worker_id'))
+            ->where('role', 'mfanyakazi')
+            ->where('is_active', true)
+            ->firstOrFail();
+
+        $amount = (int) ($request->input('agreed_amount') ?: $job->agreed_amount ?: $job->price ?: 1000);
+
+        DB::transaction(function () use ($job, $worker, $amount) {
+            $job->selected_worker_id = $worker->id;
+            $job->agreed_amount = $amount;
+
+            if (! $job->completion_code) {
+                $job->completion_code = (string) random_int(100000, 999999);
+            }
+
+            if (in_array($job->status, [Job::S_FUNDED, Job::S_IN_PROGRESS, Job::S_SUBMITTED, 'assigned'], true)) {
+                $job->accepted_worker_id = $worker->id;
+                $job->save();
+            } elseif (in_array($job->status, [Job::S_OPEN, 'posted'], true)) {
+                $job->accepted_worker_id = null;
+                $job->transitionStatus(
+                    Job::S_AWAITING_PAYMENT,
+                    Auth::id(),
+                    "Admin assigned worker: {$worker->name}",
+                    [],
+                    true
+                );
+            } else {
+                $job->save();
+            }
+        });
+
+        return back()->with('success', "Mfanyakazi {$worker->name} ameteuliwa kwa kazi hii.");
+    }
+
+    /**
+     * ADMIN FULL CONTROL - Change job status (forced)
+     */
+    public function changeJobStatus(Request $request, Job $job)
+    {
+        $request->validate([
+            'status' => ['required', 'string', 'max:50'],
+        ]);
+
+        $newStatus = $request->string('status')->toString();
+
+        $job->transitionStatus($newStatus, Auth::id(), 'Admin changed job status', [], true);
+
+        if ($newStatus === Job::S_COMPLETED) {
+            $job->update(['completed_at' => now()]);
+        }
+        if ($newStatus === Job::S_CANCELLED) {
+            $job->update(['cancelled_at' => now()]);
+        }
+
+        return back()->with('success', "Hali ya kazi imebadilishwa kuwa {$newStatus}.");
+    }
+
+    /**
+     * ADMIN — Ficha kazi kutoka kwa umma (si kufuta rekodi).
+     */
+    public function hideJob(Request $request, Job $job)
+    {
+        $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($job->isHidden()) {
+            return back()->with('status', 'Kazi tayari imefichwa.');
+        }
+
+        $job->hideModeration(Auth::id(), $request->string('reason')->toString() ?: null);
+
+        return back()->with('success', "Kazi '{$job->title}' imefichwa — watumiaji wengine hawataiona, lakini mchapishaji ataiona kwenye orodha yake.");
+    }
+
+    /**
+     * ADMIN — Rudisha kazi iliyofichwa kuonekana kwa umma.
+     */
+    public function unhideJob(Job $job)
+    {
+        if (! $job->isHidden()) {
+            return back()->with('status', 'Kazi hii haikuwa imefichwa.');
+        }
+
+        $job->unhideModeration();
+
+        return back()->with('success', "Kazi '{$job->title}' sasa inaonekana kwa watumiaji wote.");
+    }
+
+    /**
+     * ADMIN FULL CONTROL - Delete a job record
+     */
+    public function deleteJob(Job $job)
+    {
+        if (in_array($job->status, [Job::S_FUNDED, Job::S_IN_PROGRESS, Job::S_SUBMITTED, Job::S_DISPUTED], true)) {
+            return back()->with('error', 'Huwezi kufuta kazi inayoendelea na escrow. Ghairi kwanza.');
+        }
+
+        $title = $job->title;
+        $job->delete();
+
+        return redirect()->route('admin.jobs')->with('success', "Kazi '{$title}' imefutwa.");
+    }
+
+    /**
      * ADMIN FULL CONTROL - Force complete any job
      */
     public function forceCompleteJob(Job $job)
     {
-        $job->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-        ]);
+        $job->transitionStatus(Job::S_COMPLETED, Auth::id(), 'Admin force-completed job', [], true);
+        $job->update(['completed_at' => now()]);
 
         return back()->with('success', "Job '{$job->title}' has been force completed!");
     }
@@ -1175,9 +1403,8 @@ class AdminController extends Controller
      */
     public function forceCancelJob(Job $job)
     {
-        $job->update([
-            'status' => 'cancelled',
-        ]);
+        $job->transitionStatus(Job::S_CANCELLED, Auth::id(), 'Admin force-cancelled job', [], true);
+        $job->update(['cancelled_at' => now()]);
 
         return back()->with('success', "Job '{$job->title}' has been force cancelled!");
     }

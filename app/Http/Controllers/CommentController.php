@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Job;
 use App\Models\JobComment;
 use App\Models\PrivateMessage;
+use App\Rules\NoPhoneNumberInText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class CommentController extends Controller
         }
 
         $request->validate([
-            'message' => ['required', 'string', 'max:2000'],
+            'message' => ['required', 'string', 'max:2000', new NoPhoneNumberInText()],
             'type' => ['nullable', 'in:comment,application,offer'],
             'bid_amount' => ['nullable', 'integer', 'min:1000'],
         ]);
@@ -93,7 +94,7 @@ class CommentController extends Controller
         }
 
         $request->validate([
-            'reply_message' => ['required', 'string', 'max:1000'],
+            'reply_message' => ['required', 'string', 'max:1000', new NoPhoneNumberInText()],
         ]);
 
         $comment->update([
@@ -202,7 +203,7 @@ class CommentController extends Controller
         }
 
         $request->validate([
-            'reject_reason' => ['nullable', 'string', 'max:500'],
+            'reject_reason' => ['nullable', 'string', 'max:500', new NoPhoneNumberInText()],
         ]);
 
         $comment->update([
@@ -235,7 +236,7 @@ class CommentController extends Controller
 
         $request->validate([
             'counter_amount' => ['required', 'integer', 'min:1000'],
-            'counter_message' => ['nullable', 'string', 'max:500'],
+            'counter_message' => ['nullable', 'string', 'max:500', new NoPhoneNumberInText()],
         ]);
 
         $comment->update([

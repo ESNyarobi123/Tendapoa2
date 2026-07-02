@@ -1127,6 +1127,16 @@
   
   <main class="main-content">
     <div class="page-container">
+
+    @if($job->isHidden())
+      <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[12px] text-amber-950" role="status">
+        <strong class="font-bold">Kazi hii imefichwa na msimamizi.</strong>
+        Haijaonekana kwa wafanyakazi wengine wala watumiaji wengine.
+        @if($job->hidden_reason)
+          <span class="mt-1 block text-amber-900/80">Sababu: {{ $job->hidden_reason }}</span>
+        @endif
+      </div>
+    @endif
     
     <!-- HERO SECTION WITH IMAGE -->
     <div class="job-hero">
@@ -1427,7 +1437,7 @@
               <div id="worker-apply-form" class="job-action-panel job-action-panel--apply">
                 <h4>✋ Omba kufanya kazi hii</h4>
                 <p class="lead">Baada ya kuwasilisha utapelekwa kwenye <a href="{{ route('mfanyakazi.applications') }}" style="color:var(--job-primary);font-weight:800;">Maombi yangu</a> kufuatilia hali (counter, kuchaguliwa, n.k.). Hapa hutaona maombi ya wafanyakazi wengine.</p>
-                <form method="POST" action="{{ route('jobs.apply', $job) }}">
+                <form method="POST" action="{{ route('jobs.apply', $job) }}" data-tp-no-phone-fields="message,eta_text">
                   @csrf
                   <div class="form-group">
                     <label class="form-label">💵 Bei unayopendekeza (TZS)</label>
@@ -1436,11 +1446,17 @@
                   </div>
                   <div class="form-group">
                     <label class="form-label">📝 Ujumbe — kwa nini uchaguliwe?</label>
-                    <textarea name="message" class="form-textarea" rows="3" required placeholder="Mimi ni mtaalamu wa... na nina uzoefu wa..."></textarea>
+                    <textarea name="message" class="form-textarea @error('message') border-red-500 @enderror" rows="3" required placeholder="Mimi ni mtaalamu wa... na nina uzoefu wa...">{{ old('message') }}</textarea>
+                    @error('message')
+                      <p class="mt-1 text-[12px] font-semibold text-red-600" role="alert">{{ $message }}</p>
+                    @enderror
                   </div>
                   <div class="form-group">
                     <label class="form-label">⏱️ Muda wa kukamilisha (hiari)</label>
-                    <input type="text" name="eta_text" class="form-input" placeholder="Mfano: siku 2" value="{{ old('eta_text') }}">
+                    <input type="text" name="eta_text" class="form-input @error('eta_text') border-red-500 @enderror" placeholder="Mfano: siku 2" value="{{ old('eta_text') }}">
+                    @error('eta_text')
+                      <p class="mt-1 text-[12px] font-semibold text-red-600" role="alert">{{ $message }}</p>
+                    @enderror
                   </div>
                   <button type="submit" class="btn btn-success btn-full">✋ Wasilisha ombi</button>
                 </form>
@@ -1821,18 +1837,21 @@
           <!-- Comment Form for Mfanyakazi (legacy - for posted status backward compat) -->
           @auth
             @if(auth()->user()->role === 'mfanyakazi' && $job->status === 'posted' && auth()->id() !== $job->user_id)
-              <form method="post" action="{{ route('jobs.comment', $job) }}" class="comment-form" id="comment-form">
+              <form method="post" action="{{ route('jobs.comment', $job) }}" class="comment-form" id="comment-form" data-tp-no-phone-fields="message">
                 @csrf
                 <div class="form-group">
                   <label class="form-label">📝 Andika Maoni au Omba Kazi</label>
                   <textarea 
                     name="message" 
                     id="message"
-                    class="form-textarea"
+                    class="form-textarea @error('message') border-red-500 @enderror"
                     placeholder="Karibu! Mimi ni mtaalamu wa... na nina uzoefu wa miaka... Naomba kufanya kazi hii..."
                     required
                     rows="4"
-                  ></textarea>
+                  >{{ old('message') }}</textarea>
+                  @error('message')
+                    <p class="mt-1 text-[12px] font-semibold text-red-600" role="alert">{{ $message }}</p>
+                  @enderror
                 </div>
                 
                 <!-- Application Type Selector -->

@@ -67,7 +67,7 @@
               </div>
             @endif
 
-            <form id="mfanyakazi-create-form" method="post" action="{{ route('jobs.store-mfanyakazi') }}" enctype="multipart/form-data" class="space-y-0" novalidate>
+            <form id="mfanyakazi-create-form" method="post" action="{{ route('jobs.store-mfanyakazi') }}" enctype="multipart/form-data" class="space-y-0" novalidate data-tp-no-phone-fields="title,description">
               @csrf
 
               {{-- Hatua 1 --}}

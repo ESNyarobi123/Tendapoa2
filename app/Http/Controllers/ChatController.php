@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Job;
 use App\Models\PrivateMessage;
 use App\Models\User;
+use App\Services\PhoneContactPolicy;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -105,7 +106,40 @@ class ChatController extends Controller
             ->where('is_read', false)
             ->count();
 
-        return view('chat.show', compact('job', 'messages', 'otherUser', 'unreadCount'));
+        return view('chat.show', compact('job', 'messages', 'otherUser', 'unreadCount'))
+            ->with('allowsPhoneSharing', $job->allowsPhoneSharingInChat((int) $user->id, (int) $otherUser->id));
+    }
+
+    private function rejectBlockedPhoneInMessage(
+        string $message,
+        Job $job,
+        int $senderId,
+        int $receiverId,
+    ): ?\Illuminate\Http\RedirectResponse {
+        if (PhoneContactPolicy::userTextContainsBlockedPhone($message, 'chat', $job, $senderId, $receiverId)) {
+            return back()->withErrors([
+                'message' => PhoneContactPolicy::BLOCKED_MESSAGE,
+            ])->withInput();
+        }
+
+        return null;
+    }
+
+    private function rejectBlockedPhoneInMessageJson(
+        string $message,
+        Job $job,
+        int $senderId,
+        int $receiverId,
+    ): ?\Illuminate\Http\JsonResponse {
+        if (PhoneContactPolicy::userTextContainsBlockedPhone($message, 'chat', $job, $senderId, $receiverId)) {
+            return response()->json([
+                'success' => false,
+                'message' => PhoneContactPolicy::BLOCKED_MESSAGE,
+                'errors' => ['message' => [PhoneContactPolicy::BLOCKED_MESSAGE]],
+            ], 422);
+        }
+
+        return null;
     }
 
     /**
@@ -149,6 +183,15 @@ class ChatController extends Controller
             if (! $workerOk) {
                 return back()->with('error', 'Huwezi kutuma ujumbe kwa mfanyakazi huyu kwenye kazi hii.');
             }
+        }
+
+        if ($blocked = $this->rejectBlockedPhoneInMessage(
+            (string) $request->message,
+            $job,
+            (int) $user->id,
+            (int) $receiverId,
+        )) {
+            return $blocked;
         }
 
         $message = PrivateMessage::create([
@@ -235,6 +278,15 @@ class ChatController extends Controller
             }
         }
 
+        if ($blocked = $this->rejectBlockedPhoneInMessageJson(
+            (string) $request->message,
+            $job,
+            (int) $user->id,
+            (int) $receiverId,
+        )) {
+            return $blocked;
+        }
+
         $message = PrivateMessage::create([
             'work_order_id' => $job->id,
             'sender_id' => $user->id,
@@ -246,6 +298,7 @@ class ChatController extends Controller
             'success' => true,
             'message' => 'Ujumbe umetumwa',
             'data' => $message->load('sender'),
+            'allows_phone_sharing' => $job->allowsPhoneSharingInChat((int) $user->id, (int) $receiverId),
         ]);
     }
 

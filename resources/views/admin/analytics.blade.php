@@ -1,995 +1,257 @@
 @extends('layouts.admin')
-@section('title', 'Admin — Analytics & Reports')
+@section('title', 'Admin — Takwimu')
 
 @section('content')
-<style>
-  /* ====== Modern Admin Analytics Page - Dark Theme ====== */
-  .page-container {
-    --primary: #6366f1;
-    --secondary: #06b6d4;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #f43f5e;
-    --card-bg: rgba(255,255,255,0.05);
-    --card-bg-hover: rgba(255,255,255,0.08);
-    --text-primary: #ffffff;
-    --text-muted: #94a3b8;
-    --border: rgba(255,255,255,0.1);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-  }
+<div class="adm-page adm-analytics-page">
+    @include('admin.partials.page-hero', [
+        'title' => 'Takwimu na Ripoti',
+        'subtitle' => 'Chambua mapato, kazi, watumiaji, na utendaji wa mfumo',
+        'icon' => '📊',
+        'actions' => '<a class="adm-btn adm-btn--ghost" href="' . route('admin.dashboard') . '">↩️ Dashibodi</a>',
+    ])
 
-  .page-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: grid;
-    gap: 24px;
-  }
-
-  /* Header */
-  .page-header {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .page-header::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #06b6d4);
-    background-size: 200% 100%;
-    animation: gradientShift 3s ease infinite;
-  }
-  
-  @keyframes gradientShift {
-    0%, 100% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-  }
-
-  .header-content {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 24px;
-    align-items: center;
-  }
-
-  .header-text h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin: 0 0 8px 0;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    position: relative;
-    z-index: 1;
-  }
-
-  .header-text p {
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    margin: 0;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  /* Date Range Picker */
-  .date-range-section {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-  }
-
-  .date-range-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    align-items: end;
-  }
-
-  .date-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .date-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .date-input {
-    padding: 12px 16px;
-    border: 2px solid var(--border);
-    border-radius: 12px;
-    font-size: 0.875rem;
-    background: rgba(255,255,255,0.05);
-    color: var(--text-primary);
-    transition: all 0.3s ease;
-  }
-
-  .date-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  /* Key Metrics */
-  .metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 24px;
-  }
-
-  .metric-card {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
-  }
-  
-  .metric-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899);
-  }
-
-  .metric-card:hover {
-    background: var(--card-bg-hover);
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .metric-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 16px;
-  }
-
-  .metric-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    color: white;
-  }
-
-  .metric-info h3 {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin: 0;
-  }
-
-  .metric-value {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin: 8px 0;
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .metric-change {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.875rem;
-    font-weight: 600;
-  }
-
-  .metric-change.positive {
-    color: var(--success);
-  }
-
-  .metric-change.negative {
-    color: var(--danger);
-  }
-
-  /* Charts Section */
-  .charts-section {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-  }
-
-  .charts-grid {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 24px;
-  }
-
-  .chart-container {
-    background: rgba(255,255,255,0.03);
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-  }
-  
-  .chart-container:hover {
-    background: rgba(255,255,255,0.06);
-  }
-
-  .chart-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 20px;
-  }
-
-  .chart-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .chart-canvas-container {
-    position: relative;
-    height: 300px;
-    width: 100%;
-  }
-
-  .chart-placeholder {
-    height: 300px;
-    background: rgba(255,255,255,0.02);
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    font-weight: 600;
-    border: 2px dashed var(--border);
-  }
-
-  /* Top Performers */
-  .top-performers {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-  }
-
-  .performers-list {
-    display: grid;
-    gap: 16px;
-  }
-
-  .performer-item {
-    background: rgba(255,255,255,0.03);
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    transition: all 0.3s ease;
-  }
-  
-  .performer-item:hover {
-    background: rgba(255,255,255,0.08);
-  }
-
-  .performer-item:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .performer-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-
-  .performer-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .performer-avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 0.875rem;
-  }
-
-  .performer-details h4 {
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-  }
-
-  .performer-details p {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    margin: 0;
-  }
-
-  .performer-stats {
-    text-align: right;
-  }
-
-  .performer-value {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: var(--success);
-  }
-
-  .performer-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
-  }
-
-  .btn-outline {
-    background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-  }
-
-  .btn-outline:hover {
-    background: var(--primary);
-    color: white;
-  }
-
-  .btn-success {
-    background: linear-gradient(135deg, var(--success), #059669);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);
-  }
-
-  .btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.6);
-  }
-
-  /* Responsive */
-  @media (max-width: 768px) {
-    .analytics-page {
-      padding: 16px;
-    }
-    
-    .page-header {
-      padding: 24px;
-    }
-    
-    .header-content {
-      grid-template-columns: 1fr;
-      text-align: center;
-    }
-    
-    .header-text h1 {
-      font-size: 2rem;
-    }
-    
-    .date-range-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .metrics-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .charts-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-</style>
-
-<div class="page-container">
-  <div class="page-container">
-    
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-text">
-          <h1>📊 Analytics & Reports</h1>
-          <p>Chambua data na ufuatilie utendaji wa mfumo</p>
-        </div>
-        <div class="header-actions">
-          <a class="btn btn-outline" href="{{ route('dashboard') }}">
-            <span>↩️</span>
-            Rudi Dashboard
-          </a>
-          <a class="btn btn-primary" href="{{ url('/admin/analytics/export') }}">
-            <span>📈</span>
-            Export Report
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Date Range Picker -->
-    <div class="date-range-section">
-      <div class="date-range-grid">
-        <div class="date-group">
-          <label class="date-label" for="startDate">Start Date</label>
-          <input type="date" class="date-input" id="startDate" value="{{ $startDate->format('Y-m-d') }}">
-        </div>
-        <div class="date-group">
-          <label class="date-label" for="endDate">End Date</label>
-          <input type="date" class="date-input" id="endDate" value="{{ $endDate->format('Y-m-d') }}">
-        </div>
-        <div class="date-group">
-          <button class="btn btn-primary" onclick="updateAnalytics()">
-            <span>🔄</span>
-            Update Analytics
-          </button>
-        </div>
-        <div class="date-group">
-          <button class="btn btn-outline" onclick="resetDateRange()">
-            <span>📅</span>
-            Reset to Current Month
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Key Metrics -->
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <div class="metric-header">
-          <div class="metric-icon">📦</div>
-          <div class="metric-info">
-            <h3>Total Jobs</h3>
-            <div class="metric-value">{{ number_format($totalJobs) }}</div>
-            <div class="metric-change positive">
-              <span>📈</span>
-              Last {{ $period }} days
+    <form method="GET" action="{{ route('admin.analytics') }}" class="adm-filter-bar adm-card">
+        <div class="adm-filter-bar__grid">
+            <div class="adm-field">
+                <label class="adm-label" for="startDate">Tarehe ya kuanza</label>
+                <input type="date" id="startDate" name="start_date" class="adm-input"
+                    value="{{ $startDate->format('Y-m-d') }}" required>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-header">
-          <div class="metric-icon">💰</div>
-          <div class="metric-info">
-            <h3>Total Revenue</h3>
-            <div class="metric-value">TZS {{ number_format($totalRevenue) }}</div>
-            <div class="metric-change positive">
-              <span>📈</span>
-              Last {{ $period }} days
+            <div class="adm-field">
+                <label class="adm-label" for="endDate">Tarehe ya mwisho</label>
+                <input type="date" id="endDate" name="end_date" class="adm-input"
+                    value="{{ $endDate->format('Y-m-d') }}" required>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-header">
-          <div class="metric-icon">🏦</div>
-          <div class="metric-info">
-            <h3>Platform Commissions</h3>
-            <div class="metric-value">TZS {{ number_format($totalCommissions) }}</div>
-            <div class="metric-change positive">
-              <span>💎</span>
-              10% Service Fee
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-header">
-          <div class="metric-icon">👥</div>
-          <div class="metric-info">
-            <h3>Active Users</h3>
-            <div class="metric-value">{{ number_format($activeUsers) }}</div>
-            <div class="metric-change positive">
-              <span>📈</span>
-              System-wide
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="metric-card">
-        <div class="metric-header">
-          <div class="metric-icon">⭐</div>
-          <div class="metric-info">
-            <h3>Completion Rate</h3>
-            <div class="metric-value">{{ number_format($completionRate, 1) }}%</div>
-            <div class="metric-change positive">
-              <span>📈</span>
-              Last {{ $period }} days
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Charts Section -->
-    <div class="charts-section">
-      <div class="charts-grid">
-        <!-- Revenue Chart -->
-        <div class="chart-container">
-          <div class="chart-header">
-            <div class="chart-title">
-              <span>💰</span>
-              Revenue Trend
-            </div>
-            <select class="btn btn-outline" style="font-size: 0.75rem; padding: 8px 12px;">
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-              <option>Last 3 months</option>
-            </select>
-          </div>
-          <div class="chart-canvas-container">
-            <canvas id="revenueChart"></canvas>
-          </div>
-        </div>
-
-        <!-- Job Categories -->
-        <div class="chart-container">
-          <div class="chart-header">
-            <div class="chart-title">
-              <span>🏷️</span>
-              Job Categories
-            </div>
-          </div>
-          <div class="chart-canvas-container">
-            <canvas id="categoryChart"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Top Performers -->
-    <div class="top-performers">
-      <div class="chart-header">
-        <div class="chart-title">
-          <span>🏆</span>
-          Top Performing Workers
-        </div>
-        <a class="btn btn-outline" href="{{ url('/admin/users') }}" style="font-size: 0.75rem; padding: 8px 12px;">
-          View All
-        </a>
-      </div>
-      <div class="performers-list">
-        @forelse($topWorkers as $worker)
-          <div class="performer-item">
-            <div class="performer-header">
-              <div class="performer-info">
-                <div class="performer-avatar">
-                  {{ strtoupper(substr($worker->name, 0, 1)) }}
+            <div class="adm-field adm-field--actions">
+                <label class="adm-label adm-label--hidden">Vitendo</label>
+                <div class="adm-filter-actions">
+                    <button type="submit" class="adm-btn adm-btn--primary">Sasisha</button>
+                    <a href="{{ route('admin.analytics', ['period' => 30]) }}" class="adm-btn adm-btn--ghost">Siku 30</a>
                 </div>
-                <div class="performer-details">
-                  <h4>{{ $worker->name }}</h4>
-                  <p>Completed {{ $worker->completed_jobs }} jobs</p>
-                </div>
-              </div>
-              <div class="performer-stats">
-                <div class="performer-value">TZS {{ number_format($worker->total_earned ?? 0) }}</div>
-                <div class="performer-label">Total Earnings</div>
-              </div>
             </div>
-          </div>
-        @empty
-          <p class="text-center py-4">No top workers found for this period.</p>
-        @endforelse
-      </div>
+        </div>
+        <p class="adm-analytics-period">Kipindi: siku {{ (int) $period }} ({{ $startDate->format('d M Y') }} — {{ $endDate->format('d M Y') }})</p>
+    </form>
+
+    <div class="adm-stat-grid adm-analytics-stats">
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">📦</span>
+            <span class="adm-stat-tile__val">{{ number_format($totalJobs) }}</span>
+            <span class="adm-stat-tile__lbl">Kazi</span>
+        </div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">💰</span>
+            <span class="adm-stat-tile__val">{{ number_format($totalRevenue) }}</span>
+            <span class="adm-stat-tile__lbl">Mapato TZS</span>
+        </div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">🏦</span>
+            <span class="adm-stat-tile__val">{{ number_format($totalCommissions) }}</span>
+            <span class="adm-stat-tile__lbl">Kamisheni TZS</span>
+        </div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">👥</span>
+            <span class="adm-stat-tile__val">{{ number_format($activeUsers) }}</span>
+            <span class="adm-stat-tile__lbl">Watumiaji hai</span>
+        </div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">⭐</span>
+            <span class="adm-stat-tile__val">{{ number_format($completionRate, 1) }}%</span>
+            <span class="adm-stat-tile__lbl">Ukamilishaji</span>
+        </div>
     </div>
 
-    <!-- Additional Analytics -->
-    <div class="charts-section">
-      <div class="charts-grid">
-        <!-- User Growth -->
-        <div class="chart-container">
-          <div class="chart-header">
-            <div class="chart-title">
-              <span>👥</span>
-              User Growth
+    <div class="adm-analytics-grid adm-analytics-grid--wide">
+        <div class="adm-card adm-chart-card">
+            <h2 class="adm-card-title">💰 Mwenendo wa mapato</h2>
+            <div class="adm-chart-canvas">
+                <canvas id="revenueChart" aria-label="Mwenendo wa mapato"></canvas>
             </div>
-          </div>
-          <div class="chart-canvas-container">
-            <canvas id="userGrowthChart"></canvas>
-          </div>
         </div>
-
-        <!-- Job Status Distribution -->
-        <div class="chart-container">
-          <div class="chart-header">
-            <div class="chart-title">
-              <span>📋</span>
-              Job Status Distribution
+        <div class="adm-card adm-chart-card">
+            <h2 class="adm-card-title">🏷️ Makundi ya kazi</h2>
+            <div class="adm-chart-canvas adm-chart-canvas--compact">
+                <canvas id="categoryChart" aria-label="Mgawanyo wa makundi"></canvas>
             </div>
-          </div>
-          <div class="chart-canvas-container">
-            <canvas id="jobStatusChart"></canvas>
-          </div>
         </div>
-      </div>
     </div>
 
-  </div>
+    <div class="adm-card">
+        <div class="adm-analytics-section-head">
+            <h2 class="adm-card-title">🏆 Wafanyakazi bora</h2>
+            <a href="{{ route('admin.completed-jobs') }}" class="adm-btn adm-btn--ghost adm-btn--sm">Ona wote</a>
+        </div>
+        @if($topWorkers->count())
+            <ul class="adm-log-list">
+                @foreach($topWorkers as $worker)
+                    <li class="adm-log-item adm-analytics-worker">
+                        <div class="adm-worker-avatar" aria-hidden="true">{{ strtoupper(substr($worker->name, 0, 2)) }}</div>
+                        <div class="adm-log-body">
+                            <div class="adm-log-head">
+                                <div class="adm-log-user">
+                                    <strong>{{ $worker->name }}</strong>
+                                    <span class="adm-pill adm-pill--completed">{{ $worker->completed_jobs ?? 0 }} kazi</span>
+                                </div>
+                                <span class="adm-log-time">TZS {{ number_format($worker->total_earned ?? 0) }}</span>
+                            </div>
+                        </div>
+                    </li>
+                @endforeach
+            </ul>
+        @else
+            <div class="adm-empty adm-empty--compact">
+                <p>Hakuna data ya wafanyakazi kwa kipindi hiki.</p>
+            </div>
+        @endif
+    </div>
+
+    <div class="adm-analytics-grid">
+        <div class="adm-card adm-chart-card">
+            <h2 class="adm-card-title">👥 Ukuaji wa watumiaji</h2>
+            <div class="adm-chart-canvas">
+                <canvas id="userGrowthChart" aria-label="Ukuaji wa watumiaji"></canvas>
+            </div>
+        </div>
+        <div class="adm-card adm-chart-card">
+            <h2 class="adm-card-title">📋 Hali za kazi</h2>
+            <div class="adm-chart-canvas adm-chart-canvas--compact">
+                <canvas id="jobStatusChart" aria-label="Mgawanyo wa hali za kazi"></canvas>
+            </div>
+        </div>
+    </div>
 </div>
 
+@push('scripts')
+@php
+    $revenueLabels = $revenueTrend->pluck('date')->map(fn ($d) => date('d M', strtotime($d)))->values()->all();
+    $revenueData = $revenueTrend->pluck('total')->values()->all();
+    $userGrowthLabels = $userGrowth->pluck('date')->map(fn ($d) => date('d M', strtotime($d)))->values()->all();
+    $userGrowthData = $userGrowth->pluck('count')->values()->all();
+    $categoryLabels = $categoryDistribution->pluck('name')->values()->all();
+    $categoryData = $categoryDistribution->pluck('jobs_count')->values()->all();
+    $statusLabels = array_map(fn ($s) => str_replace('_', ' ', ucfirst($s)), array_keys($jobStatuses));
+    $statusData = array_values($jobStatuses);
+    $chartColors = ['#818cf8', '#34d399', '#fbbf24', '#f472b6', '#22d3ee', '#fb7185', '#a78bfa'];
+@endphp
 <script>
-  // Analytics functions
-  function updateAnalytics() {
-    const startDate = document.getElementById('startDate').value;
-    const endDate = document.getElementById('endDate').value;
-    
-    if (!startDate || !endDate) {
-      if (typeof tpToast === 'function') tpToast('Chagua tarehe ya kuanzia na ya mwisho.', 'error');
-      else alert('Chagua tarehe zote mbili.');
-      return;
-    }
-    
-    if (new Date(startDate) > new Date(endDate)) {
-      if (typeof tpToast === 'function') tpToast('Tarehe ya kuanzia haiwezi kuwa baada ya ya mwisho.', 'error');
-      else alert('Tarehe si sahihi.');
-      return;
-    }
-    
-    // Redirect with parameters
-    window.location.href = `{{ route('admin.analytics') }}?start_date=${startDate}&end_date=${endDate}`;
-  }
+document.addEventListener('DOMContentLoaded', function () {
+    if (typeof Chart === 'undefined') return;
 
-  function resetDateRange() {
-    window.location.href = `{{ route('admin.analytics') }}?period=30`;
-  }
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
 
-  function updateMetrics() {}
-
-  function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${type === 'success' ? '#10b981' : '#ef4444'};
-      color: white;
-      padding: 16px 24px;
-      border-radius: 12px;
-      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-      z-index: 1001;
-      font-weight: 600;
-      transform: translateX(100%);
-      transition: transform 0.3s ease;
-    `;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    // Animate in
-    setTimeout(() => {
-      notification.style.transform = 'translateX(0)';
-    }, 100);
-    
-    // Remove after 3 seconds
-    setTimeout(() => {
-      notification.style.transform = 'translateX(100%)';
-      setTimeout(() => {
-        document.body.removeChild(notification);
-      }, 300);
-    }, 3000);
-  }
-
-  // Chart.js Configuration for Dark Theme
-  Chart.defaults.color = '#94a3b8';
-  Chart.defaults.borderColor = 'rgba(255,255,255,0.1)';
-  Chart.defaults.backgroundColor = 'rgba(99, 102, 241, 0.1)';
-
-  // Initialize Charts
-  document.addEventListener('DOMContentLoaded', function() {
-    @php
-      // Prepare chart data from controller variables
-      $revenueLabels = $revenueTrend->pluck('date')->map(fn($d) => date('M d', strtotime($d)))->toArray();
-      $revenueData = $revenueTrend->pluck('total')->toArray();
-
-      $userGrowthLabels = $userGrowth->pluck('date')->map(fn($d) => date('M d', strtotime($d)))->toArray();
-      $userGrowthData = $userGrowth->pluck('count')->toArray();
-
-      $categoryLabels = $categoryDistribution->pluck('name')->toArray();
-      $categoryData = $categoryDistribution->pluck('jobs_count')->toArray();
-    @endphp
-
-    // Revenue Chart
-    const revenueCtx = document.getElementById('revenueChart');
-    if (revenueCtx) {
-      new Chart(revenueCtx, {
-        type: 'line',
-        data: {
-          labels: @json($revenueLabels),
-          datasets: [{
-            label: 'Revenue (TZS)',
-            data: @json($revenueData),
-            borderColor: '#6366f1',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            tension: 0.4,
-            fill: true,
-            pointBackgroundColor: '#6366f1',
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointRadius: 5,
-            pointHoverRadius: 7
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: '#94a3b8' }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: '#ffffff',
-              bodyColor: '#94a3b8',
-              borderColor: 'rgba(255,255,255,0.1)',
-              borderWidth: 1
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { color: '#94a3b8' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
-            },
-            x: {
-              ticks: { color: '#94a3b8' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
-            }
-          }
-        }
-      });
-    }
-
-    // Category Distribution Chart (Doughnut)
-    const categoryCtx = document.getElementById('categoryChart');
-    if (categoryCtx) {
-      new Chart(categoryCtx, {
-        type: 'doughnut',
-        data: {
-          labels: @json($categoryLabels),
-          datasets: [{
-            data: @json($categoryData),
-            backgroundColor: [
-              'rgba(99, 102, 241, 0.8)',
-              'rgba(139, 92, 246, 0.8)',
-              'rgba(236, 72, 153, 0.8)',
-              'rgba(6, 182, 212, 0.8)'
-            ],
-            borderColor: [
-              '#6366f1',
-              '#8b5cf6',
-              '#ec4899',
-              '#06b6d4'
-            ],
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: '#94a3b8', padding: 15 }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: '#ffffff',
-              bodyColor: '#94a3b8'
-            }
-          }
-        }
-      });
-    }
-
-    // User Growth Chart
-    const userGrowthCtx = document.getElementById('userGrowthChart');
-    if (userGrowthCtx) {
-      new Chart(userGrowthCtx, {
-        type: 'bar',
-        data: {
-          labels: @json($userGrowthLabels),
-          datasets: [{
-            label: 'New Users',
-            data: @json($userGrowthData),
-            backgroundColor: 'rgba(139, 92, 246, 0.8)',
-            borderColor: '#8b5cf6',
-            borderWidth: 2,
-            borderRadius: 8
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: '#94a3b8' }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: '#ffffff',
-              bodyColor: '#94a3b8'
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { color: '#94a3b8' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
-            },
-            x: {
-              ticks: { color: '#94a3b8' },
-              grid: { color: 'rgba(255,255,255,0.05)' }
-            }
-          }
-        }
-      });
-    }
-
-    // Job Status Distribution Chart
-    const jobStatusCtx = document.getElementById('jobStatusChart');
-    if (jobStatusCtx) {
-      new Chart(jobStatusCtx, {
-        type: 'pie',
-        data: {
-          labels: ['Completed', 'In Progress', 'Pending', 'Cancelled'],
-          datasets: [{
-            data: [
-              {{ $jobStatuses['completed'] ?? 0 }},
-              {{ $jobStatuses['in_progress'] ?? 0 }},
-              {{ $jobStatuses['pending'] ?? 0 }},
-              {{ $jobStatuses['cancelled'] ?? 0 }}
-            ],
-            backgroundColor: [
-              'rgba(16, 185, 129, 0.8)',
-              'rgba(99, 102, 241, 0.8)',
-              'rgba(245, 158, 11, 0.8)',
-              'rgba(244, 63, 94, 0.8)'
-            ],
-            borderColor: [
-              '#10b981',
-              '#6366f1',
-              '#f59e0b',
-              '#f43f5e'
-            ],
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: '#94a3b8', padding: 15 }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              titleColor: '#ffffff',
-              bodyColor: '#94a3b8'
-            }
-          }
-        }
-      });
-    }
-
-    // Add some interactive animations
-    // Animate metric cards on scroll
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
+    const tooltip = {
+        backgroundColor: 'rgba(15, 23, 42, 0.92)',
+        titleColor: '#f8fafc',
+        bodyColor: '#cbd5e1',
+        borderColor: 'rgba(129, 140, 248, 0.25)',
+        borderWidth: 1,
+        padding: 10,
     };
 
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }
-      });
-    }, observerOptions);
+    const scaleOpts = {
+        y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        x: { ticks: { color: '#94a3b8', maxRotation: 0 }, grid: { color: 'rgba(255,255,255,0.03)' } },
+    };
 
-    // Observe all metric cards
-    document.querySelectorAll('.metric-card').forEach(card => {
-      card.style.opacity = '0';
-      card.style.transform = 'translateY(20px)';
-      card.style.transition = 'all 0.6s ease';
-      observer.observe(card);
-    });
+    const revenueEl = document.getElementById('revenueChart');
+    if (revenueEl) {
+        new Chart(revenueEl, {
+            type: 'line',
+            data: {
+                labels: @json($revenueLabels),
+                datasets: [{
+                    label: 'Mapato (TZS)',
+                    data: @json($revenueData),
+                    borderColor: '#818cf8',
+                    backgroundColor: 'rgba(129, 140, 248, 0.12)',
+                    tension: 0.35,
+                    fill: true,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip },
+                scales: scaleOpts,
+            },
+        });
+    }
 
-    // Observe performer items
-    document.querySelectorAll('.performer-item').forEach(item => {
-      item.style.opacity = '0';
-      item.style.transform = 'translateY(20px)';
-      item.style.transition = 'all 0.6s ease';
-      observer.observe(item);
-    });
+    const categoryEl = document.getElementById('categoryChart');
+    if (categoryEl) {
+        new Chart(categoryEl, {
+            type: 'doughnut',
+            data: {
+                labels: @json($categoryLabels),
+                datasets: [{
+                    data: @json($categoryData),
+                    backgroundColor: @json($chartColors).map(c => c + 'cc'),
+                    borderColor: @json($chartColors),
+                    borderWidth: 1,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10, padding: 8 } },
+                    tooltip,
+                },
+            },
+        });
+    }
 
-    // Add hover effects
-    document.querySelectorAll('.metric-card').forEach(card => {
-      card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-8px) scale(1.02)';
-      });
-      
-      card.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0) scale(1)';
-      });
-    });
-  });
+    const userEl = document.getElementById('userGrowthChart');
+    if (userEl) {
+        new Chart(userEl, {
+            type: 'bar',
+            data: {
+                labels: @json($userGrowthLabels),
+                datasets: [{
+                    label: 'Watumiaji wapya',
+                    data: @json($userGrowthData),
+                    backgroundColor: 'rgba(52, 211, 153, 0.75)',
+                    borderColor: '#34d399',
+                    borderWidth: 1,
+                    borderRadius: 6,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip },
+                scales: scaleOpts,
+            },
+        });
+    }
+
+    const statusEl = document.getElementById('jobStatusChart');
+    if (statusEl) {
+        new Chart(statusEl, {
+            type: 'doughnut',
+            data: {
+                labels: @json($statusLabels),
+                datasets: [{
+                    data: @json($statusData),
+                    backgroundColor: @json($chartColors).map(c => c + 'cc'),
+                    borderColor: @json($chartColors),
+                    borderWidth: 1,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: '#94a3b8', boxWidth: 10, padding: 8 } },
+                    tooltip,
+                },
+            },
+        });
+    }
+});
 </script>
+@endpush
 @endsection

@@ -525,7 +525,7 @@
           </thead>
           <tbody>
             @foreach($users as $user)
-              <tr class="user-row" data-role="{{ $user->role }}" data-status="{{ $user->email_verified_at ? 'active' : 'inactive' }}">
+              <tr class="user-row" data-role="{{ $user->role }}" data-status="{{ $user->is_active ? 'active' : 'inactive' }}">
                 <td>
                   <div class="user-info">
                     <div class="user-avatar">
@@ -543,8 +543,8 @@
                   </span>
                 </td>
                 <td>
-                  <span class="status-badge {{ $user->email_verified_at ? 'active' : 'inactive' }}">
-                    {{ $user->email_verified_at ? 'Active' : 'Inactive' }}
+                  <span class="status-badge {{ $user->is_active ? 'active' : 'inactive' }}">
+                    {{ $user->is_active ? 'Active' : 'Suspended' }}
                   </span>
                 </td>
                 <td>{{ $user->created_at?->format('M d, Y') ?? 'N/A' }}</td>

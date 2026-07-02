@@ -1,778 +1,231 @@
 @extends('layouts.admin')
 @section('title', 'Admin — Job Management')
 
+@php use App\Models\Job; @endphp
+
 @section('content')
-<style>
-  /* ====== Modern Admin Jobs Page - Dark Theme ====== */
-  .page-container {
-    --primary: #6366f1;
-    --secondary: #06b6d4;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #f43f5e;
-    --card-bg: rgba(255,255,255,0.05);
-    --card-bg-hover: rgba(255,255,255,0.08);
-    --text-primary: #ffffff;
-    --text-muted: #94a3b8;
-    --border: rgba(255,255,255,0.1);
-    --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-    --dark: #0f172a;
-  }
-
-  .page-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    display: grid;
-    gap: 24px;
-  }
-
-  /* Header */
-  .page-header {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    padding: 32px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
-  }
-
-  .header-content {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 24px;
-    align-items: center;
-  }
-
-  .header-text h1 {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin: 0 0 8px 0;
-    background: linear-gradient(135deg, var(--primary), var(--success));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .header-text p {
-    color: var(--text-muted);
-    font-size: 1.1rem;
-    margin: 0;
-  }
-
-  .header-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  /* Stats Grid */
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .stat-card {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: var(--shadow);
-    border: 1px solid rgba(255,255,255,0.2);
-    text-align: center;
-    transition: all 0.3s ease;
-  }
-
-  .stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .stat-icon {
-    font-size: 2rem;
-    margin-bottom: 8px;
-  }
-
-  .stat-value {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-  }
-
-  .stat-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  /* Filters */
-  .filters-section {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-  }
-
-  .filters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    align-items: end;
-  }
-
-  .filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .filter-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  .filter-input, .filter-select {
-    padding: 12px 16px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    font-size: 0.875rem;
-    background: rgba(255,255,255,0.05);
-    color: white;
-    transition: all 0.3s ease;
-  }
-
-  .filter-input:focus, .filter-select:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  }
-
-  /* Jobs List */
-  .jobs-section {
-    background: var(--card-bg);
-    backdrop-filter: blur(20px);
-    border-radius: 20px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-  }
-
-  .jobs-list {
-    display: grid;
-    gap: 16px;
-  }
-
-  .job-card {
-    background: rgba(255,255,255,0.03);
-    border-radius: 16px;
-    padding: 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    transition: all 0.3s ease;
-  }
-
-  .job-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-  }
-
-  .job-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    margin-bottom: 16px;
-  }
-
-  .job-info h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 8px 0;
-  }
-
-  .job-meta {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    color: var(--text-muted);
-    font-size: 0.875rem;
-    flex-wrap: wrap;
-  }
-
-  .job-price {
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--success);
-    text-align: right;
-  }
-
-  .job-status {
-    padding: 6px 16px;
-    border-radius: 20px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 12px;
-    display: inline-block;
-  }
-
-  .job-status.posted {
-    background: #dbeafe;
-    color: #1e40af;
-  }
-
-  .job-status.assigned {
-    background: #fef3c7;
-    color: #92400e;
-  }
-
-  .job-status.in-progress {
-    background: #fce7f3;
-    color: #be185d;
-  }
-
-  .job-status.completed {
-    background: #d1fae5;
-    color: #065f46;
-  }
-
-  .job-status.cancelled {
-    background: #fecaca;
-    color: #dc2626;
-  }
-
-  .job-details {
-    background: rgba(255,255,255,0.02);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 16px;
-  }
-
-  .detail-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .detail-row:last-child {
-    border-bottom: none;
-  }
-
-  .detail-label {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-muted);
-  }
-
-  .detail-value {
-    font-size: 0.875rem;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .job-actions {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  /* Buttons */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 20px;
-    border-radius: 12px;
-    font-weight: 600;
-    text-decoration: none;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-    font-size: 0.875rem;
-  }
-
-  .btn-primary {
-    background: linear-gradient(135deg, var(--primary), #1d4ed8);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.4);
-  }
-
-  .btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(59, 130, 246, 0.6);
-  }
-
-  .btn-success {
-    background: linear-gradient(135deg, var(--success), #059669);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.4);
-  }
-
-  .btn-success:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.6);
-  }
-
-  .btn-danger {
-    background: linear-gradient(135deg, var(--danger), #dc2626);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(239, 68, 68, 0.4);
-  }
-
-  .btn-danger:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(239, 68, 68, 0.6);
-  }
-
-  .btn-outline {
-    background: transparent;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-  }
-
-  .btn-outline:hover {
-    background: var(--primary);
-    color: white;
-  }
-
-  .btn-warning {
-    background: linear-gradient(135deg, var(--warning), #d97706);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(245, 158, 11, 0.4);
-  }
-
-  .btn-warning:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(245, 158, 11, 0.6);
-  }
-
-  /* Empty State */
-  .empty-state {
-    text-align: center;
-    padding: 80px 20px;
-    background: rgba(255,255,255,0.02);
-    border-radius: 16px;
-    border: 2px dashed var(--border);
-  }
-
-  .empty-state-icon {
-    font-size: 4rem;
-    margin-bottom: 16px;
-    opacity: 0.6;
-  }
-
-  .empty-state h3 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 8px 0;
-  }
-
-  .empty-state p {
-    color: var(--text-muted);
-    font-size: 1rem;
-    margin: 0;
-  }
-
-  /* Pagination */
-  .pagination-wrapper {
-    display: flex;
-    justify-content: center;
-    margin-top: 32px;
-  }
-
-  .pagination-wrapper nav svg {
-    width: 20px;
-  }
-
-  .pagination-wrapper nav div div p {
-    color: var(--text-muted) !important;
-    margin: 0 10px;
-  }
-
-  .pagination-wrapper nav div span span,
-  .pagination-wrapper nav div a {
-    background: var(--card-bg) !important;
-    color: var(--text-primary) !important;
-    border: 1px solid var(--border) !important;
-  }
-
-  .pagination-wrapper nav div span[aria-current="page"] span {
-    background: var(--primary) !important;
-    border-color: var(--primary) !important;
-  }
-
-  /* Responsive */
-  @media (max-width: 768px) {
-    .jobs-page {
-      padding: 16px;
-    }
-    
-    .page-header {
-      padding: 24px;
-    }
-    
-    .header-content {
-      grid-template-columns: 1fr;
-      text-align: center;
-    }
-    
-    .header-text h1 {
-      font-size: 2rem;
-    }
-    
-    .filters-grid {
-      grid-template-columns: 1fr;
-    }
-    
-    .job-header {
-      flex-direction: column;
-      gap: 16px;
-    }
-    
-    .job-meta {
-      flex-direction: column;
-      align-items: flex-start;
-      gap: 8px;
-    }
-    
-    .job-actions {
-      flex-direction: column;
-    }
-  }
-</style>
-
-<div class="page-container">
-  <div class="page-container">
-    
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-text">
-          <h1>📋 Job Management</h1>
-          <p>Dhibiti na simamia kazi zote za mfumo</p>
-        </div>
-        <div class="header-actions">
-          <a class="btn btn-outline" href="{{ route('dashboard') }}">
-            <span>↩️</span>
-            Rudi Dashboard
-          </a>
-          <a class="btn btn-primary" href="{{ route('jobs.create') }}">
-            <span>➕</span>
-            Chapisha Kazi
-          </a>
-        </div>
-      </div>
-    </div>
+<div class="adm-page">
+    @include('admin.partials.page-hero', [
+        'title' => 'Usimamizi wa Kazi',
+        'subtitle' => 'Dhibiti na simamia kazi zote za mfumo',
+        'icon' => '📋',
+        'actions' => '<a class="adm-btn adm-btn--ghost" href="' . route('dashboard') . '">↩️ Rudi</a>
+            <a class="adm-btn adm-btn--primary" href="' . route('jobs.create') . '">➕ Chapisha Kazi</a>',
+    ])
 
     @if(!empty($filterUser))
-      <div class="adm-filter-banner">
-        <span>Kazi za mtumiaji: <strong>{{ $filterUser->name }}</strong> (ID {{ $filterUser->id }})</span>
-        <a href="{{ route('admin.jobs') }}">Ondoa kichujio</a>
-      </div>
+        <div class="adm-filter-banner">
+            <span>Kazi za mtumiaji: <strong>{{ $filterUser->name }}</strong> (ID {{ $filterUser->id }})</span>
+            <a href="{{ route('admin.jobs') }}">Ondoa kichujio</a>
+        </div>
     @endif
 
-    <!-- Stats Overview -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-icon">📦</div>
-        <div class="stat-value">{{ $jobs->total() }}</div>
-        <div class="stat-label">Total Jobs</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">📝</div>
-        <div class="stat-value">{{ $jobs->where('status', 'posted')->count() }}</div>
-        <div class="stat-label">Posted</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">⏳</div>
-        <div class="stat-value">{{ $jobs->where('status', 'in_progress')->count() }}</div>
-        <div class="stat-label">In Progress</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">✅</div>
-        <div class="stat-value">{{ $jobs->where('status', 'completed')->count() }}</div>
-        <div class="stat-label">Completed</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">❌</div>
-        <div class="stat-value">{{ $jobs->where('status', 'cancelled')->count() }}</div>
-        <div class="stat-label">Cancelled</div>
-      </div>
+    <div class="adm-stat-grid">
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">📦</span>
+            <span class="adm-stat-tile__val">{{ number_format($jobStats['total'] ?? 0) }}</span>
+            <span class="adm-stat-tile__lbl">Jumla</span>
+        </div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">📝</span>
+            <span class="adm-stat-tile__val">{{ number_format($jobStats['posted'] ?? 0) }}</span>
+            <span class="adm-stat-tile__lbl">Posted</span>
+        </div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">⏳</span>
+            <span class="adm-stat-tile__val">{{ number_format($jobStats['in_progress'] ?? 0) }}</span>
+            <span class="adm-stat-tile__lbl">In Progress</span>
+        </div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">✅</span>
+            <span class="adm-stat-tile__val">{{ number_format($jobStats['completed'] ?? 0) }}</span>
+            <span class="adm-stat-tile__lbl">Completed</span>
+        </div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">❌</span>
+            <span class="adm-stat-tile__val">{{ number_format($jobStats['cancelled'] ?? 0) }}</span>
+            <span class="adm-stat-tile__lbl">Cancelled</span>
+        </div>
     </div>
 
-    <!-- Filters -->
-    <div class="filters-section">
-      <div class="filters-grid">
-        <div class="filter-group">
-          <label class="filter-label" for="search">Search Jobs</label>
-          <input type="text" class="filter-input" id="search" placeholder="Search by title or description..." onkeyup="searchJobs(this.value)">
-        </div>
-        <div class="filter-group">
-          <label class="filter-label" for="status">Filter by Status</label>
-          <select class="filter-select" id="status" onchange="filterByStatus(this.value)">
-            <option value="">All Status</option>
-            <option value="posted">Posted</option>
-            <option value="assigned">Assigned</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label class="filter-label" for="category">Filter by Category</label>
-          <select class="filter-select" id="category" onchange="filterByCategory(this.value)">
-            <option value="">All Categories</option>
-            <option value="cleaning">Cleaning</option>
-            <option value="delivery">Delivery</option>
-            <option value="maintenance">Maintenance</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <label class="filter-label" for="price">Price Range</label>
-          <select class="filter-select" id="price" onchange="filterByPrice(this.value)">
-            <option value="">All Prices</option>
-            <option value="0-10000">TZS 0 - 10,000</option>
-            <option value="10000-50000">TZS 10,000 - 50,000</option>
-            <option value="50000+">TZS 50,000+</option>
-          </select>
-        </div>
-        <div class="filter-group">
-          <button class="btn btn-outline" onclick="clearFilters()">
-            <span>🔄</span>
-            Clear Filters
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Jobs List -->
-    <div class="jobs-section">
-      @if($jobs->count())
-        <div class="jobs-list">
-          @foreach($jobs as $job)
-            <div class="job-card" data-status="{{ $job->status }}" data-category="{{ $job->category->slug ?? '' }}" data-price="{{ $job->price ?? 0 }}">
-              <div class="job-header">
-                <div class="job-info">
-                  <div class="job-status {{ str_replace('_', '-', $job->status) }}">
-                    {{ strtoupper($job->status) }}
-                  </div>
-                  <h3>{{ $job->title }}</h3>
-                  <div class="job-meta">
-                    <span>👤 {{ $job->muhitaji->name ?? 'Unknown' }}</span>
-                    <span>🏷️ {{ $job->category->name ?? 'Uncategorized' }}</span>
-                    <span>📍 {{ $job->location ?? 'N/A' }}</span>
-                    <span>⏱️ {{ $job->created_at?->diffForHumans() ?? '' }}</span>
-                  </div>
-                </div>
-                <div class="job-price">TZS {{ number_format($job->price ?? 0) }}</div>
-              </div>
-
-              <div class="job-details">
-                <div class="detail-row">
-                  <span class="detail-label">Description:</span>
-                  <span class="detail-value">{{ Str::limit($job->description ?? 'No description', 50) }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Worker:</span>
-                  <span class="detail-value">{{ $job->acceptedWorker->name ?? 'Not assigned' }}</span>
-                </div>
-                <div class="detail-row">
-                  <span class="detail-label">Created:</span>
-                  <span class="detail-value">{{ $job->created_at?->format('M d, Y H:i') ?? 'N/A' }}</span>
-                </div>
-                @if($job->completed_at)
-                  <div class="detail-row">
-                    <span class="detail-label">Completed:</span>
-                    <span class="detail-value">{{ $job->completed_at->format('M d, Y H:i') }}</span>
-                  </div>
-                @endif
-              </div>
-
-              <div class="job-actions">
-                <a class="btn btn-outline" href="{{ route('jobs.show', $job) }}">
-                  <span>👁️</span>
-                  View Details
-                </a>
-                @if($job->status === 'posted')
-                  <button class="btn btn-warning" onclick="assignJob({{ $job->id }})">
-                    <span>👷</span>
-                    Assign Worker
-                  </button>
-                @endif
-                @if(in_array($job->status, ['posted', 'assigned']))
-                  <button class="btn btn-danger" onclick="cancelJob({{ $job->id }})">
-                    <span>❌</span>
-                    Cancel Job
-                  </button>
-                @endif
-                @if($job->status === 'completed')
-                  <button class="btn btn-success" onclick="markAsPaid({{ $job->id }})">
-                    <span>💰</span>
-                    Mark as Paid
-                  </button>
-                @endif
-              </div>
+    <form method="GET" action="{{ route('admin.jobs') }}" class="adm-filter-bar adm-card">
+        @if(!empty($filterUser))
+            <input type="hidden" name="user" value="{{ $filterUser->id }}">
+        @endif
+        <div class="adm-filter-bar__grid">
+            <div class="adm-field">
+                <label class="adm-label" for="search">Tafuta</label>
+                <input type="search" id="search" name="search" class="adm-input"
+                    value="{{ request('search') }}" placeholder="Kichwa au maelezo…">
             </div>
-          @endforeach
+            <div class="adm-field">
+                <label class="adm-label" for="status">Hali</label>
+                <select id="status" name="status" class="adm-input adm-select">
+                    <option value="">Hali zote</option>
+                    @foreach(['open','posted','awaiting_payment','funded','assigned','in_progress','submitted','completed','cancelled','disputed'] as $st)
+                        <option value="{{ $st }}" @selected(request('status') === $st)>{{ str_replace('_', ' ', ucfirst($st)) }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="adm-field">
+                <label class="adm-label" for="category">Kategoria</label>
+                <select id="category" name="category" class="adm-input adm-select">
+                    <option value="">Kategoria zote</option>
+                    @foreach($categories as $cat)
+                        <option value="{{ $cat->slug }}" @selected(request('category') === $cat->slug)>{{ $cat->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="adm-field">
+                <label class="adm-label" for="visibility">Mwonekano</label>
+                <select id="visibility" name="visibility" class="adm-input adm-select">
+                    <option value="">Zote</option>
+                    <option value="visible" @selected(request('visibility') === 'visible')>Zinazoonekana</option>
+                    <option value="hidden" @selected(request('visibility') === 'hidden')>Zilizofichwa</option>
+                </select>
+            </div>
+            <div class="adm-field">
+                <label class="adm-label" for="engagement">Aina</label>
+                <select id="engagement" name="engagement" class="adm-input adm-select">
+                    <option value="">Aina zote</option>
+                    <option value="{{ Job::ENGAGEMENT_JOB_REQUEST }}" @selected(request('engagement') === Job::ENGAGEMENT_JOB_REQUEST)>Ombi la Kazi</option>
+                    <option value="{{ Job::ENGAGEMENT_SERVICE_LISTING }}" @selected(request('engagement') === Job::ENGAGEMENT_SERVICE_LISTING)>Tangazo la Huduma</option>
+                    <option value="{{ Job::ENGAGEMENT_SERVICE_BOOKING }}" @selected(request('engagement') === Job::ENGAGEMENT_SERVICE_BOOKING)>Agizo la Huduma</option>
+                </select>
+            </div>
+            <div class="adm-field adm-field--actions">
+                <label class="adm-label adm-label--hidden">Vitendo</label>
+                <div class="adm-filter-actions">
+                    <button type="submit" class="adm-btn adm-btn--primary">Chuja</button>
+                    <a href="{{ route('admin.jobs', $filterUser ? ['user' => $filterUser->id] : []) }}" class="adm-btn adm-btn--ghost">Safisha</a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    @if($jobs->count())
+        <div class="adm-list">
+            @foreach($jobs as $job)
+                @php
+                    $statusSlug = str_replace('_', '-', $job->status);
+                @endphp
+                <article class="adm-list-card adm-card {{ $job->isHidden() ? 'adm-list-card--hidden' : '' }}">
+                    <div class="adm-list-card__head">
+                        <div class="adm-list-card__main">
+                            @if($job->isHidden())
+                                <span class="adm-pill adm-pill--hidden">IMEFICHWA</span>
+                            @endif
+                            @include('components.engagement-badge', ['job' => $job])
+                            <span class="adm-pill adm-pill--{{ $statusSlug }}">{{ strtoupper(str_replace('_', ' ', $job->status)) }}</span>
+                            <h2 class="adm-list-card__title">
+                                <a href="{{ route('admin.job.details', $job) }}">{{ $job->title }}</a>
+                            </h2>
+                            <ul class="adm-meta-row">
+                                <li>👤 {{ $job->muhitaji->name ?? '—' }}</li>
+                                <li>🏷️ {{ $job->category->name ?? '—' }}</li>
+                                <li>📍 {{ $job->location ?? '—' }}</li>
+                                <li>⏱️ {{ $job->created_at?->diffForHumans() }}</li>
+                            </ul>
+                        </div>
+                        <div class="adm-list-card__price">TZS {{ number_format($job->price ?? 0) }}</div>
+                    </div>
+
+                    <dl class="adm-dl-compact">
+                        <div><dt>Maelezo</dt><dd>{{ Str::limit($job->description ?? '—', 80) }}</dd></div>
+                        <div><dt>Mfanyakazi</dt><dd>{{ $job->acceptedWorker->name ?? 'Hajateuliwa' }}</dd></div>
+                        @if($job->isServiceBooking() && $job->source_listing_id)
+                            <div><dt>Tangazo la chanzo</dt><dd><a href="{{ route('admin.job.details', $job->source_listing_id) }}">#{{ $job->source_listing_id }}</a></dd></div>
+                        @endif
+                        <div><dt>Imeundwa</dt><dd>{{ $job->created_at?->format('d M Y, H:i') }}</dd></div>
+                        @if($job->completed_at)
+                            <div><dt>Imekamilika</dt><dd>{{ $job->completed_at->format('d M Y, H:i') }}</dd></div>
+                        @endif
+                    </dl>
+
+                    <div class="adm-list-card__actions">
+                        <a class="adm-btn adm-btn--ghost adm-btn--sm" href="{{ route('admin.job.details', $job) }}">👁️ Maelezo</a>
+                        @if(!$job->accepted_worker_id && in_array($job->status, ['open', 'posted', 'awaiting_payment', Job::S_OPEN, Job::S_AWAITING_PAYMENT], true))
+                            <button type="button" class="adm-btn adm-btn--warn adm-btn--sm"
+                                onclick="admOpenAssignModal({{ $job->id }}, @json($job->title), {{ (int) ($job->price ?? 0) }})">
+                                👷 Teua mfanyakazi
+                            </button>
+                        @endif
+                        @if(!in_array($job->status, ['completed', 'cancelled', Job::S_COMPLETED, Job::S_CANCELLED], true))
+                            <form method="POST" action="{{ route('admin.job.force-cancel', $job) }}" class="adm-inline-form">
+                                @csrf
+                                <button type="button" class="adm-btn adm-btn--danger adm-btn--sm"
+                                    onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Thibitisha kughairi kazi hii?'):Promise.resolve(confirm('Ghairi kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                                    ❌ Ghairi
+                                </button>
+                            </form>
+                        @endif
+                        @if($job->isHidden())
+                            <form method="POST" action="{{ route('admin.job.unhide', $job) }}" class="adm-inline-form">
+                                @csrf
+                                <button type="submit" class="adm-btn adm-btn--primary adm-btn--sm">👁️ Onyesha tena</button>
+                            </form>
+                        @else
+                            <form method="POST" action="{{ route('admin.job.hide', $job) }}" class="adm-inline-form">
+                                @csrf
+                                <button type="button" class="adm-btn adm-btn--warn adm-btn--sm"
+                                    onclick="var f=this.closest('form'); var r=prompt('Sababu ya kuficha (si lazima):',''); if(r===null)return; if(r!==''){ var i=document.createElement('input'); i.type='hidden'; i.name='reason'; i.value=r; f.appendChild(i);} (typeof tpConfirm==='function'?tpConfirm('Ficha kazi hii kutoka kwa watumiaji wengine?'):Promise.resolve(confirm('Ficha kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                                    🙈 Ficha
+                                </button>
+                            </form>
+                        @endif
+                        @if(!in_array($job->status, ['completed', 'cancelled', Job::S_COMPLETED, Job::S_CANCELLED], true))
+                            <form method="POST" action="{{ route('admin.job.delete', $job) }}" class="adm-inline-form">
+                                @csrf
+                                @method('DELETE')
+                                <button type="button" class="adm-btn adm-btn--ghost adm-btn--sm"
+                                    onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Futa kabisa rekodi ya kazi hii?'):Promise.resolve(confirm('Futa kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                                    🗑️ Futa
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </article>
+            @endforeach
         </div>
 
-        <!-- Pagination -->
-        <div class="pagination-wrapper">
-          {{ $jobs->links() }}
+        <div class="adm-pagination">
+            {{ $jobs->links() }}
         </div>
-      @else
-        <div class="empty-state">
-          <div class="empty-state-icon">📋</div>
-          <h3>No Jobs Found</h3>
-          <p>There are no jobs to display at the moment.</p>
+    @else
+        <div class="adm-empty adm-card">
+            <span class="adm-empty__ico" aria-hidden="true">📋</span>
+            <h3>Hakuna kazi</h3>
+            <p>Hakuna kazi zinazolingana na vichujio ulivyochagua.</p>
+            <a href="{{ route('admin.jobs') }}" class="adm-btn adm-btn--primary">Onyesha zote</a>
         </div>
-      @endif
-    </div>
-
-  </div>
+    @endif
 </div>
 
-<script>
-  // Filter functions
-  function searchJobs(query) {
-    const cards = document.querySelectorAll('.job-card');
-    cards.forEach(card => {
-      const title = card.querySelector('h3').textContent.toLowerCase();
-      const description = card.querySelector('.detail-value').textContent.toLowerCase();
-      const searchTerm = query.toLowerCase();
-      
-      if (title.includes(searchTerm) || description.includes(searchTerm)) {
-        card.style.display = 'block';
-      } else {
-        card.style.display = 'none';
-      }
-    });
-  }
+<div id="assign-worker-modal" class="adm-modal hidden" role="dialog" aria-modal="true" aria-labelledby="assign-modal-title">
+    <div class="adm-modal-backdrop" data-adm-modal-close></div>
+    <div class="adm-modal-panel">
+        <h3 id="assign-modal-title" class="adm-modal-title">Teua mfanyakazi</h3>
+        <p id="assign-modal-job" class="adm-modal-sub"></p>
+        <form id="assign-worker-form" method="POST" action="">
+            @csrf
+            <label class="adm-label" for="assign_worker_id">Mfanyakazi</label>
+            <select id="assign_worker_id" name="worker_id" class="adm-input adm-select" required>
+                <option value="">Chagua mfanyakazi…</option>
+                @foreach($workers as $worker)
+                    <option value="{{ $worker->id }}">{{ $worker->name }} ({{ $worker->email }})</option>
+                @endforeach
+            </select>
+            <label class="adm-label adm-label--spaced" for="assign_agreed_amount">Kiasi kilichokubaliwa (TZS)</label>
+            <input type="number" id="assign_agreed_amount" name="agreed_amount" class="adm-input" min="1000" step="1" required>
+            <div class="adm-modal-actions">
+                <button type="button" class="adm-btn adm-btn--ghost" data-adm-modal-close>Funga</button>
+                <button type="submit" class="adm-btn adm-btn--primary">Hifadhi</button>
+            </div>
+        </form>
+    </div>
+</div>
 
-  function filterByStatus(status) {
-    const cards = document.querySelectorAll('.job-card');
-    cards.forEach(card => {
-      if (!status || card.dataset.status === status) {
-        card.style.display = 'block';
-      } else {
-        card.style.display = 'none';
-      }
-    });
-  }
-
-  function filterByCategory(category) {
-    const cards = document.querySelectorAll('.job-card');
-    cards.forEach(card => {
-      if (!category || card.dataset.category === category) {
-        card.style.display = 'block';
-      } else {
-        card.style.display = 'none';
-      }
-    });
-  }
-
-  function filterByPrice(range) {
-    const cards = document.querySelectorAll('.job-card');
-    cards.forEach(card => {
-      const price = parseInt(card.dataset.price);
-      let show = true;
-      
-      if (range) {
-        switch(range) {
-          case '0-10000':
-            show = price >= 0 && price <= 10000;
-            break;
-          case '10000-50000':
-            show = price > 10000 && price <= 50000;
-            break;
-          case '50000+':
-            show = price > 50000;
-            break;
-        }
-      }
-      
-      card.style.display = show ? 'block' : 'none';
-    });
-  }
-
-  function clearFilters() {
-    document.getElementById('search').value = '';
-    document.getElementById('status').value = '';
-    document.getElementById('category').value = '';
-    document.getElementById('price').value = '';
-    
-    const cards = document.querySelectorAll('.job-card');
-    cards.forEach(card => {
-      card.style.display = 'block';
-    });
-  }
-
-  function assignJob(jobId) {
-    if (typeof tpToast === 'function') tpToast('Tumia ukurasa wa kazi ili kuongeza mfanyakazi (hakuna kitufe cha haraka bado).', 'info');
-    else alert('Fungua kazi maalum kutoka jedwali.');
-  }
-
-  function cancelJob(jobId) {
-    if (typeof tpToast === 'function') tpToast('Fungua maelezo ya kazi kwa admin ili kughairi (force cancel).', 'info');
-    else alert('Fungua job details.');
-  }
-
-  function markAsPaid(jobId) {
-    if (typeof tpToast === 'function') tpToast('Malipo yanafuatiliwa kupitia escrow / payments — tumia ukurasa wa kazi.', 'info');
-    else alert('Tumia job details.');
-  }
-
-  // Add some interactive animations
-  document.addEventListener('DOMContentLoaded', function() {
-    // Animate job cards on scroll
-    const observerOptions = {
-      threshold: 0.1,
-      rootMargin: '0px 0px -50px 0px'
-    };
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.style.opacity = '1';
-          entry.target.style.transform = 'translateY(0)';
-        }
-      });
-    }, observerOptions);
-
-    // Observe all job cards
-    document.querySelectorAll('.job-card').forEach(card => {
-      card.style.opacity = '0';
-      card.style.transform = 'translateY(20px)';
-      card.style.transition = 'all 0.6s ease';
-      observer.observe(card);
-    });
-
-    // Add hover effects
-    document.querySelectorAll('.job-card').forEach(card => {
-      card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-4px) scale(1.02)';
-      });
-      
-      card.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0) scale(1)';
-      });
-    });
-  });
-</script>
+@push('scripts')
+<script>window.__ADM_JOBS_BASE = @json(rtrim(url('/admin/jobs'), '/'));</script>
+@endpush
 @endsection

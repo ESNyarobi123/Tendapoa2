@@ -183,8 +183,13 @@
   $user = auth()->user();
   $userLat = $user ? ($user->lat ?? null) : null;
   $userLng = $user ? ($user->lng ?? null) : null;
-  $jobsArray = $jobs->items();
-  $allJobsFromDb = \App\Models\Job::where('status', 'posted')->with('category')->get();
+  $jobsArray = array_values($jobs->items());
+  $allJobsFromDb = \App\Models\Job::query()
+    ->whereIn('status', [\App\Models\Job::S_OPEN, 'posted'])
+    ->with('category')
+    ->get()
+    ->values()
+    ->all();
 @endphp
 
 <div id="feed-data" data-user-lat="{{ $userLat ?? '' }}" data-user-lng="{{ $userLng ?? '' }}"

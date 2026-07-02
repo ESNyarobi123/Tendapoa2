@@ -138,13 +138,26 @@
 
         {{-- Input --}}
         <div class="message-input-box shrink-0 rounded-b-2xl border border-t-0 border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
-          <form action="{{ route('chat.send', $job) }}" method="POST" id="message-form" class="flex items-end gap-2 sm:gap-3">
+          @if(!empty($allowsPhoneSharing))
+            <p class="mb-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[12px] font-semibold leading-relaxed text-emerald-800">
+              Malipo ya escrow yamethibitishwa na kazi imeanzishwa. Unaweza kushiriki nambari yako ya simu hapa ili muweze kuwasiliana na kukutana.
+            </p>
+          @else
+            <p class="mb-2 text-[11px] leading-relaxed text-slate-500">
+              Usiweke nambari ya simu hapa. Baada ya malipo ya escrow na mfanyakazi kukubali kazi, mtaweza kushiriki nambari kwenye mazungumzo haya.
+            </p>
+          @endif
+          @error('message')
+            <p class="mb-2 text-[12px] font-semibold text-red-600" role="alert">{{ $message }}</p>
+          @enderror
+          <form action="{{ route('chat.send', $job) }}" method="POST" id="message-form" class="flex items-end gap-2 sm:gap-3"
+            @if(empty($allowsPhoneSharing)) data-tp-no-phone-fields="message" @else data-tp-allow-phone="1" @endif>
             @csrf
             <input type="hidden" name="receiver_id" value="{{ $otherUser->id }}">
             <div class="input-wrapper min-w-0 flex-1">
               <label for="message-input" class="sr-only">Ujumbe</label>
               <textarea name="message" id="message-input" rows="2" required placeholder="Andika ujumbe… (Enter kutuma, Shift+Enter mstari mpya)"
-                class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20"></textarea>
+                class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/80 px-3.5 py-3 text-[13px] text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 @error('message') !border-red-500 ring-2 ring-red-200 @enderror">{{ old('message') }}</textarea>
             </div>
             <button type="submit" class="send-btn flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-indigo-600 text-white shadow-md transition hover:from-brand-700 hover:to-indigo-700 sm:h-12 sm:w-12" title="Tuma">
               <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
@@ -170,6 +183,7 @@
 
   var form = document.getElementById('message-form');
   var input = document.getElementById('message-input');
+  var allowsPhoneSharing = @json(!empty($allowsPhoneSharing));
 
   function escapeHtml(text) {
     var d = document.createElement('div');
@@ -177,11 +191,34 @@
     return d.innerHTML;
   }
 
+  if (form && input && container && !allowsPhoneSharing) {
+    var liveCheck = function () {
+      if (!input.value.trim()) {
+        if (typeof window.tpSetPhoneFieldError === 'function') window.tpSetPhoneFieldError(input, false);
+        return;
+      }
+      if (typeof window.tpCheckPhoneField === 'function') window.tpCheckPhoneField(input);
+    };
+    input.addEventListener('input', liveCheck);
+    input.addEventListener('blur', liveCheck);
+  }
+
   if (form && input && container) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var messageText = input.value.trim();
       if (!messageText) return;
+
+      if (!allowsPhoneSharing && typeof window.tpTextContainsPhoneNumber === 'function'
+          && window.tpTextContainsPhoneNumber(messageText)) {
+        var msg = window.TP_NO_PHONE_MESSAGE || 'Usiweke nambari ya simu kwenye maelezo.';
+        if (typeof window.tpSetPhoneFieldError === 'function') {
+          window.tpSetPhoneFieldError(input, true);
+        }
+        if (typeof window.tpToast === 'function') window.tpToast(msg, 'error');
+        else alert(msg);
+        return;
+      }
 
       var formData = new FormData(form);
       fetch(form.action, {
@@ -195,7 +232,14 @@
       })
         .then(function (r) {
           if (!r.ok) {
-            return r.text().then(function (t) { throw new Error(t || r.status); });
+            return r.json().catch(function () { return {}; }).then(function (body) {
+              var errMsg = (body && body.message) ? body.message : 'Imeshindikana kutuma ujumbe.';
+              if (typeof window.tpSetPhoneFieldError === 'function') {
+                window.tpSetPhoneFieldError(input, true);
+              }
+              if (typeof window.tpToast === 'function') window.tpToast(errMsg, 'error');
+              throw new Error(errMsg);
+            });
           }
           return r.json();
         })

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin — ' . ($settings['platform_name'] ?? 'TendaPoa'))</title>
+    <x-brand-favicon />
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     @vite(['resources/js/admin-entry.js'])
@@ -25,10 +26,10 @@
         <aside class="adm-sidebar" id="admSidebar">
             <div class="adm-sidebar-head">
                 <a href="{{ route('admin.dashboard') }}" class="adm-brand">
-                    @if(isset($settings['platform_logo']))
-                        <img src="{{ asset('storage/' . $settings['platform_logo']) }}" alt="" class="adm-brand-logo-img">
+                    @if(! empty(($settings ?? [])['platform_logo'] ?? null))
+                        <img src="{{ asset('storage/' . ($settings ?? [])['platform_logo']) }}" alt="TendaPoa" class="adm-brand-logo-img">
                     @else
-                        <span class="adm-brand-mark">TP</span>
+                        <img src="{{ asset('images/brand/tendapoa-logo.jpg') }}" alt="TendaPoa" class="adm-brand-logo-img">
                     @endif
                     <span class="adm-brand-text">{{ $settings['platform_name'] ?? 'TendaPoa' }}</span>
                 </a>
@@ -215,12 +216,12 @@
 
             sidebar.querySelectorAll('a').forEach(function (a) {
                 a.addEventListener('click', function () {
-                    if (window.innerWidth <= 900) closeMobile();
+                    if (window.innerWidth <= 1024) closeMobile();
                 });
             });
 
             window.addEventListener('resize', function () {
-                if (window.innerWidth > 900) closeMobile();
+                if (window.innerWidth > 1024) closeMobile();
             });
         })();
     </script>

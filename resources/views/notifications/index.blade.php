@@ -4,303 +4,223 @@
   $useUserSidebar = auth()->check() && in_array(auth()->user()->role, ['muhitaji', 'mfanyakazi'], true);
   $filter = request('filter') === 'unread' ? 'unread' : 'all';
   $dashUrl = $isAdmin ? route('admin.dashboard') : route('dashboard');
+
+  $groupNotifications = function ($items) {
+      return $items->groupBy(function ($notification) {
+          if ($notification->created_at->isToday()) {
+              return 'Leo';
+          }
+          if ($notification->created_at->isYesterday()) {
+              return 'Jana';
+          }
+          if ($notification->created_at->isCurrentWeek()) {
+              return 'Wiki hii';
+          }
+
+          return 'Zamani';
+      });
+  };
+
+  $groupOrder = ['Leo', 'Jana', 'Wiki hii', 'Zamani'];
 @endphp
 @extends($layout)
 @section('title', 'Taarifa')
 
 @section('content')
 @if($isAdmin)
-  <main class="adm-notifications-main">
-    <div class="adm-notif-page">
-      <section class="adm-notif-hero">
-        <div class="adm-notif-hero-inner">
-          <div>
-            <p class="adm-notif-kicker">Kituo cha taarifa</p>
-            <h1>Taarifa zako</h1>
-            <p class="adm-notif-lead">Kazi, malipo, na masasisho ya mfumo — yote hapa (data halisi kutoka database).</p>
-          </div>
-          <div class="adm-notif-actions-top">
-            @if($unreadCount > 0)
-              <form action="{{ route('notifications.readAll') }}" method="POST" class="m-0 inline">
-                @csrf
-                <button type="submit" class="adm-notif-btn adm-notif-btn--solid">✓ Soma zote</button>
-              </form>
-            @endif
-            <a href="{{ $dashUrl }}" class="adm-notif-btn adm-notif-btn--outline">Dashibodi</a>
-          </div>
-        </div>
-      </section>
+<div class="adm-page adm-notif-page">
+    @include('admin.partials.page-hero', [
+        'title' => 'Kituo cha Taarifa',
+        'subtitle' => 'Kazi, malipo, huduma, na masasisho ya mfumo — yote mahali pamoja.',
+        'icon' => '🔔',
+        'actions' => ($unreadCount > 0
+            ? '<form action="' . route('notifications.readAll') . '" method="POST" class="adm-inline-form" style="display:inline;margin:0;">'
+                . csrf_field()
+                . '<button type="submit" class="adm-btn adm-btn--primary">✓ Soma zote</button></form>'
+            : '')
+            . '<a class="adm-btn adm-btn--ghost" href="' . $dashUrl . '">Dashibodi</a>',
+    ])
 
-      <div class="adm-notif-stats">
-        <div class="adm-notif-stat">
-          <div class="adm-notif-stat-label">Jumla</div>
-          <div class="adm-notif-stat-value">{{ number_format($totalCount) }}</div>
+    <div class="adm-stat-grid adm-notif-stat-grid">
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">📬</span>
+            <span class="adm-stat-tile__val">{{ number_format($totalCount) }}</span>
+            <span class="adm-stat-tile__lbl">Jumla</span>
         </div>
-        <div class="adm-notif-stat">
-          <div class="adm-notif-stat-label">Zisizosomwa</div>
-          <div class="adm-notif-stat-value">{{ number_format($unreadCount) }}</div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">✨</span>
+            <span class="adm-stat-tile__val">{{ number_format($unreadCount) }}</span>
+            <span class="adm-stat-tile__lbl">Zisizosomwa</span>
         </div>
-        <div class="adm-notif-stat">
-          <div class="adm-notif-stat-label">Ukurasa huu</div>
-          <div class="adm-notif-stat-value">{{ $notifications->count() }}</div>
-          <div class="adm-notif-stat-sub">Kati ya {{ $notifications->total() }} zinazolingana</div>
+        <div class="adm-stat-tile">
+            <span class="adm-stat-tile__ico" aria-hidden="true">📄</span>
+            <span class="adm-stat-tile__val">{{ $notifications->count() }}</span>
+            <span class="adm-stat-tile__lbl">Ukurasa huu ({{ $notifications->total() }})</span>
         </div>
-      </div>
-
-      <div class="adm-notif-filters">
-        <span>Onyesha</span>
-        <a href="{{ route('notifications.index', array_filter(['filter' => null])) }}"
-          class="adm-notif-pill {{ $filter === 'all' ? 'is-active' : '' }}">Zote</a>
-        <a href="{{ route('notifications.index', ['filter' => 'unread']) }}"
-          class="adm-notif-pill {{ $filter === 'unread' ? 'is-active-warn' : '' }}">
-          Zisizosomwa
-          @if($unreadCount > 0)
-            <span class="adm-notif-pill-count">{{ $unreadCount }}</span>
-          @endif
-        </a>
-      </div>
-
-      @if($notifications->count() > 0)
-        <ul class="adm-notif-list">
-          @foreach ($notifications as $notification)
-            @php
-              $type = (string) ($notification->data['type'] ?? 'info');
-              $icon = '🔔';
-              $iconMod = '';
-              if ($type === 'admin_message' || str_contains($type, 'admin')) {
-                  $icon = '📢';
-                  $iconMod = 'adm-notif-icon--violet';
-              } elseif (str_contains($type, 'job')) {
-                  $icon = '💼';
-                  $iconMod = 'adm-notif-icon--sky';
-              } elseif (str_contains($type, 'money') || str_contains($type, 'payment') || isset($notification->data['earnings'])) {
-                  $icon = '💰';
-                  $iconMod = 'adm-notif-icon--emerald';
-              } elseif (str_contains($type, 'alert') || str_contains($type, 'cancel')) {
-                  $icon = '⚠️';
-                  $iconMod = 'adm-notif-icon--rose';
-              }
-              $isUnread = ! $notification->read_at;
-            @endphp
-            <li>
-              <article class="adm-notif-card {{ $isUnread ? 'adm-notif-card--unread' : '' }}">
-                @if($isUnread)
-                  <span class="adm-notif-dot" title="Haijasomwa"></span>
-                @endif
-                <div class="adm-notif-card-inner">
-                  <div class="adm-notif-icon {{ $iconMod }}">{{ $icon }}</div>
-                  <div class="adm-notif-card-body">
-                    <div class="adm-notif-card-head">
-                      <h2 class="adm-notif-card-title">{{ $notification->data['title'] ?? 'Taarifa' }}</h2>
-                      <time class="adm-notif-card-time" datetime="{{ $notification->created_at->toIso8601String() }}">
-                        {{ $notification->created_at->diffForHumans() }}
-                      </time>
-                    </div>
-                    <p class="adm-notif-card-msg">{{ $notification->data['message'] ?? 'Hakuna maelezo ya ziada.' }}</p>
-                    <div class="adm-notif-card-actions">
-                      @if(! empty($notification->data['action_url']))
-                        <a href="{{ $notification->data['action_url'] }}" class="adm-notif-btn adm-notif-btn--solid">Fungua →</a>
-                      @endif
-                      @if($isUnread)
-                        <form method="POST" action="{{ route('notifications.read', $notification->id) }}" class="m-0 inline">
-                          @csrf
-                          <button type="submit" class="adm-notif-btn">Weka kama imesomwa</button>
-                        </form>
-                      @endif
-                    </div>
-                  </div>
-                </div>
-              </article>
-            </li>
-          @endforeach
-        </ul>
-        <div class="adm-notif-pagination">
-          {{ $notifications->appends(request()->query())->links() }}
-        </div>
-      @else
-        <div class="adm-notif-empty">
-          <div class="adm-notif-empty-icon">{{ $filter === 'unread' ? '✨' : '🔔' }}</div>
-          @if($filter === 'unread')
-            <h3>Hakuna zisizosomwa</h3>
-            <p>Umesoma taarifa zote. Chagua &ldquo;Zote&rdquo; kuona historia.</p>
-            <a href="{{ route('notifications.index') }}" class="adm-notif-btn adm-notif-btn--solid">Ona taarifa zote</a>
-          @else
-            <h3>Bado hakuna taarifa</h3>
-            <p>Utapokea taarifa kuhusu kazi, malipo, na masasisho ya mfumo hapa.</p>
-            <a href="{{ $dashUrl }}" class="adm-notif-btn adm-notif-btn--solid">Rudi dashibodi</a>
-          @endif
-        </div>
-      @endif
     </div>
-  </main>
+
+    <div class="adm-notif-filters adm-card">
+        <span>Onyesha</span>
+        <a href="{{ route('notifications.index') }}"
+            class="adm-notif-pill {{ $filter === 'all' ? 'is-active' : '' }}">Zote</a>
+        <a href="{{ route('notifications.index', ['filter' => 'unread']) }}"
+            class="adm-notif-pill {{ $filter === 'unread' ? 'is-active-warn' : '' }}">
+            Zisizosomwa
+            @if($unreadCount > 0)
+                <span class="adm-notif-pill-count">{{ $unreadCount }}</span>
+            @endif
+        </a>
+    </div>
+
+    @if($notifications->count() > 0)
+        @php $adminGroups = $groupNotifications($notifications); @endphp
+        @foreach($groupOrder as $groupLabel)
+            @if($adminGroups->has($groupLabel))
+                <h3 class="adm-notif-group-label">{{ $groupLabel }}</h3>
+                <ul class="adm-notif-list">
+                    @foreach ($adminGroups[$groupLabel] as $notification)
+                        @include('notifications.partials.card', ['notification' => $notification, 'theme' => 'admin'])
+                    @endforeach
+                </ul>
+            @endif
+        @endforeach
+        <div class="adm-pagination">
+            {{ $notifications->appends(request()->query())->links() }}
+        </div>
+    @else
+        <div class="adm-empty adm-card">
+            <span class="adm-empty__ico" aria-hidden="true">{{ $filter === 'unread' ? '✨' : '🔔' }}</span>
+            @if($filter === 'unread')
+                <h3>Hakuna zisizosomwa</h3>
+                <p>Umesoma taarifa zote. Chagua &ldquo;Zote&rdquo; kuona historia.</p>
+                <a href="{{ route('notifications.index') }}" class="adm-btn adm-btn--primary">Ona taarifa zote</a>
+            @else
+                <h3>Bado hakuna taarifa</h3>
+                <p>Utapokea taarifa kuhusu kazi, malipo, na masasisho ya mfumo hapa.</p>
+                <a href="{{ $dashUrl }}" class="adm-btn adm-btn--primary">Rudi dashibodi</a>
+            @endif
+        </div>
+    @endif
+</div>
 @else
-<div class="flex min-h-screen bg-slate-100/90">
+<div class="flex min-h-screen bg-slate-50">
   @if($useUserSidebar)
     @include('components.user-sidebar')
   @endif
 
-  <main class="{{ $useUserSidebar ? 'tp-main w-full min-w-0 p-4 pt-16 sm:p-6 lg:pt-6' : 'w-full max-w-3xl mx-auto px-4 py-8 sm:px-6' }}">
-    <div class="mx-auto max-w-2xl lg:max-w-3xl space-y-6">
+  <main class="{{ $useUserSidebar ? 'tp-main w-full min-w-0 p-4 pt-16 sm:p-6 lg:pt-6' : 'w-full px-4 py-6 sm:px-6' }}">
+    <div class="tp-notif-page">
 
       @if(session('success'))
-        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-900 shadow-sm">
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[13px] font-semibold text-emerald-900 shadow-sm">
           {{ session('success') }}
         </div>
       @endif
 
-      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-500 p-6 text-white shadow-lg sm:p-8">
-        <div class="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/15 blur-3xl"></div>
-        <div class="pointer-events-none absolute bottom-0 left-1/4 h-32 w-56 rounded-full bg-rose-300/20 blur-2xl"></div>
-        <div class="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-white/80">Kituo cha taarifa</p>
-            <h1 class="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">Taarifa zako</h1>
-            <p class="mt-2 max-w-md text-[13px] leading-relaxed text-white/90">
-              Fuatilia kazi, malipo, na ujumbe kutoka TendaPoa — zote mahali pamoja.
-            </p>
+      <section class="tp-notif-hero">
+        <div class="tp-notif-hero-glow" aria-hidden="true"></div>
+        <div class="tp-notif-hero-inner">
+          <div class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <span class="tp-notif-hero-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                Kituo cha taarifa
+              </span>
+              <h1 class="tp-notif-hero-title">Taarifa zako</h1>
+              <p class="tp-notif-hero-sub">
+                Fuatilia kazi, malipo, huduma, na ujumbe — kila kitu muhimu kiko hapa, wazi na rahisi kusoma.
+              </p>
+            </div>
+            <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              @if($unreadCount > 0)
+                <form action="{{ route('notifications.readAll') }}" method="POST" class="w-full sm:w-auto">
+                  @csrf
+                  <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-[12px] font-bold text-slate-900 shadow-lg transition hover:bg-slate-100 sm:w-auto">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                    Soma zote
+                  </button>
+                </form>
+              @endif
+              <a href="{{ $dashUrl }}" class="inline-flex w-full items-center justify-center rounded-xl border border-white/20 bg-white/10 px-5 py-2.5 text-[12px] font-semibold text-white backdrop-blur-sm transition hover:bg-white/15 sm:w-auto">
+                Dashibodi
+              </a>
+            </div>
           </div>
-          <div class="flex shrink-0 flex-wrap gap-2">
-            @if($unreadCount > 0)
-              <form action="{{ route('notifications.readAll') }}" method="POST">
-                @csrf
-                <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-white/95 px-4 py-2.5 text-[12px] font-bold text-orange-900 shadow-md transition hover:bg-white">
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                  Soma zote
-                </button>
-              </form>
-            @endif
-            <a href="{{ $dashUrl }}" class="inline-flex items-center justify-center rounded-xl border border-white/35 bg-white/10 px-4 py-2.5 text-[12px] font-semibold text-white backdrop-blur-sm transition hover:bg-white/20">Dashboard</a>
+
+          <div class="tp-notif-hero-stats">
+            <div class="tp-notif-stat">
+              <p class="tp-notif-stat-val">{{ number_format($totalCount) }}</p>
+              <p class="tp-notif-stat-lbl">Jumla</p>
+            </div>
+            <div class="tp-notif-stat tp-notif-stat--hot">
+              <p class="tp-notif-stat-val">{{ number_format($unreadCount) }}</p>
+              <p class="tp-notif-stat-lbl">Zisizosomwa</p>
+            </div>
+            <div class="tp-notif-stat">
+              <p class="tp-notif-stat-val">{{ $notifications->count() }}</p>
+              <p class="tp-notif-stat-lbl">Ukurasa huu</p>
+            </div>
           </div>
         </div>
       </section>
 
-      <div class="grid gap-3 sm:grid-cols-3">
-        <div class="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm ring-1 ring-slate-100/80">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Jumla</p>
-          <p class="mt-1 text-2xl font-bold tabular-nums text-slate-900">{{ number_format($totalCount) }}</p>
+      <div class="tp-notif-toolbar">
+        <p class="hidden px-2 text-[11px] font-bold uppercase tracking-wide text-slate-500 sm:block">Chuja taarifa</p>
+        <div class="tp-notif-segment w-full sm:w-auto sm:min-w-[280px]">
+          <a href="{{ route('notifications.index') }}" class="{{ $filter === 'all' ? 'is-active' : '' }}">
+            Zote
+          </a>
+          <a href="{{ route('notifications.index', ['filter' => 'unread']) }}" class="{{ $filter === 'unread' ? 'is-active-warn' : '' }}">
+            Zisizosomwa
+            @if($unreadCount > 0)
+              <span class="tp-notif-segment-count">{{ $unreadCount }}</span>
+            @endif
+          </a>
         </div>
-        <div class="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-4 shadow-sm ring-1 ring-amber-100/80">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-amber-800">Zisizosomwa</p>
-          <p class="mt-1 text-2xl font-bold tabular-nums text-amber-900">{{ number_format($unreadCount) }}</p>
-        </div>
-        <div class="rounded-2xl border border-brand-100 bg-gradient-to-br from-brand-50 to-teal-50/30 p-4 shadow-sm ring-1 ring-brand-100/80">
-          <p class="text-[10px] font-bold uppercase tracking-wider text-brand-800">Ukurasa huu</p>
-          <p class="mt-1 text-2xl font-bold tabular-nums text-brand-900">{{ $notifications->count() }}</p>
-          <p class="mt-0.5 text-[10px] text-brand-700/70">Kati ya {{ $notifications->total() }} zinazolingana</p>
-        </div>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <span class="mr-1 text-[11px] font-bold uppercase tracking-wide text-slate-500">Onyesha:</span>
-        <a href="{{ route('notifications.index', array_filter(['filter' => null])) }}"
-          class="inline-flex items-center rounded-full px-4 py-2 text-[12px] font-bold transition {{ $filter === 'all' ? 'bg-slate-900 text-white shadow-md' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
-          Zote
-        </a>
-        <a href="{{ route('notifications.index', ['filter' => 'unread']) }}"
-          class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12px] font-bold transition {{ $filter === 'unread' ? 'bg-amber-600 text-white shadow-md shadow-amber-600/25' : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50' }}">
-          Zisizosomwa
-          @if($unreadCount > 0)
-            <span class="rounded-full bg-white/25 px-2 py-0.5 text-[10px] tabular-nums">{{ $unreadCount }}</span>
-          @endif
-        </a>
       </div>
 
       @if($notifications->count() > 0)
-        <ul class="space-y-3">
-          @foreach ($notifications as $notification)
-            @php
-              $type = (string) ($notification->data['type'] ?? 'info');
-              $icon = '🔔';
-              $iconWrap = 'bg-slate-100 text-slate-600 ring-slate-200/80';
+        @php $userGroups = $groupNotifications($notifications); @endphp
+        @foreach($groupOrder as $groupLabel)
+          @if($userGroups->has($groupLabel))
+            <section class="tp-notif-group">
+              <h2 class="tp-notif-group-title">{{ $groupLabel }}</h2>
+              <ul class="space-y-3">
+                @foreach ($userGroups[$groupLabel] as $notification)
+                  @include('notifications.partials.card', ['notification' => $notification, 'theme' => 'app'])
+                @endforeach
+              </ul>
+            </section>
+          @endif
+        @endforeach
 
-              if ($type === 'admin_message' || str_contains($type, 'admin')) {
-                  $icon = '📢';
-                  $iconWrap = 'bg-violet-100 text-violet-700 ring-violet-200/80';
-              } elseif (str_contains($type, 'job')) {
-                  $icon = '💼';
-                  $iconWrap = 'bg-sky-100 text-sky-700 ring-sky-200/80';
-              } elseif (str_contains($type, 'money') || str_contains($type, 'payment') || isset($notification->data['earnings'])) {
-                  $icon = '💰';
-                  $iconWrap = 'bg-emerald-100 text-emerald-700 ring-emerald-200/80';
-              } elseif (str_contains($type, 'alert') || str_contains($type, 'cancel')) {
-                  $icon = '⚠️';
-                  $iconWrap = 'bg-rose-100 text-rose-700 ring-rose-200/80';
-              }
-
-              $isUnread = ! $notification->read_at;
-              $borderUnread = $isUnread
-                  ? 'border-l-4 border-l-brand-600 bg-gradient-to-r from-brand-50/80 to-white ring-brand-100/60'
-                  : 'border-l-4 border-l-transparent';
-            @endphp
-            <li>
-              <article class="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm transition hover:border-slate-300 hover:shadow-md {{ $borderUnread }}">
-                @if($isUnread)
-                  <span class="absolute right-4 top-4 h-2 w-2 rounded-full bg-brand-500 shadow-[0_0_0_3px_rgba(255,255,255,1)]" title="Haijasomwa"></span>
-                @endif
-                <div class="flex gap-4 p-4 sm:p-5">
-                  <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-xl ring-1 {{ $iconWrap }} shadow-sm">
-                    {{ $icon }}
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-start justify-between gap-2 pr-6 sm:pr-0">
-                      <h2 class="text-[15px] font-bold leading-snug text-slate-900">
-                        {{ $notification->data['title'] ?? 'Taarifa' }}
-                      </h2>
-                      <time class="shrink-0 text-[11px] font-medium text-slate-400" datetime="{{ $notification->created_at->toIso8601String() }}">
-                        {{ $notification->created_at->diffForHumans() }}
-                      </time>
-                    </div>
-                    <p class="mt-2 text-[13px] leading-relaxed text-slate-600">
-                      {{ $notification->data['message'] ?? 'Hakuna maelezo ya ziada.' }}
-                    </p>
-                    <div class="mt-4 flex flex-wrap items-center gap-2">
-                      @if(! empty($notification->data['action_url']))
-                        <a href="{{ $notification->data['action_url'] }}"
-                          class="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-[12px] font-bold text-white shadow-sm transition hover:bg-brand-700">
-                          Fungua
-                          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                        </a>
-                      @endif
-                      @if($isUnread)
-                        <form method="POST" action="{{ route('notifications.read', $notification->id) }}" class="inline">
-                          @csrf
-                          <button type="submit" class="inline-flex items-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-bold text-slate-700 shadow-sm transition hover:bg-slate-50">
-                            Weka kama imesomwa
-                          </button>
-                        </form>
-                      @endif
-                    </div>
-                  </div>
-                </div>
-              </article>
-            </li>
-          @endforeach
-        </ul>
-
-        <div class="flex justify-center pt-4 text-[12px] text-slate-600 [&_.pagination]:flex [&_.pagination]:flex-wrap [&_.pagination]:justify-center [&_.pagination]:gap-1 [&_a]:rounded-lg [&_a]:border [&_a]:border-slate-200 [&_a]:px-3 [&_a]:py-1.5 [&_a]:font-medium [&_a]:text-slate-700 [&_a:hover]:bg-slate-50 [&_span]:rounded-lg [&_span]:bg-brand-50 [&_span]:px-3 [&_span]:py-1.5 [&_span]:font-semibold [&_span]:text-brand-800">
+        <div class="pt-2 text-center text-[12px] text-slate-600 [&_.pagination]:flex [&_.pagination]:flex-wrap [&_.pagination]:justify-center [&_.pagination]:gap-1.5 [&_a]:rounded-xl [&_a]:border [&_a]:border-slate-200 [&_a]:bg-white [&_a]:px-3.5 [&_a]:py-2 [&_a]:font-semibold [&_a]:text-slate-700 [&_a]:shadow-sm [&_a]:transition [&_a]:hover:border-brand-200 [&_a]:hover:text-brand-700 [&_span]:rounded-xl [&_span]:bg-brand-600 [&_span]:px-3.5 [&_span]:py-2 [&_span]:font-bold [&_span]:text-white">
           {{ $notifications->appends(request()->query())->links() }}
         </div>
       @else
-        <div class="rounded-2xl border-2 border-dashed border-slate-200 bg-white/80 px-6 py-16 text-center shadow-inner">
-          <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 text-4xl shadow-sm ring-1 ring-slate-200/80">
-            @if($filter === 'unread')
-              ✨
-            @else
-              🔔
-            @endif
+        <div class="tp-notif-empty">
+          <div class="tp-notif-empty-icon">
+            {{ $filter === 'unread' ? '✨' : '🔔' }}
           </div>
           @if($filter === 'unread')
-            <h3 class="mt-6 text-lg font-bold text-slate-900">Hakuna zisizosomwa</h3>
-            <p class="mx-auto mt-2 max-w-sm text-[13px] leading-relaxed text-slate-600">Umesoma taarifa zote! Unaweza kuona historia kwa kuchagua &ldquo;Zote&rdquo; hapo juu.</p>
-            <a href="{{ route('notifications.index') }}" class="mt-6 inline-flex rounded-xl bg-slate-900 px-5 py-2.5 text-[13px] font-bold text-white shadow-md hover:bg-slate-800">Ona taarifa zote</a>
+            <h3 class="mt-6 text-xl font-extrabold text-slate-900">Hakuna zisizosomwa</h3>
+            <p class="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-slate-600">
+              Hongera! Umesoma taarifa zote. Rudi hapa wakati wowote kupata masasisho mapya.
+            </p>
+            <a href="{{ route('notifications.index') }}" class="tp-notif-btn-primary mt-6 inline-flex w-full max-w-xs sm:w-auto">
+              Ona taarifa zote
+            </a>
           @else
-            <h3 class="mt-6 text-lg font-bold text-slate-900">Bado hakuna taarifa</h3>
-            <p class="mx-auto mt-2 max-w-sm text-[13px] leading-relaxed text-slate-600">Utapokea taarifa kuhusu kazi, malipo, na masasisho ya mfumo hapa.</p>
-            <a href="{{ $dashUrl }}" class="mt-6 inline-flex rounded-xl bg-gradient-to-r from-brand-600 to-teal-600 px-5 py-2.5 text-[13px] font-bold text-white shadow-lg shadow-brand-600/20 hover:from-brand-700 hover:to-teal-700">Rudi dashboard</a>
+            <h3 class="mt-6 text-xl font-extrabold text-slate-900">Bado hakuna taarifa</h3>
+            <p class="mx-auto mt-2 max-w-sm text-[14px] leading-relaxed text-slate-600">
+              Utapokea arifa kuhusu kazi, malipo, huduma, na ujumbe kutoka TendaPoa hapa.
+            </p>
+            <a href="{{ $dashUrl }}" class="tp-notif-btn-primary mt-6 inline-flex w-full max-w-xs sm:w-auto">
+              Rudi dashibodi
+            </a>
           @endif
         </div>
       @endif
-
     </div>
   </main>
 </div>

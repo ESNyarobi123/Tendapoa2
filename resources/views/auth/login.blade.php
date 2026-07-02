@@ -15,7 +15,7 @@
 
         <div class="mx-auto flex min-h-full max-w-5xl flex-col justify-center px-4 py-16 lg:flex-row lg:items-stretch lg:gap-0 lg:py-12">
             <div class="hidden overflow-hidden rounded-2xl rounded-r-none bg-gradient-to-br from-brand-600 to-brand-800 p-10 text-white shadow-sm lg:flex lg:w-[42%] lg:flex-col lg:justify-center">
-                <div class="mb-6 flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-lg font-bold">T</div>
+                <img src="{{ asset('images/brand/tendapoa-logo.jpg') }}" alt="TendaPoa" class="mb-6 h-11 w-11 rounded-xl object-cover shadow-md ring-2 ring-white/25" width="44" height="44">
                 <h1 class="text-2xl font-bold tracking-tight">TendaPoa</h1>
                 <p class="mt-3 max-w-sm text-[13px] leading-relaxed text-white/85">
                     Onganisha na wafanyakazi au wateja. Malipo salama, mawasiliano wazi, na kazi zinazoonekana wazi.

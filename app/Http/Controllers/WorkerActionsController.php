@@ -35,7 +35,7 @@ class WorkerActionsController extends Controller
             abort(403);
         }
 
-        $jobs = Job::with('muhitaji', 'category')
+        $jobs = Job::with('muhitaji', 'category', 'sourceListing')
             ->where('accepted_worker_id', $u->id)
             ->whereIn('status', [Job::S_FUNDED, Job::S_IN_PROGRESS, Job::S_SUBMITTED, 'assigned', 'in_progress', 'ready_for_confirmation'])
             ->latest()->paginate(12);
@@ -123,7 +123,7 @@ class WorkerActionsController extends Controller
         }
 
         // NEW: funded = needs accept/decline, assigned = legacy needs accept/decline
-        $pendingJobs = Job::with('muhitaji', 'category')
+        $pendingJobs = Job::with(['muhitaji', 'category', 'sourceListing'])
             ->where('accepted_worker_id', $u->id)
             ->whereIn('status', [Job::S_FUNDED, 'assigned'])
             ->latest()
@@ -135,7 +135,7 @@ class WorkerActionsController extends Controller
             });
 
         // Active jobs: in_progress, submitted, or legacy ready_for_confirmation
-        $activeJobs = Job::with('muhitaji', 'category')
+        $activeJobs = Job::with(['muhitaji', 'category', 'sourceListing'])
             ->where('accepted_worker_id', $u->id)
             ->whereIn('status', [Job::S_IN_PROGRESS, Job::S_SUBMITTED, 'in_progress', 'ready_for_confirmation'])
             ->latest()

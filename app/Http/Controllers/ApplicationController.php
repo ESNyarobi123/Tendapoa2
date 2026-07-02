@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\ApplicationAcceptedNotification;
 use App\Notifications\ApplicationRejectedNotification;
 use App\Notifications\JobApplicationReceivedNotification;
+use App\Rules\NoPhoneNumberInText;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -70,8 +71,8 @@ class ApplicationController extends Controller
 
         $request->validate([
             'proposed_amount' => ['required', 'integer', 'min:1000'],
-            'message' => ['required', 'string', 'max:1000'],
-            'eta_text' => ['nullable', 'string', 'max:100'],
+            'message' => ['required', 'string', 'max:1000', new NoPhoneNumberInText()],
+            'eta_text' => ['nullable', 'string', 'max:100', new NoPhoneNumberInText()],
         ]);
 
         DB::transaction(function () use ($job, $user, $request) {
@@ -175,7 +176,7 @@ class ApplicationController extends Controller
 
         $request->validate([
             'counter_amount' => ['required', 'integer', 'min:1000'],
-            'client_response_note' => ['nullable', 'string', 'max:500'],
+            'client_response_note' => ['nullable', 'string', 'max:500', new NoPhoneNumberInText()],
         ]);
 
         if (! $application->isActive()) {
@@ -377,8 +378,8 @@ class ApplicationController extends Controller
 
         $validated = $request->validate([
             'proposed_amount' => ['required', 'integer', 'min:1000'],
-            'message' => ['required', 'string', 'max:1000'],
-            'eta_text' => ['nullable', 'string', 'max:100'],
+            'message' => ['required', 'string', 'max:1000', new NoPhoneNumberInText()],
+            'eta_text' => ['nullable', 'string', 'max:100', new NoPhoneNumberInText()],
         ]);
 
         $application = DB::transaction(function () use ($job, $user, $validated) {

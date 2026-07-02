@@ -14,7 +14,10 @@ class JobViewController extends Controller
 {
     public function show(Job $job)
     {
-        $job->load('muhitaji', 'category', 'comments.user', 'acceptedWorker', 'selectedWorker', 'applications.worker', 'reviews', 'activeDispute');
+        $user = Auth::user();
+        abort_unless($job->userCanView($user), 404);
+
+        $job->load('muhitaji', 'category', 'comments.user', 'acceptedWorker', 'selectedWorker', 'applications.worker', 'reviews', 'activeDispute', 'hiddenByAdmin');
 
         return view('jobs.show', compact('job'));
     }
@@ -25,6 +28,8 @@ class JobViewController extends Controller
         if (! in_array($role, ['mfanyakazi', 'admin'], true)) {
             abort(403, 'Huna ruhusa (mfanyakazi/admin tu).');
         }
+
+        abort_if($job->isHidden() && $role !== 'admin', 403, 'Kazi hii haipatikani kwa maombi mapya.');
 
         $r->validate([
             'message' => ['required', 'max:1000'],
@@ -44,7 +49,15 @@ class JobViewController extends Controller
 
     public function apiShow(Job $job)
     {
-        $job->load('muhitaji', 'category', 'comments.user', 'acceptedWorker', 'selectedWorker', 'payment', 'applications.worker', 'reviews', 'activeDispute');
+        $user = Auth::user();
+        if (! $job->userCanView($user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kazi hii haipatikani.',
+            ], 404);
+        }
+
+        $job->load('muhitaji', 'category', 'comments.user', 'acceptedWorker', 'selectedWorker', 'payment', 'applications.worker', 'reviews', 'activeDispute', 'hiddenByAdmin');
         $jobData = $job->toArray();
         if ($job->image) {
             $jobData['image_url'] = asset('storage/'.$job->image);

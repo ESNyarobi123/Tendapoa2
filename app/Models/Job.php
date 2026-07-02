@@ -36,6 +36,8 @@ class Job extends Model
         'completion_code',
         'completed_at',
         'poster_type',
+        'engagement_type',
+        'source_listing_id',
         'posting_fee',
         'mfanyakazi_response',
         'worker_response',
@@ -59,6 +61,9 @@ class Job extends Model
         'urgency',
         'cancel_reason',
         'application_count',
+        'hidden_at',
+        'hidden_by',
+        'hidden_reason',
     ];
 
     /** Hide raw locale columns from API/JSON; API gets single "title"/"description" from accessors */
@@ -79,6 +84,7 @@ class Job extends Model
         'confirmed_at' => 'datetime',
         'cancelled_at' => 'datetime',
         'disputed_at' => 'datetime',
+        'hidden_at' => 'datetime',
         'auto_release_at' => 'datetime',
         'price' => 'integer',
         'budget' => 'integer',
@@ -94,7 +100,79 @@ class Job extends Model
     ];
 
     /** Appended attributes */
-    protected $appends = ['image_url'];
+    protected $appends = ['image_url', 'is_hidden'];
+
+    public function isHidden(): bool
+    {
+        return $this->hidden_at !== null;
+    }
+
+    public function getIsHiddenAttribute(): bool
+    {
+        return $this->isHidden();
+    }
+
+    /** Kazi zinazoonekana kwa umma (feed, ramani, utafutaji). */
+    public function scopePubliclyVisible($query)
+    {
+        return $query->whereNull('hidden_at');
+    }
+
+    public function scopeHiddenOnly($query)
+    {
+        return $query->whereNotNull('hidden_at');
+    }
+
+    /**
+     * Mwenye kazi, mfanyakazi aliyeteuliwa, au admin wanaweza kuona kazi iliyofichwa.
+     */
+    public function userCanView(?User $user): bool
+    {
+        if (! $this->isHidden()) {
+            return true;
+        }
+
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        if ($user->id === $this->user_id) {
+            return true;
+        }
+
+        if ($user->id === $this->accepted_worker_id || $user->id === $this->selected_worker_id) {
+            return true;
+        }
+
+        return false;
+    }
+
+    public function hideModeration(?int $adminId, ?string $reason = null): void
+    {
+        $this->update([
+            'hidden_at' => now(),
+            'hidden_by' => $adminId,
+            'hidden_reason' => $reason,
+        ]);
+    }
+
+    public function unhideModeration(): void
+    {
+        $this->update([
+            'hidden_at' => null,
+            'hidden_by' => null,
+            'hidden_reason' => null,
+        ]);
+    }
+
+    public function hiddenByAdmin()
+    {
+        return $this->belongsTo(User::class, 'hidden_by');
+    }
 
     /** STATUS constants — NEW WORKFLOW */
     public const S_OPEN = 'open';
@@ -116,6 +194,19 @@ class Job extends Model
     public const S_DISPUTED = 'disputed';
 
     public const S_REFUNDED = 'refunded';
+
+    /** Engagement types — catalog vs booking vs classic job request */
+    public const ENGAGEMENT_JOB_REQUEST = 'job_request';
+
+    public const ENGAGEMENT_SERVICE_LISTING = 'service_listing';
+
+    public const ENGAGEMENT_SERVICE_BOOKING = 'service_booking';
+
+    public const ENGAGEMENT_TYPES = [
+        self::ENGAGEMENT_JOB_REQUEST,
+        self::ENGAGEMENT_SERVICE_LISTING,
+        self::ENGAGEMENT_SERVICE_BOOKING,
+    ];
 
     // Legacy compat
     public const S_OFFERED = 'offered';
@@ -231,6 +322,17 @@ class Job extends Model
         return $this->hasMany(Dispute::class, 'work_order_id');
     }
 
+    public function sourceListing()
+    {
+        return $this->belongsTo(self::class, 'source_listing_id');
+    }
+
+    public function serviceBookings()
+    {
+        return $this->hasMany(self::class, 'source_listing_id')
+            ->where('engagement_type', self::ENGAGEMENT_SERVICE_BOOKING);
+    }
+
     public function activeDispute()
     {
         return $this->hasOne(Dispute::class, 'work_order_id')
@@ -271,6 +373,63 @@ class Job extends Model
             ->whereIn('status', [self::S_OPEN, self::S_AWAITING_PAYMENT, self::S_SUBMITTED]);
     }
 
+    /** Catalog entries posted by workers (browseable services). */
+    public function scopeServiceListings($q)
+    {
+        return $q->where('engagement_type', self::ENGAGEMENT_SERVICE_LISTING);
+    }
+
+    /** Client orders spawned from a service listing after "Choose Provider". */
+    public function scopeServiceBookings($q)
+    {
+        return $q->where('engagement_type', self::ENGAGEMENT_SERVICE_BOOKING);
+    }
+
+    /** Classic muhitaji job requests (apply → select → fund). */
+    public function scopeJobRequests($q)
+    {
+        return $q->where('engagement_type', self::ENGAGEMENT_JOB_REQUEST);
+    }
+
+    public static function activeBookingStatuses(): array
+    {
+        return [
+            self::S_AWAITING_PAYMENT,
+            self::S_FUNDED,
+            self::S_IN_PROGRESS,
+            self::S_SUBMITTED,
+        ];
+    }
+
+    /**
+     * Listing in catalog mode (worker-posted service).
+     */
+    public function isCatalogListing(): bool
+    {
+        if ($this->isServiceListing()) {
+            return true;
+        }
+
+        return $this->engagement_type === self::ENGAGEMENT_JOB_REQUEST
+            && $this->poster_type === 'mfanyakazi'
+            && $this->source_listing_id === null;
+    }
+
+    public function isServiceListing(): bool
+    {
+        return $this->engagement_type === self::ENGAGEMENT_SERVICE_LISTING;
+    }
+
+    public function isServiceBooking(): bool
+    {
+        return $this->engagement_type === self::ENGAGEMENT_SERVICE_BOOKING;
+    }
+
+    public function isJobRequest(): bool
+    {
+        return $this->engagement_type === self::ENGAGEMENT_JOB_REQUEST;
+    }
+
     /* ===========================
      |  Status transition helper
      * =========================== */
@@ -296,6 +455,14 @@ class Job extends Model
     /* ===========================
      |  Helpers / Accessors
      * =========================== */
+
+    /**
+     * Baada ya escrow + kukubali kwa mfanyakazi, DM kati ya mteja na mfanyakazi inaruhusu nambari za simu.
+     */
+    public function allowsPhoneSharingInChat(int $senderId, ?int $receiverId = null): bool
+    {
+        return \App\Services\PhoneContactPolicy::allowsPhoneSharingInChat($this, $senderId, $receiverId);
+    }
 
     /**
      * Localized title: API returns single "title" based on Accept-Language.

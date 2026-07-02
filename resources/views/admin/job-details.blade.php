@@ -10,6 +10,7 @@
         default => 'adm-badge--info',
     };
 @endphp
+@php use App\Models\Job; @endphp
 <div class="adm-subpage adm-stack">
     <div class="adm-page-head">
         <div>
@@ -17,7 +18,32 @@
             <p class="adm-page-head-sub">{{ $job->title }}</p>
         </div>
         <div class="adm-actions">
-            @if($job->status !== 'completed')
+            @if(!$job->accepted_worker_id)
+                <form action="{{ route('admin.job.assign-worker', $job) }}" method="POST" class="adm-actions adm-assign-form" style="margin:0;flex-wrap:wrap;gap:0.5rem;">
+                    @csrf
+                    <select name="worker_id" class="adm-input" required style="min-width:12rem;">
+                        <option value="">Chagua mfanyakazi…</option>
+                        @foreach($workers as $worker)
+                            <option value="{{ $worker->id }}" @selected($job->selected_worker_id == $worker->id)>{{ $worker->name }}</option>
+                        @endforeach
+                    </select>
+                    <input type="number" name="agreed_amount" class="adm-input" min="1000" value="{{ $job->agreed_amount ?: $job->price }}" style="width:8rem;" required>
+                    <button type="submit" class="adm-btn adm-btn--accent">👷 Teua mfanyakazi</button>
+                </form>
+            @endif
+            <form action="{{ route('admin.job.change-status', $job) }}" method="POST" class="adm-actions" style="margin:0;gap:0.5rem;">
+                @csrf
+                <select name="status" class="adm-input" required style="min-width:10rem;">
+                    @foreach($statusOptions as $statusOption)
+                        <option value="{{ $statusOption }}" @selected($job->status === $statusOption)>{{ $statusOption }}</option>
+                    @endforeach
+                </select>
+                <button type="button" class="adm-btn adm-btn--muted"
+                    onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Badilisha hali ya kazi?'):Promise.resolve(confirm('Badilisha hali?'))).then(function(ok){ if(ok) f.submit(); });">
+                    Badilisha hali
+                </button>
+            </form>
+            @if($job->status !== Job::S_COMPLETED && $job->status !== 'completed')
                 <form action="{{ route('admin.job.force-complete', $job) }}" method="POST" class="adm-actions" style="margin:0;">
                     @csrf
                     <button type="button" class="adm-btn adm-btn--success"
@@ -26,7 +52,7 @@
                     </button>
                 </form>
             @endif
-            @if($job->status !== 'cancelled')
+            @if($job->status !== Job::S_CANCELLED && $job->status !== 'cancelled')
                 <form action="{{ route('admin.job.force-cancel', $job) }}" method="POST" class="adm-actions" style="margin:0;">
                     @csrf
                     <button type="button" class="adm-btn adm-btn--danger"
@@ -35,6 +61,29 @@
                     </button>
                 </form>
             @endif
+            @if($job->isHidden())
+                <form action="{{ route('admin.job.unhide', $job) }}" method="POST" class="adm-actions" style="margin:0;">
+                    @csrf
+                    <button type="submit" class="adm-btn adm-btn--accent">👁️ Onyesha kwa umma</button>
+                </form>
+            @else
+                <form action="{{ route('admin.job.hide', $job) }}" method="POST" class="adm-actions" style="margin:0;gap:0.5rem;flex-wrap:wrap;">
+                    @csrf
+                    <input type="text" name="reason" class="adm-input" placeholder="Sababu ya kuficha (si lazima)" maxlength="500" style="min-width:14rem;">
+                    <button type="button" class="adm-btn adm-btn--warn"
+                        onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Ficha kazi hii? Mchapishaji ataiona tu kwenye orodha yake.'):Promise.resolve(confirm('Ficha kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                        🙈 Ficha kazi
+                    </button>
+                </form>
+            @endif
+            <form action="{{ route('admin.job.delete', $job) }}" method="POST" class="adm-actions" style="margin:0;">
+                @csrf
+                @method('DELETE')
+                <button type="button" class="adm-btn adm-btn--danger"
+                    onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Futa kabisa rekodi ya kazi hii?'):Promise.resolve(confirm('Futa kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                    🗑️ Futa kazi
+                </button>
+            </form>
             @if($job->accepted_worker_id)
                 <a href="{{ route('admin.chat.view', $job) }}" class="adm-btn adm-btn--accent">💬 Mazungumzo</a>
             @endif
@@ -52,6 +101,37 @@
             <div>
                 <span class="adm-k">Hali</span>
                 <span class="adm-badge {{ $statusClass }}">{{ $job->status }}</span>
+            </div>
+            <div>
+                <span class="adm-k">Aina ya kazi</span>
+                <span class="adm-v">@include('components.engagement-badge', ['job' => $job])</span>
+            </div>
+            @if($job->isServiceBooking() && $job->sourceListing)
+                <div>
+                    <span class="adm-k">Tangazo la chanzo</span>
+                    <span class="adm-v">
+                        <a href="{{ route('admin.job.details', $job->sourceListing) }}">{{ $job->sourceListing->title }}</a>
+                        <span style="color:var(--adm-muted);font-size:0.75rem;"> (#{{ $job->source_listing_id }})</span>
+                    </span>
+                </div>
+            @endif
+            <div>
+                <span class="adm-k">Mwonekano</span>
+                <span class="adm-v">
+                    @if($job->isHidden())
+                        <span class="adm-pill adm-pill--hidden">Imefichwa</span>
+                        @if($job->hidden_at)
+                            <span style="display:block;font-size:0.75rem;color:var(--adm-muted);margin-top:0.25rem;">{{ $job->hidden_at->format('d M Y H:i') }}
+                                @if($job->hiddenByAdmin) — {{ $job->hiddenByAdmin->name }} @endif
+                            </span>
+                        @endif
+                        @if($job->hidden_reason)
+                            <span style="display:block;font-size:0.75rem;color:var(--adm-muted);margin-top:0.15rem;">{{ $job->hidden_reason }}</span>
+                        @endif
+                    @else
+                        Inaonekana kwa umma
+                    @endif
+                </span>
             </div>
             <div>
                 <span class="adm-k">Bei</span>

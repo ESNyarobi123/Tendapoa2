@@ -29,7 +29,7 @@
     <div class="mx-auto max-w-5xl px-4 py-16 pt-20 md:flex md:min-h-screen md:items-center md:py-12">
         {{-- Panel ya brand: inaonekana kutoka md+ (iPad portrait pamoja) --}}
         <div class="mb-6 hidden w-full flex-col justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 p-8 text-white shadow-sm sm:p-10 md:mb-0 md:mr-0 md:flex md:w-[38%] md:rounded-r-none">
-            <div class="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-lg font-bold">T</div>
+            <img src="{{ asset('images/brand/tendapoa-logo.jpg') }}" alt="TendaPoa" class="mb-5 h-11 w-11 rounded-xl object-cover shadow-md ring-2 ring-white/25" width="44" height="44">
             <h1 class="text-2xl font-bold tracking-tight">Fungua akaunti</h1>
             <p id="brandStepHint" class="mt-3 text-[13px] leading-relaxed text-white/85"></p>
             <ul id="brandBullets" class="mt-6 space-y-2 text-[12px] text-white/80">

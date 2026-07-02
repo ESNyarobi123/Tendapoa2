@@ -60,6 +60,11 @@
                 <div class="min-w-0 flex-1 space-y-2">
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="inline-flex max-w-full truncate rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 ring-1 ring-slate-200/80">{{ $cat }}</span>
+                    @if($job->isServiceBooking())
+                      <span class="inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-violet-800 ring-1 ring-violet-200">Agizo la Huduma</span>
+                    @elseif($job->isServiceListing())
+                      <span class="inline-flex rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-sky-800 ring-1 ring-sky-200">Tangazo la Huduma</span>
+                    @endif
                     <span class="inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ring-1 {{ $statusRing }}">
                       @switch($status)
                         @case('funded') Imefadhiliwa @break
