@@ -306,7 +306,9 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
 
                 $data = [
                     'role' => 'mfanyakazi',
-                    'done' => Job::where('accepted_worker_id', $user->id)->where('status', 'completed')->count(),
+                    'done' => $user->workerCompletedJobsCount(),
+                    'done_count' => $user->workerCompletedJobsCount(),
+                    'active_count' => $user->workerActiveJobsCount(),
                     'earnTotal' => WalletTransaction::where('user_id', $user->id)
                         ->where('type', 'EARN')
                         ->where('amount', '>', 0)

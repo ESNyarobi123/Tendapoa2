@@ -107,4 +107,49 @@ class User extends Authenticatable
         }
         return "{$this->lat}, {$this->lng}";
     }
+
+    /**
+     * Idadi ya kazi mfanyakazi amezimaliza (kutoka work_orders + fallback ya EARN).
+     */
+    public function workerCompletedJobsCount(): int
+    {
+        $fromJobs = Job::query()
+            ->where('status', Job::S_COMPLETED)
+            ->where(function ($q) {
+                $q->where('accepted_worker_id', $this->id)
+                    ->orWhere('selected_worker_id', $this->id);
+            })
+            ->count();
+
+        if ($fromJobs > 0) {
+            return $fromJobs;
+        }
+
+        return WalletTransaction::query()
+            ->where('user_id', $this->id)
+            ->where('type', 'EARN')
+            ->where('amount', '>', 0)
+            ->get()
+            ->pluck('meta.job_id')
+            ->filter()
+            ->unique()
+            ->count();
+    }
+
+    /**
+     * Kazi zinazoendelea sasa (funded → submitted).
+     */
+    public function workerActiveJobsCount(): int
+    {
+        return Job::query()
+            ->where('accepted_worker_id', $this->id)
+            ->whereIn('status', [
+                Job::S_FUNDED,
+                Job::S_IN_PROGRESS,
+                Job::S_SUBMITTED,
+                Job::S_ASSIGNED,
+                Job::S_READY_FOR_CONFIRMATION,
+            ])
+            ->count();
+    }
 }

@@ -78,7 +78,8 @@ class DashboardController extends Controller
         }
 
         // default: mfanyakazi
-        $done = Job::where('accepted_worker_id', $u->id)->where('status', 'completed')->count();
+        $done = $u->workerCompletedJobsCount();
+        $activeCount = $u->workerActiveJobsCount();
 
         // Get earnings from wallet transactions instead of just completed jobs
         $earnTotal = WalletTransaction::where('user_id', $u->id)
@@ -154,6 +155,7 @@ class DashboardController extends Controller
 
         return view('mfanyakazi.dashboard', compact(
             'done',
+            'activeCount',
             'earnTotal',
             'withdrawn',
             'available',
