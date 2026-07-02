@@ -154,7 +154,7 @@
                             <form method="POST" action="{{ route('admin.job.force-cancel', $job) }}" class="adm-inline-form">
                                 @csrf
                                 <button type="button" class="adm-btn adm-btn--danger adm-btn--sm"
-                                    onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Thibitisha kughairi kazi hii?'):Promise.resolve(confirm('Ghairi kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                                    data-adm-confirm="Thibitisha kughairi kazi hii?">
                                     ❌ Ghairi
                                 </button>
                             </form>
@@ -168,7 +168,8 @@
                             <form method="POST" action="{{ route('admin.job.hide', $job) }}" class="adm-inline-form">
                                 @csrf
                                 <button type="button" class="adm-btn adm-btn--warn adm-btn--sm"
-                                    onclick="var f=this.closest('form'); var r=prompt('Sababu ya kuficha (si lazima):',''); if(r===null)return; if(r!==''){ var i=document.createElement('input'); i.type='hidden'; i.name='reason'; i.value=r; f.appendChild(i);} (typeof tpConfirm==='function'?tpConfirm('Ficha kazi hii kutoka kwa watumiaji wengine?'):Promise.resolve(confirm('Ficha kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                                    data-adm-prompt-hide="Sababu ya kuficha (si lazima):"
+                                    data-adm-confirm="Ficha kazi hii kutoka kwa watumiaji wengine?">
                                     🙈 Ficha
                                 </button>
                             </form>
@@ -178,7 +179,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <button type="button" class="adm-btn adm-btn--ghost adm-btn--sm"
-                                    onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Futa kabisa rekodi ya kazi hii?'):Promise.resolve(confirm('Futa kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                                    data-adm-confirm="Futa kabisa rekodi ya kazi hii? Hatua haiwezi kutenduliwa.">
                                     🗑️ Futa
                                 </button>
                             </form>

@@ -1,14 +1,14 @@
 /**
- * TendaPoa — toasts & modal prompt (replaces alert/prompt where loaded via Vite).
+ * TendaPoa — toasts & modal prompt/confirm (works on admin + app).
  */
+import '../css/tp-ui.css';
+
 (function () {
   function getToastRoot() {
     let el = document.getElementById('tp-toast-root');
     if (!el) {
       el = document.createElement('div');
       el.id = 'tp-toast-root';
-      el.className =
-        'fixed top-4 right-4 z-[10050] flex w-[min(100%,22rem)] flex-col gap-2 pointer-events-none px-3 sm:px-0';
       el.setAttribute('aria-live', 'polite');
       document.body.appendChild(el);
     }
@@ -22,18 +22,17 @@
     const card = document.createElement('div');
     card.setAttribute('role', 'status');
     card.className =
-      'pointer-events-auto rounded-xl border px-4 py-3 text-[13px] font-semibold shadow-lg transition ' +
+      'tp-toast-card ' +
       (type === 'success'
-        ? 'border-emerald-500/30 bg-emerald-600 text-white'
+        ? 'tp-toast-card--success'
         : type === 'error'
-          ? 'border-red-500/30 bg-red-600 text-white'
-          : 'border-slate-600/40 bg-slate-800 text-white');
+          ? 'tp-toast-card--error'
+          : 'tp-toast-card--info');
     card.textContent = msg;
     root.appendChild(card);
     setTimeout(() => {
       card.style.opacity = '0';
       card.style.transform = 'translateX(8px)';
-      card.style.transition = 'opacity 0.25s, transform 0.25s';
       setTimeout(() => card.remove(), 260);
     }, 4200);
   }
@@ -44,13 +43,13 @@
     host = document.createElement('div');
     host.id = 'tp-dialog-host';
     host.innerHTML =
-      '<div id="tp-dialog-backdrop" class="fixed inset-0 z-[10060] hidden bg-slate-900/50 backdrop-blur-[1px]" aria-hidden="true"></div>' +
-      '<div id="tp-dialog-panel" class="fixed left-1/2 top-1/2 z-[10061] hidden w-[min(100%,24rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl" role="dialog" aria-modal="true">' +
-      '<p id="tp-dialog-title" class="text-[14px] font-bold text-slate-900"></p>' +
-      '<textarea id="tp-dialog-input" rows="3" class="mt-3 w-full rounded-xl border border-slate-200 px-3 py-2 text-[13px] text-slate-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"></textarea>' +
-      '<div class="mt-4 flex justify-end gap-2">' +
-      '<button type="button" id="tp-dialog-cancel" class="rounded-xl border border-slate-200 px-4 py-2 text-[12px] font-semibold text-slate-700 hover:bg-slate-50">Funga</button>' +
-      '<button type="button" id="tp-dialog-ok" class="rounded-xl bg-brand-600 px-4 py-2 text-[12px] font-bold text-white hover:bg-brand-700">Sawa</button>' +
+      '<div id="tp-dialog-backdrop" class="tp-hidden" aria-hidden="true"></div>' +
+      '<div id="tp-dialog-panel" class="tp-hidden" role="dialog" aria-modal="true">' +
+      '<p id="tp-dialog-title"></p>' +
+      '<textarea id="tp-dialog-input" rows="3"></textarea>' +
+      '<div class="tp-ui-actions">' +
+      '<button type="button" id="tp-dialog-cancel" class="tp-ui-btn tp-ui-btn--ghost">Funga</button>' +
+      '<button type="button" id="tp-dialog-ok" class="tp-ui-btn tp-ui-btn--primary">Sawa</button>' +
       '</div></div>';
     document.body.appendChild(host);
     return host;
@@ -62,12 +61,12 @@
     host = document.createElement('div');
     host.id = 'tp-confirm-host';
     host.innerHTML =
-      '<div id="tp-confirm-backdrop" class="fixed inset-0 z-[10060] hidden bg-slate-900/50 backdrop-blur-[1px]" aria-hidden="true"></div>' +
-      '<div id="tp-confirm-panel" class="fixed left-1/2 top-1/2 z-[10061] hidden w-[min(100%,22rem)] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl" role="alertdialog" aria-modal="true">' +
-      '<p id="tp-confirm-message" class="text-[13px] font-semibold leading-relaxed text-slate-800"></p>' +
-      '<div class="mt-5 flex justify-end gap-2">' +
-      '<button type="button" id="tp-confirm-cancel" class="rounded-xl border border-slate-200 px-4 py-2 text-[12px] font-semibold text-slate-700 hover:bg-slate-50">Ghairi</button>' +
-      '<button type="button" id="tp-confirm-ok" class="rounded-xl bg-brand-600 px-4 py-2 text-[12px] font-bold text-white hover:bg-brand-700">Ndio</button>' +
+      '<div id="tp-confirm-backdrop" class="tp-hidden" aria-hidden="true"></div>' +
+      '<div id="tp-confirm-panel" class="tp-hidden" role="alertdialog" aria-modal="true">' +
+      '<p id="tp-confirm-message"></p>' +
+      '<div class="tp-ui-actions">' +
+      '<button type="button" id="tp-confirm-cancel" class="tp-ui-btn tp-ui-btn--ghost">Ghairi</button>' +
+      '<button type="button" id="tp-confirm-ok" class="tp-ui-btn tp-ui-btn--primary">Ndio</button>' +
       '</div></div>';
     document.body.appendChild(host);
     return host;
@@ -87,8 +86,8 @@
       msgEl.textContent = String(message || 'Thibitisha?');
 
       function cleanup() {
-        backdrop.classList.add('hidden');
-        panel.classList.add('hidden');
+        backdrop.classList.add('tp-hidden');
+        panel.classList.add('tp-hidden');
         btnOk.onclick = null;
         btnCancel.onclick = null;
         backdrop.onclick = null;
@@ -102,8 +101,8 @@
         }
       }
 
-      backdrop.classList.remove('hidden');
-      panel.classList.remove('hidden');
+      backdrop.classList.remove('tp-hidden');
+      panel.classList.remove('tp-hidden');
       document.addEventListener('keydown', onKey);
 
       btnOk.onclick = () => {
@@ -134,8 +133,8 @@
       input.value = initial || '';
 
       function cleanup() {
-        backdrop.classList.add('hidden');
-        panel.classList.add('hidden');
+        backdrop.classList.add('tp-hidden');
+        panel.classList.add('tp-hidden');
         btnOk.onclick = null;
         btnCancel.onclick = null;
         backdrop.onclick = null;
@@ -149,15 +148,15 @@
         }
       }
 
-      backdrop.classList.remove('hidden');
-      panel.classList.remove('hidden');
+      backdrop.classList.remove('tp-hidden');
+      panel.classList.remove('tp-hidden');
       document.addEventListener('keydown', onKey);
       setTimeout(() => input.focus(), 50);
 
       btnOk.onclick = () => {
         const v = input.value.trim();
         cleanup();
-        resolve(v || null);
+        resolve(v === '' ? '' : v);
       };
       btnCancel.onclick = () => {
         cleanup();

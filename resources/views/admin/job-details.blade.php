@@ -39,7 +39,7 @@
                     @endforeach
                 </select>
                 <button type="button" class="adm-btn adm-btn--muted"
-                    onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Badilisha hali ya kazi?'):Promise.resolve(confirm('Badilisha hali?'))).then(function(ok){ if(ok) f.submit(); });">
+                    data-adm-confirm="Badilisha hali ya kazi?">
                     Badilisha hali
                 </button>
             </form>
@@ -47,7 +47,7 @@
                 <form action="{{ route('admin.job.force-complete', $job) }}" method="POST" class="adm-actions" style="margin:0;">
                     @csrf
                     <button type="button" class="adm-btn adm-btn--success"
-                        onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Thibitisha force-complete kwa kazi hii?'):Promise.resolve(confirm('Force complete?'))).then(function(ok){ if(ok) f.submit(); });">
+                        data-adm-confirm="Thibitisha force-complete kwa kazi hii?">
                         Force complete
                     </button>
                 </form>
@@ -56,7 +56,7 @@
                 <form action="{{ route('admin.job.force-cancel', $job) }}" method="POST" class="adm-actions" style="margin:0;">
                     @csrf
                     <button type="button" class="adm-btn adm-btn--danger"
-                        onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Thibitisha kughairi kazi hii kwa nguvu?'):Promise.resolve(confirm('Force cancel?'))).then(function(ok){ if(ok) f.submit(); });">
+                        data-adm-confirm="Thibitisha kughairi kazi hii kwa nguvu?">
                         Force cancel
                     </button>
                 </form>
@@ -71,7 +71,7 @@
                     @csrf
                     <input type="text" name="reason" class="adm-input" placeholder="Sababu ya kuficha (si lazima)" maxlength="500" style="min-width:14rem;">
                     <button type="button" class="adm-btn adm-btn--warn"
-                        onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Ficha kazi hii? Mchapishaji ataiona tu kwenye orodha yake.'):Promise.resolve(confirm('Ficha kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                        data-adm-confirm="Ficha kazi hii? Mchapishaji ataiona tu kwenye orodha yake.">
                         🙈 Ficha kazi
                     </button>
                 </form>
@@ -80,7 +80,7 @@
                 @csrf
                 @method('DELETE')
                 <button type="button" class="adm-btn adm-btn--danger"
-                    onclick="var f=this.closest('form'); (typeof tpConfirm==='function'?tpConfirm('Futa kabisa rekodi ya kazi hii?'):Promise.resolve(confirm('Futa kazi?'))).then(function(ok){ if(ok) f.submit(); });">
+                    data-adm-confirm="Futa kabisa rekodi ya kazi hii? Hatua haiwezi kutenduliwa.">
                     🗑️ Futa kazi
                 </button>
             </form>

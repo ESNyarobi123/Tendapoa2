@@ -1,7 +1,59 @@
 /**
  * Admin panel UX helpers — flashes, modals, table responsiveness.
  */
+import './tp-ui';
+
+function admConfirmThenSubmit(form, message) {
+  if (!form) return;
+  const ask =
+    typeof window.tpConfirm === 'function'
+      ? window.tpConfirm(message)
+      : Promise.resolve(window.confirm(message));
+  ask.then((ok) => {
+    if (ok) form.submit();
+  });
+}
+
+window.admConfirmThenSubmit = admConfirmThenSubmit;
+
 document.addEventListener('DOMContentLoaded', () => {
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-adm-confirm]');
+    if (!btn) return;
+    e.preventDefault();
+    admConfirmThenSubmit(btn.closest('form'), btn.getAttribute('data-adm-confirm') || 'Thibitisha?');
+  });
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-adm-prompt-hide]');
+    if (!btn) return;
+    e.preventDefault();
+    const form = btn.closest('form');
+    if (!form) return;
+
+    const promptMsg = btn.getAttribute('data-adm-prompt-hide') || 'Sababu ya kuficha (si lazima):';
+    const confirmMsg = btn.getAttribute('data-adm-confirm') || 'Ficha kazi hii kutoka kwa watumiaji wengine?';
+
+    let reason;
+    if (typeof window.tpPrompt === 'function') {
+      reason = await window.tpPrompt(promptMsg, '');
+      if (reason === null) return;
+    } else {
+      reason = window.prompt(promptMsg, '');
+      if (reason === null) return;
+    }
+
+    if (reason) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'reason';
+      input.value = reason;
+      form.appendChild(input);
+    }
+
+    admConfirmThenSubmit(form, confirmMsg);
+  });
+
   document.querySelectorAll('.adm-flash').forEach((el) => {
     const close = document.createElement('button');
     close.type = 'button';

@@ -1,7 +1,14 @@
 {
-  "_tp-ui-hLfDouKJ.js": {
-    "file": "assets/tp-ui-hLfDouKJ.js",
-    "name": "tp-ui"
+  "_tp-ui-CQxdiTA9.css": {
+    "file": "assets/tp-ui-CQxdiTA9.css",
+    "src": "_tp-ui-CQxdiTA9.css"
+  },
+  "_tp-ui-iCakAEpb.js": {
+    "file": "assets/tp-ui-iCakAEpb.js",
+    "name": "tp-ui",
+    "css": [
+      "assets/tp-ui-CQxdiTA9.css"
+    ]
   },
   "resources/css/app.css": {
     "file": "assets/app-siksU9kQ.css",
@@ -20,24 +27,24 @@
     ]
   },
   "resources/js/admin-entry.js": {
-    "file": "assets/admin-entry-DU57v611.js",
+    "file": "assets/admin-entry-CzWBozYJ.js",
     "name": "admin-entry",
     "src": "resources/js/admin-entry.js",
     "isEntry": true,
     "imports": [
-      "_tp-ui-hLfDouKJ.js"
+      "_tp-ui-iCakAEpb.js"
     ],
     "css": [
       "assets/admin-entry-9TOVPFLf.css"
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-DrjxCqge.js",
+    "file": "assets/app-D63n7km9.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
-      "_tp-ui-hLfDouKJ.js"
+      "_tp-ui-iCakAEpb.js"
     ]
   }
 }
