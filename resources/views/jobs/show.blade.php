@@ -1710,7 +1710,7 @@
               @php
                 $wAvatar = $app->worker->profile_photo_url ?? '';
                 if (!$wAvatar) {
-                  $wAvatar = 'https://ui-avatars.com/api/?name=' . rawurlencode($app->worker->name) . '&background=e2e8f0&color=475569&size=128';
+                  $wAvatar = 'https://ui-avatars.com/api/?name=' . rawurlencode($app->worker->name) . '&background=e2e8f0&color=475569&size=128&format=png';
                 }
               @endphp
               <div class="comment-item"

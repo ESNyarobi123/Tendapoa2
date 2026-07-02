@@ -113,7 +113,7 @@
               @if(in_array($job->status, ['funded', 'in_progress', 'submitted', 'awaiting_payment', 'assigned']) && ($job->acceptedWorker || $job->selectedWorker))
                 <div class="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
                   @php $w = $job->acceptedWorker ?? $job->selectedWorker; @endphp
-                  <img src="{{ $w->profile_photo_url ?: 'https://ui-avatars.com/api/?name='.urlencode($w->name).'&background=e2e8f0&color=475569&size=64' }}" alt="" class="h-8 w-8 shrink-0 rounded-lg object-cover ring-1 ring-slate-200">
+                  <img src="{{ $w->profile_photo_url ?: 'https://ui-avatars.com/api/?name='.urlencode($w->name).'&background=e2e8f0&color=475569&size=64&format=png' }}" alt="" class="h-8 w-8 shrink-0 rounded-lg object-cover ring-1 ring-slate-200">
                   <div class="min-w-0">
                     <p class="text-[9px] font-semibold uppercase tracking-wide text-slate-400">Mfanyakazi</p>
                     <p class="truncate text-[12px] font-semibold text-slate-800">{{ $w->name }}</p>

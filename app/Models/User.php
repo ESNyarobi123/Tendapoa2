@@ -32,8 +32,8 @@ class User extends Authenticatable
             }
         }
 
-        // Default avatar
-        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name ?? 'User') . '&color=7F9CF5&background=EBF4FF';
+        // Default avatar — must be PNG for Flutter/mobile (ui-avatars defaults to SVG).
+        return 'https://ui-avatars.com/api/?name=' . urlencode($this->name ?? 'User') . '&color=7F9CF5&background=EBF4FF&format=png';
     }
 
     public function jobs()
