@@ -225,7 +225,9 @@ class ServiceController extends Controller
 
     protected function isServiceListing(Job $job): bool
     {
-        return $job->isCatalogListing();
+        return $job->isServiceListing()
+            && $job->poster_type === 'mfanyakazi'
+            && $job->source_listing_id === null;
     }
 
     protected function isVisibleServiceListing(Job $listing): bool
@@ -259,14 +261,9 @@ class ServiceController extends Controller
         $query = Job::query()
             ->with(['category', 'user:id,name,phone,profile_photo_path,lat,lng,role'])
             ->publiclyVisible()
-            ->where(function ($q) {
-                $q->where('engagement_type', Job::ENGAGEMENT_SERVICE_LISTING)
-                    ->orWhere(function ($qq) {
-                        $qq->where('engagement_type', Job::ENGAGEMENT_JOB_REQUEST)
-                            ->where('poster_type', 'mfanyakazi')
-                            ->whereNull('source_listing_id');
-                    });
-            })
+            ->serviceListings()
+            ->where('poster_type', 'mfanyakazi')
+            ->whereNull('source_listing_id')
             ->whereIn('status', [Job::S_OPEN, 'posted'])
             ->when($category, fn ($q) => $q->whereHas(
                 'category',

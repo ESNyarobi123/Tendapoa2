@@ -476,6 +476,9 @@ class JobController extends Controller
             'urgency' => $r->input('urgency', 'normal'),
             'status' => Job::S_OPEN,
             'published_at' => now(),
+            'poster_type' => 'muhitaji',
+            'engagement_type' => Job::ENGAGEMENT_JOB_REQUEST,
+            'source_listing_id' => null,
         ]);
 
         // Log status transition

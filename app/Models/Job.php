@@ -406,11 +406,7 @@ class Job extends Model
      */
     public function isCatalogListing(): bool
     {
-        if ($this->isServiceListing()) {
-            return true;
-        }
-
-        return $this->engagement_type === self::ENGAGEMENT_JOB_REQUEST
+        return $this->isServiceListing()
             && $this->poster_type === 'mfanyakazi'
             && $this->source_listing_id === null;
     }

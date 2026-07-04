@@ -74,6 +74,8 @@ class FeedController extends Controller
         $user = Auth::user();
         $jobs = Job::with('category', 'muhitaji')
             ->publiclyVisible()
+            ->jobRequests()
+            ->where('poster_type', 'muhitaji')
             ->whereIn('status', [Job::S_OPEN, 'posted'])
             ->whereNotNull('lat')
             ->whereNotNull('lng')
@@ -101,6 +103,8 @@ class FeedController extends Controller
 
         $jobs = Job::with('category', 'muhitaji')
             ->publiclyVisible()
+            ->jobRequests()
+            ->where('poster_type', 'muhitaji')
             ->whereIn('status', [Job::S_OPEN, 'posted'])
             ->when($cat, fn ($q) => $q->whereHas('category', fn ($qq) => $qq->where('slug', $cat)))
             ->latest()

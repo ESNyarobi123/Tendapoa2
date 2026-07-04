@@ -477,6 +477,9 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
                 'address_text' => $validated['address_text'] ?? null,
                 'status' => $paymentsEnabled ? 'pending_payment' : 'posted',
                 'published_at' => $paymentsEnabled ? null : now(),
+                'poster_type' => 'muhitaji',
+                'engagement_type' => Job::ENGAGEMENT_JOB_REQUEST,
+                'source_listing_id' => null,
             ]);
 
             if (! $paymentsEnabled) {
@@ -927,8 +930,7 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
         // Maombi yangu (job_applications)
         Route::get('/applications', [WorkerApplicationsController::class, 'apiIndex']);
 
-        // Kazi nilizochapisha mwenyewe (mfanyakazi) + idadi ya waombaji wa kila moja
-        Route::get('/posted-jobs', function (Request $request) {
+        $workerServicesIndex = function (Request $request) {
             $user = $request->user();
             if ($user->role !== 'mfanyakazi') {
                 return response()->json([
@@ -938,29 +940,119 @@ Route::middleware(['force.json', 'auth:sanctum'])->group(function () {
             }
 
             $jobs = Job::where('user_id', $user->id)
+                ->serviceListings()
                 ->where('poster_type', 'mfanyakazi')
-                ->withCount(['applications as applications_count' => function ($q) {
-                    $q->whereIn('status', [
-                        JobApplication::STATUS_APPLIED,
-                        JobApplication::STATUS_SHORTLISTED,
-                        JobApplication::STATUS_ACCEPTED_COUNTER,
-                        JobApplication::STATUS_COUNTERED,
-                    ]);
-                }])
-                ->with(['category', 'selectedWorker', 'acceptedWorker'])
+                ->whereNull('source_listing_id')
+                ->withCount([
+                    'serviceBookings as service_requests_count',
+                    'serviceBookings as active_service_requests_count' => function ($q) {
+                        $q->whereIn('status', Job::activeBookingStatuses());
+                    },
+                ])
+                ->with(['category'])
                 ->latest()
                 ->paginate(20);
 
+            $items = collect($jobs->items())->map(function (Job $job) {
+                if ($job->image) {
+                    $imageUrl = asset('storage/'.$job->image);
+                    if (Storage::disk('public')->exists($job->image)) {
+                        $imageUrl .= '?v='.filemtime(storage_path('app/public/'.$job->image));
+                    }
+                    $job->image_url = $imageUrl;
+                }
+
+                // Backward-compatible alias for the current Flutter screen.
+                $job->applications_count = $job->service_requests_count;
+
+                return $job;
+            })->values();
+
             return response()->json([
                 'success' => true,
-                'data' => $jobs->items(),
+                'data' => $items,
                 'pagination' => [
                     'current_page' => $jobs->currentPage(),
                     'last_page' => $jobs->lastPage(),
                     'total' => $jobs->total(),
                 ],
             ]);
-        });
+        };
+
+        // Huduma nilizochapisha mwenyewe (mfanyakazi) + idadi ya client requests.
+        Route::get('/services', $workerServicesIndex);
+
+        // Backward-compatible alias used by the current Flutter screen.
+        Route::get('/posted-jobs', $workerServicesIndex);
+
+        $workerServiceRequests = function (Request $request, ?Job $listing = null) {
+            $user = $request->user();
+            if ($user->role !== 'mfanyakazi') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Mfanyakazi tu.',
+                ], 403);
+            }
+
+            if ($listing) {
+                if (
+                    $listing->user_id !== $user->id ||
+                    ! $listing->isServiceListing() ||
+                    $listing->poster_type !== 'mfanyakazi'
+                ) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Huduma haipatikani.',
+                    ], 404);
+                }
+            }
+
+            $requests = Job::query()
+                ->serviceBookings()
+                ->where('selected_worker_id', $user->id)
+                ->when($listing, fn ($q) => $q->where('source_listing_id', $listing->id))
+                ->with([
+                    'category',
+                    'muhitaji:id,name,phone,profile_photo_path,role',
+                    'sourceListing:id,title,price,user_id,image',
+                    'payment',
+                ])
+                ->latest()
+                ->paginate(20);
+
+            $items = collect($requests->items())->map(function (Job $booking) {
+                $booking->client = $booking->muhitaji;
+                $booking->requested_service = $booking->sourceListing;
+                $booking->can_chat = (bool) ($booking->selected_worker_id || $booking->accepted_worker_id);
+
+                if ($booking->image) {
+                    $imageUrl = asset('storage/'.$booking->image);
+                    if (Storage::disk('public')->exists($booking->image)) {
+                        $imageUrl .= '?v='.filemtime(storage_path('app/public/'.$booking->image));
+                    }
+                    $booking->image_url = $imageUrl;
+                }
+
+                return $booking;
+            })->values();
+
+            return response()->json([
+                'success' => true,
+                'data' => $items,
+                'pagination' => [
+                    'current_page' => $requests->currentPage(),
+                    'last_page' => $requests->lastPage(),
+                    'total' => $requests->total(),
+                    'has_more' => $requests->hasMorePages(),
+                ],
+            ]);
+        };
+
+        // Requests zote za huduma za worker.
+        Route::get('/service-requests', $workerServiceRequests);
+
+        // Requests za huduma moja aliyochapisha worker.
+        Route::get('/services/{listing}/requests', $workerServiceRequests);
 
         // Get assigned jobs - using controller method
         Route::get('/assigned', [WorkerActionsController::class, 'apiAssigned']);
